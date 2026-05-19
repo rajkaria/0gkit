@@ -1,0 +1,180 @@
+---
+title: React guide
+---
+
+# React guide
+
+`@foundryprotocol/0gkit-react` is four thin reactive hooks over the 0G
+primitives. `react` is a peer dependency.
+
+```bash
+npm install @foundryprotocol/0gkit-react react
+```
+
+## The shared shape
+
+Every hook returns the same `AsyncState` envelope plus a named runner and a
+`reset`:
+
+```ts
+interface AsyncState<T> {
+  data: T | undefined;
+  error: Error | undefined;
+  loading: boolean;
+}
+// each hook adds: <runner>(...args) => Promise<T>  and  reset(): void
+```
+
+`data` and `error` are mutually exclusive — a new run clears both until it
+settles. The runner **resolves with the value and also rejects**, so you can
+either read `data`/`error` reactively or `await` the call directly and
+`try/catch`. `config` is read per-call through a ref, so you may recompute it
+each render (e.g. on a network/key change) without the hook going stale.
+
+## The runtime boundary (read this)
+
+`useUpload` / `useDownload` / `useInference` ultimately call the **Node-only**
+0G storage/compute SDKs. They will surface a clean `ConfigError` in a pure
+browser bundle. Run them where Node runs — a server action, a Node/Electron
+host, or behind your own API route. **`useAttestation` is pure crypto and
+works fully in the browser** (the 0gkit playground verifies attestations
+live, client-side).
+
+## Hooks
+
+### `useUpload(config)`
+
+```ts
+function useUpload(config: StorageConfig): {
+  data: UploadResult | undefined; // { root, tx, raw }
+  error: Error | undefined;
+  loading: boolean;
+  upload: (data: Uint8Array) => Promise<UploadResult>;
+  reset: () => void;
+};
+```
+
+### `useDownload(config)`
+
+```ts
+function useDownload(config: StorageConfig): {
+  data: Uint8Array | undefined;
+  error: Error | undefined;
+  loading: boolean;
+  download: (root: string) => Promise<Uint8Array>;
+  reset: () => void;
+};
+```
+
+### `useInference(config)`
+
+```ts
+interface InferenceArgs {
+  messages: ChatMessage[]; // { role, content }
+  model?: string;
+  temperature?: number;
+}
+function useInference(config: ComputeConfig): {
+  data: InferenceResult | undefined; // { output, receipt, raw }
+  error: Error | undefined;
+  loading: boolean;
+  infer: (args: InferenceArgs) => Promise<InferenceResult>;
+  reset: () => void;
+};
+```
+
+### `useAttestation()`
+
+Takes no config (pure, no network, no keys).
+
+```ts
+function useAttestation(): {
+  data: VerifyResult | undefined; // { ok, checks, signer }
+  error: Error | undefined;
+  loading: boolean;
+  verify: (signed: SignedEnvelope, expectedSigner: string) => Promise<VerifyResult>;
+  reset: () => void;
+};
+```
+
+`verify` never throws for a bad signature — it resolves `{ ok: false }` with
+per-check detail in `data.checks`.
+
+## A complete Next.js example
+
+A client component. Upload runs through a server route (Node) while
+attestation verifies right in the browser.
+
+```tsx
+"use client";
+
+import { useUpload, useAttestation } from "@foundryprotocol/0gkit-react";
+import type { SignedEnvelope } from "@foundryprotocol/0gkit-attestation";
+
+export default function Console({ signed }: { signed: SignedEnvelope }) {
+  // Config is read per-call via a ref — safe to recompute each render.
+  const up = useUpload({
+    network: "galileo",
+    privateKey: process.env.NEXT_PUBLIC_DEMO_KEY, // demo only — see safety note
+  });
+  const at = useAttestation(); // pure crypto, browser-safe
+
+  return (
+    <div>
+      <button
+        disabled={up.loading}
+        onClick={() => {
+          // The runner rejects too — handle it or read up.error reactively.
+          up.upload(new TextEncoder().encode("hello 0G")).catch(() => {});
+        }}
+      >
+        {up.loading ? "uploading…" : "upload"}
+      </button>
+      {up.data && <code>root: {up.data.root}</code>}
+      {up.error && <span role="alert">{up.error.message}</span>}
+
+      <button
+        disabled={at.loading}
+        onClick={() => at.verify(signed, signed.envelope.coordinator)}
+      >
+        verify attestation
+      </button>
+      {at.data && (
+        <p>
+          {at.data.ok ? "VERIFIED" : "NOT VERIFIED"} — digest{" "}
+          {String(at.data.checks.digest)}, signer {String(at.data.checks.signer)}
+        </p>
+      )}
+    </div>
+  );
+}
+```
+
+For a real app, do uploads/inference in a server action or API route (Node)
+and call it from the client, since the storage/compute SDKs are Node-only.
+
+## Awaiting directly vs. reading state
+
+```tsx
+const ai = useInference({ network: "galileo", brokerKey, provider });
+
+async function onAsk() {
+  try {
+    const r = await ai.infer({
+      messages: [{ role: "user", content: "Hello 0G" }],
+    });
+    console.log(r.output, r.receipt.latencyMs);
+  } catch (err) {
+    // same Error you'd see in ai.error
+  }
+}
+// or just render ai.loading / ai.data / ai.error — both are kept in sync.
+```
+
+## Related
+
+Wraps [storage](/packages/storage), [compute](/packages/compute),
+[attestation](/packages/attestation). See [Troubleshooting → key
+handling](/troubleshooting#key-handling--safety) before putting any key near
+the browser. Template:
+`npx degit rajkaria/0G-ai-kit/templates/react-app`.

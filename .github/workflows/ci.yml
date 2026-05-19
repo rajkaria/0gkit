@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: lint · typecheck · build · test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm format:check
+
+      # core is the shared base — its type declarations must exist before
+      # dependents' DTS builds.
+      - run: pnpm --filter @foundryprotocol/0gkit-core build
+
+      - run: pnpm build
+
+      - run: pnpm lint
+
+      - run: pnpm boundary:check
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      - run: pnpm templates:check
+
+      # Playground golden-path smoke: console renders, attestation verify runs
+      # live in-browser, copy-code works for all four forms.
+      - run: pnpm --filter @foundryprotocol/0gkit-playground exec playwright install --with-deps chromium
+
+      - run: pnpm --filter @foundryprotocol/0gkit-playground exec playwright test

@@ -1,0 +1,62 @@
+{
+  "name": "@foundryprotocol/0gkit-cli",
+  "version": "0.1.0",
+  "description": "The neutral 0G command line — init, doctor, chain, storage, infer, da, attest. Foundry is a separate opt-in plugin.",
+  "license": "MIT",
+  "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/0gkit-cli",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajkaria/0G-ai-kit.git",
+    "directory": "packages/0gkit-cli"
+  },
+  "bugs": {
+    "url": "https://github.com/rajkaria/0G-ai-kit/issues"
+  },
+  "type": "module",
+  "bin": {
+    "0g": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
+    "clean": "rimraf dist",
+    "prepublishOnly": "pnpm run clean && pnpm run build"
+  },
+  "dependencies": {
+    "@foundryprotocol/0gkit-attestation": "workspace:*",
+    "@foundryprotocol/0gkit-chain": "workspace:*",
+    "@foundryprotocol/0gkit-compute": "workspace:*",
+    "@foundryprotocol/0gkit-core": "workspace:*",
+    "@foundryprotocol/0gkit-da": "workspace:*",
+    "@foundryprotocol/0gkit-storage": "workspace:*",
+    "commander": "^14.0.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "dependency-cruiser": "^16.0.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "0g",
+    "0g-network",
+    "cli",
+    "toolkit"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

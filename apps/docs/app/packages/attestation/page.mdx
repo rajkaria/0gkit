@@ -1,0 +1,208 @@
+---
+title: "@foundryprotocol/0gkit-attestation"
+---
+
+# @foundryprotocol/0gkit-attestation
+
+> Neutral 0G TEE attestation: parse, sign (EIP-191), recover, verify, and
+> report a signed envelope. Pure crypto — no network.
+
+## What it does
+
+Five pure functions over an `AttestationEnvelope` (the
+`foundry/eval-result/v1` shape). Validate/narrow an unknown value into an
+envelope, compute its on-chain digest, EIP-191 personal-sign it, recover the
+signer, verify digest **and** signer (never throwing), and produce a
+human-readable report. Signatures verify identically on-chain (ecrecover).
+
+## When to use it
+
+- Producing a signed, tamper-evident attestation of a TEE eval result.
+- Verifying one you received: did the digest match, and did the expected
+  coordinator actually sign it?
+- Logging / displaying an envelope (`reportEnvelope`).
+
+## Where to use it
+
+**Anywhere** — pure `viem` crypto, no network, no Node-only dependency.
+Browser-safe (the playground runs `verifyEnvelope` live in-browser).
+
+## Install
+
+```bash
+npm install @foundryprotocol/0gkit-attestation @foundryprotocol/0gkit-core viem
+```
+
+## API reference
+
+### Types
+
+```ts
+interface AttestationEnvelope {
+  kind: "foundry/eval-result/v1";
+  forge: Address;
+  scores: number[];
+  baseline: number;
+  teeAttestation: Hex;
+  daRef?: string;
+  coordinator: Address;
+  timestamp: number; // unix seconds
+}
+interface SignedEnvelope {
+  envelope: AttestationEnvelope;
+  digest: Hex;
+  signature: Hex;
+}
+interface VerifyResult {
+  ok: boolean;
+  checks: { digest: boolean; signer: boolean };
+  signer: Address; // the recovered address
+}
+```
+
+### `parseEnvelope(value)`
+
+```ts
+function parseEnvelope(value: unknown): AttestationEnvelope;
+```
+
+Validates + narrows an unknown value. **Throws** `AttestationError` (with a
+hint) if any field is missing or the wrong type, or `kind` is not
+`foundry/eval-result/v1`.
+
+### `digestEnvelope(envelope)`
+
+```ts
+function digestEnvelope(envelope: AttestationEnvelope): Hex;
+```
+
+`keccak256` of the canonical envelope JSON — the on-chain anchor (this is
+`core`'s `digestJson` applied to the envelope).
+
+### `signEnvelope(envelope, privateKey)`
+
+```ts
+function signEnvelope(
+  envelope: AttestationEnvelope,
+  privateKey: Hex | string
+): Promise<SignedEnvelope>;
+```
+
+EIP-191 personal-sign over the digest (matches on-chain ecrecover). Leading
+`0x` on the key is optional. **Throws** `AttestationError` for an invalid
+private key.
+
+### `recoverSigner(signed)`
+
+```ts
+function recoverSigner(
+  signed: Pick<SignedEnvelope, "digest" | "signature">
+): Promise<Address>;
+```
+
+Recovers the signing address from `{ digest, signature }`.
+
+### `verifyEnvelope(signed, expectedSigner)`
+
+```ts
+function verifyEnvelope(
+  signed: SignedEnvelope,
+  expectedSigner: Address | string
+): Promise<VerifyResult>;
+```
+
+Verifies digest integrity **and** signer identity. **Never throws** — a
+malformed signature yields `ok:false`. When `checks.digest` is `false`,
+`checks.signer` is reported `false` without attempting recovery (the signer
+check is skipped, not "wrong signer").
+
+### `reportEnvelope(signed)`
+
+```ts
+function reportEnvelope(signed: SignedEnvelope): string;
+```
+
+A human-readable multi-line summary for CLIs / logs (kind, forge, coordinator,
+scores, timestamp, digest, truncated signature).
+
+## Examples
+
+### Minimal — sign then verify
+
+```ts
+import {
+  signEnvelope,
+  verifyEnvelope,
+  type AttestationEnvelope,
+} from "@foundryprotocol/0gkit-attestation";
+import { privateKeyToAccount } from "viem/accounts";
+
+const pk = process.env.ZEROG_PRIVATE_KEY as `0x${string}`;
+const coordinator = privateKeyToAccount(pk).address;
+
+const envelope: AttestationEnvelope = {
+  kind: "foundry/eval-result/v1",
+  forge: "0x0000000000000000000000000000000000000001",
+  scores: [0.91, 0.88],
+  baseline: 0.8,
+  teeAttestation: "0xdeadbeef",
+  coordinator,
+  timestamp: Math.floor(Date.now() / 1000),
+};
+
+const signed = await signEnvelope(envelope, pk);
+const result = await verifyEnvelope(signed, coordinator);
+console.log(result.ok); // true
+console.log(result.checks); // { digest: true, signer: true }
+```
+
+### Realistic — verify untrusted input, never throwing
+
+```ts
+import {
+  parseEnvelope,
+  verifyEnvelope,
+  reportEnvelope,
+  type SignedEnvelope,
+} from "@foundryprotocol/0gkit-attestation";
+import { AttestationError } from "@foundryprotocol/0gkit-core";
+
+function checkUntrusted(raw: unknown, expectedSigner: string) {
+  // 1. Structural validation — this CAN throw AttestationError:
+  let signed: SignedEnvelope;
+  try {
+    const s = raw as SignedEnvelope;
+    parseEnvelope(s.envelope); // throws if the envelope shape is wrong
+    signed = s;
+  } catch (err) {
+    if (err instanceof AttestationError) {
+      return { ok: false, reason: err.message, hint: err.hint };
+    }
+    throw err;
+  }
+
+  // 2. Crypto verification — verifyEnvelope NEVER throws:
+  return verifyEnvelope(signed, expectedSigner).then((r) => ({
+    ok: r.ok,
+    checks: r.checks, // { digest, signer }
+    recovered: r.signer,
+    report: reportEnvelope(signed),
+  }));
+}
+```
+
+## Common errors
+
+| Symptom                                              | Cause                                       | Fix                                                                |
+| ---------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------ |
+| `AttestationError: Invalid attestation envelope: …`  | `parseEnvelope` got a bad/incomplete shape. | Match the `foundry/eval-result/v1` shape exactly.                  |
+| `AttestationError: signEnvelope: invalid privateKey` | Key is not 64 hex chars.                    | Pass a 64-char hex key (with or without `0x`).                     |
+| `verify` returns `ok:false`, `checks.digest:false`   | The envelope was altered after signing.     | The payload is tampered — reject it. (Not an exception by design.) |
+| `verify` returns `ok:false`, `checks.signer:false`   | A different key signed it.                  | Confirm the expected signer / coordinator address.                 |
+
+## Related
+
+[core](/packages/core) (`digestJson`) · [da](/packages/da) (digest anchor) ·
+CLI: [`0g attest`](/cli#0g-attest) · MCP: `og_attest_verify`
+([MCP guide](/mcp)) · React: [`useAttestation`](/react). Template:
+`npx degit rajkaria/0G-ai-kit/templates/attestation-verify`.

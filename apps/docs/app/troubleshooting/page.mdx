@@ -1,0 +1,108 @@
+---
+title: Troubleshooting & FAQ
+---
+
+# Troubleshooting & FAQ
+
+## First: run `0g doctor`
+
+Almost every "it doesn't work" has a one-line answer from the preflight:
+
+```bash
+npx 0g doctor --network galileo
+npx 0g doctor --json | jq '.checks[] | select(.ok==false)'
+```
+
+It checks RPC reachability + chain id, signer presence/funding, the storage
+indexer, the DA encoder, and faucet guidance. And remember: **every
+`ZeroGError` carries a `.hint`** — read it, it is the exact fix.
+
+## Peer dependencies
+
+| Package                              | Required peers | Optional peers (when needed)                                                                       |
+| ------------------------------------ | -------------- | -------------------------------------------------------------------------------------------------- |
+| `@foundryprotocol/0gkit-core`        | `viem ^2.21`   | —                                                                                                  |
+| `@foundryprotocol/0gkit-chain`       | `viem ^2.21`   | —                                                                                                  |
+| `@foundryprotocol/0gkit-storage`     | `viem ^2.21`   | `@0gfoundation/0g-storage-ts-sdk ^1.2.9`, `ethers ^6.16` — for upload/download/computeRoot/exists  |
+| `@foundryprotocol/0gkit-compute`     | `viem ^2.21`   | `@0gfoundation/0g-compute-ts-sdk` (or `@0glabs/0g-serving-broker`), `ethers ^6.16` — for inference |
+| `@foundryprotocol/0gkit-da`          | `viem ^2.21`   | —                                                                                                  |
+| `@foundryprotocol/0gkit-attestation` | `viem ^2.21`   | —                                                                                                  |
+| `@foundryprotocol/0gkit-react`       | `react`        | the primitive you use (+ its peers)                                                                |
+
+The `@0gfoundation/*` SDKs and `ethers` are marked **optional** so the packages
+install and type-check without them. They are lazily, dynamically imported only
+when you call an operation that needs them. If you see:
+
+> `ConfigError: @0gfoundation/0g-storage-ts-sdk could not be loaded …`
+> `ConfigError: 0G compute SDK not found …`
+> `ConfigError: ethers could not be loaded …`
+
+…install the peer the hint names, e.g.:
+
+```bash
+npm install @0gfoundation/0g-storage-ts-sdk ethers      # storage
+npm install @0gfoundation/0g-compute-ts-sdk ethers       # compute
+```
+
+## Browser limitations
+
+- **Node-only:** `Storage` (upload/download/computeRoot/exists) and `Compute`
+  (inference) dynamically import the Node-only 0G SDKs and `ethers`. They do
+  not run in a pure browser bundle — you will get a clean `ConfigError`. Run
+  them in a Node script, a server action, an API route, or via the `0g` CLI.
+- **Browser-safe:** `@foundryprotocol/0gkit-core` (presets, client factory,
+  canonical JSON), `@foundryprotocol/0gkit-da`'s `digest`/`verify`, and **all
+  of `@foundryprotocol/0gkit-attestation`** (pure `viem` crypto). The 0gkit
+  playground verifies attestations live in-browser.
+- In a Next.js/Turbopack app you can alias the Node-only SDKs to a stub for the
+  client bundle (the playground does this in `next.config.ts` via
+  `turbopack.resolveAlias`) so live upload/infer surface an honest "needs a
+  server/CLI" error instead of a bundler crash.
+
+## Key handling & safety
+
+- **Use a testnet key.** `galileo` is the default everywhere and needs no real
+  funds. Get testnet funds at `https://faucet.0g.ai` (or
+  `0g chain faucet <addr>`).
+- **Never ship a private key to the browser.** `useUpload`/`useInference` need
+  Node anyway — do the signing server-side and call it from the client. Any
+  `NEXT_PUBLIC_*` key is public; treat the React example's demo key as a demo
+  only.
+- Keys can be passed with or without the leading `0x` — 0gkit normalizes them.
+  A malformed key throws a `ConfigError` with the exact remedy.
+- 0gkit never logs or transmits your key anywhere except the RPC/SDK calls you
+  invoke.
+
+## FAQ
+
+**Which network is the default?** `galileo` (testnet) — everywhere: the CLI,
+the MCP server, and the primitives' network resolution.
+
+**`0g storage` rejects `--network local`.** Storage and DA only support
+`aristotle` | `galileo` (they need an indexer/encoder). Use `galileo`.
+
+**`waitForReceipt` throws `ChainError`.** The hash is wrong or was broadcast to
+a different network. Verify both.
+
+**`faucet()` throws on galileo.** Galileo has no programmatic faucet — that is
+expected. The `ConfigError.hint` is the web faucet URL
+(`https://faucet.0g.ai`).
+
+**`verifyEnvelope` returned `ok:false` but did not throw.** By design —
+attestation verification never throws for a bad signature/digest. Inspect
+`data.checks` (`{ digest, signer }`) to see which check failed.
+
+**Is Foundry required?** No. 0gkit is vendor-neutral and `pnpm boundary:check`
+enforces it in CI. Foundry is a separate, opt-in plugin
+(`ZEROG_FOUNDRY=1`), absent by default.
+
+**Where do I drop to the raw SDK?** `Storage#raw()`, `Compute#raw()`,
+`Compute#openai()`, or the viem clients from `createClient(...)`. See
+[Concepts → the escape hatch](/concepts#the-escape-hatch-to-the-raw-sdk).
+
+## Still stuck?
+
+Open an issue at
+[github.com/rajkaria/0G-ai-kit/issues](https://github.com/rajkaria/0G-ai-kit/issues)
+with the full `ZeroGError` (`code`, `message`, `hint`) and `0g doctor --json`
+output.

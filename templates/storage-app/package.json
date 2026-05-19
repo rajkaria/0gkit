@@ -1,0 +1,24 @@
+{
+  "name": "storage-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Upload a file to 0G Storage, verify the round-trip, with @foundryprotocol/0gkit-storage.",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "dependencies": {
+    "@foundryprotocol/0gkit-core": "^0.1.0",
+    "@foundryprotocol/0gkit-storage": "^0.1.0",
+    "@0gfoundation/0g-storage-ts-sdk": "^0.3.0",
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

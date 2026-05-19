@@ -1,0 +1,74 @@
+{
+  "name": "@foundryprotocol/0gkit-mcp",
+  "version": "0.1.0",
+  "description": "The neutral 0G MCP server — every 0G primitive (storage, compute, da, chain, attestation) as an MCP tool for Claude / Cursor / Cline / any agent runtime. Foundry is a separate opt-in plugin.",
+  "license": "MIT",
+  "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/0gkit-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajkaria/0G-ai-kit.git",
+    "directory": "packages/0gkit-mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/rajkaria/0G-ai-kit/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "0g-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
+    "clean": "rimraf dist",
+    "prepublishOnly": "pnpm run clean && pnpm run build"
+  },
+  "dependencies": {
+    "@foundryprotocol/0gkit-attestation": "workspace:*",
+    "@foundryprotocol/0gkit-chain": "workspace:*",
+    "@foundryprotocol/0gkit-compute": "workspace:*",
+    "@foundryprotocol/0gkit-core": "workspace:*",
+    "@foundryprotocol/0gkit-da": "workspace:*",
+    "@foundryprotocol/0gkit-storage": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "viem": "^2.21.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "dependency-cruiser": "^16.0.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "0g",
+    "0g-network",
+    "mcp",
+    "model-context-protocol",
+    "toolkit",
+    "ai-agent"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,62 @@
+---
+title: "@foundryprotocol/0gkit-react"
+---
+
+# @foundryprotocol/0gkit-react
+
+> Neutral React hooks for 0G: `useUpload`, `useDownload`, `useInference`,
+> `useAttestation`.
+
+## What it does
+
+Thin reactive wrappers over `storage`, `compute`, and `attestation`. Every
+hook returns the same shape — `{ data, error, loading, reset }` plus a named
+runner. The runner resolves with the value **and** rejects, so a component can
+read state reactively or `await` the call directly. `react` is a peer
+dependency.
+
+## When to use it
+
+- A React UI that uploads to / downloads from 0G Storage, runs inference, or
+  verifies an attestation.
+- You want loading/error state managed for you with a consistent shape.
+
+## Where to use it
+
+A React 18/19 client component. Note the runtime boundary: `useUpload` /
+`useDownload` / `useInference` ultimately call the Node-only storage/compute
+SDKs, so they only work where those run (a server action, an Electron/Node
+host, or behind your own API). `useAttestation` is **pure crypto and works
+fully in the browser**.
+
+## Install
+
+```bash
+npm install @foundryprotocol/0gkit-react react
+# plus whichever primitive you use:
+npm install @foundryprotocol/0gkit-storage @0gfoundation/0g-storage-ts-sdk ethers # uploads
+npm install @foundryprotocol/0gkit-compute ethers                                  # inference
+npm install @foundryprotocol/0gkit-attestation                                     # verify
+```
+
+## API surface
+
+```ts
+function useUpload(config: StorageConfig): UseUploadResult; // .upload(bytes)
+function useDownload(config: StorageConfig): UseDownloadResult; // .download(root)
+function useInference(config: ComputeConfig): UseInferenceResult; // .infer(args)
+function useAttestation(): UseAttestationResult; // .verify(signed, expectedSigner)
+```
+
+Each result extends `AsyncState<T>` (`{ data, error, loading }`) and adds the
+named runner plus `reset()`. `config` is read per-call through a ref, so you
+may recompute it each render without the hook going stale.
+
+Full signatures, return shapes, and a complete Next.js example are in the
+dedicated **[React guide](/react)**.
+
+## Related
+
+Wraps [storage](/packages/storage), [compute](/packages/compute),
+[attestation](/packages/attestation). Full guide: **[React guide](/react)**.
+Template: `npx degit rajkaria/0G-ai-kit/templates/react-app`.

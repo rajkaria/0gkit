@@ -1,0 +1,175 @@
+---
+title: "@foundryprotocol/0gkit-storage"
+---
+
+# @foundryprotocol/0gkit-storage
+
+> Neutral 0G Storage client: `upload`, `download`, `computeRoot`, `exists`.
+
+## What it does
+
+Wraps `@0gfoundation/0g-storage-ts-sdk` behind one class. Upload bytes (returns
+the storage root + the funding tx as a `Receipt`), download by root, compute a
+merkle root locally without uploading, and probe whether a root is
+retrievable. The SDK and `ethers` are lazily, dynamically imported so the
+package installs and type-checks without them.
+
+## When to use it
+
+- Persisting blobs (model weights, datasets, artifacts) to 0G Storage.
+- Content-addressing: `computeRoot` gives you the root **without** an upload or
+  any keys — perfect for dedupe / "do I already have this?" checks.
+- Polling for finalization with `exists`.
+
+## Where to use it
+
+**Node only.** `upload`/`download`/`computeRoot`/`exists` dynamically import
+the Node-only `@0gfoundation/0g-storage-ts-sdk` (and `ethers` for the signer).
+This is why the playground and React guide surface a clean `ConfigError` in
+the browser — uploads must run on a server, in a script, or via the CLI.
+
+## Install
+
+```bash
+npm install @foundryprotocol/0gkit-storage @foundryprotocol/0gkit-core viem
+# optional peers — required for upload/download/computeRoot/exists:
+npm install @0gfoundation/0g-storage-ts-sdk ethers
+```
+
+## API reference
+
+### `class Storage`
+
+```ts
+interface StorageConfig {
+  network?: "aristotle" | "galileo"; // default "aristotle"
+  indexerUrl?: string; // overrides the preset indexer
+  rpcUrl?: string; // default https://evmrpc.0g.ai
+  privateKey?: string; // required for upload (funds the tx)
+  loadSdk?: () => Promise<StorageSdk>; // inject the SDK (testing)
+}
+interface UploadResult {
+  root: string; // 0x-normalized merkle root
+  tx: Receipt; // { txHash, latencyMs }
+  raw: unknown; // the raw SDK result
+}
+new Storage(config: StorageConfig);
+```
+
+The default network is `aristotle`. The indexer is chosen from the network
+(`https://indexer-storage.0g.network` for aristotle,
+`https://indexer-storage-testnet.0g.ai` for galileo) unless `indexerUrl` is
+set.
+
+#### `storage.upload(data)`
+
+```ts
+upload(data: Uint8Array): Promise<UploadResult>;
+```
+
+Uploads the bytes; returns `{ root, tx, raw }`. Requires `privateKey` in the
+config (it funds the tx). **Throws** `ConfigError` if `privateKey` is missing
+or the SDK / `ethers` cannot be loaded; **throws** `NetworkError` if the
+upload fails or returns an unrecognized shape.
+
+#### `storage.download(root)`
+
+```ts
+download(root: string): Promise<Uint8Array>;
+```
+
+Downloads with proof. **Throws** `NetworkError` if the download fails, the
+blob is empty (not finalized yet — retry), or the response is truncated.
+
+#### `storage.computeRoot(data)`
+
+```ts
+computeRoot(data: Uint8Array): Promise<string>;
+```
+
+Computes the merkle root **locally** — no upload, no keys, no network.
+**Throws** `NetworkError` if the computation fails (e.g. empty input).
+
+#### `storage.exists(root)`
+
+```ts
+exists(root: string): Promise<boolean>;
+```
+
+`true` if the root's header is retrievable. Transport errors are treated as
+"not found" and return `false` — if you are polling for finalization, retry
+rather than treating `false` as definitive. **Never throws** for transport.
+
+#### `storage.raw()`
+
+```ts
+raw(): Promise<unknown>; // the loaded @0gfoundation/0g-storage-ts-sdk module
+```
+
+The escape hatch — the underlying SDK module.
+
+## Examples
+
+### Minimal — content-address without uploading
+
+```ts
+import { Storage } from "@foundryprotocol/0gkit-storage";
+
+// No privateKey needed: computeRoot is local-only.
+const storage = new Storage({ network: "galileo" });
+const root = await storage.computeRoot(new TextEncoder().encode("hello 0G"));
+console.log(root); // 0x… — deterministic for the same bytes
+console.log(await storage.exists(root)); // false until uploaded
+```
+
+### Realistic — upload, verify, download with error handling
+
+```ts
+import { Storage } from "@foundryprotocol/0gkit-storage";
+import { ZeroGError } from "@foundryprotocol/0gkit-core";
+
+const storage = new Storage({
+  network: "galileo",
+  privateKey: process.env.ZEROG_PRIVATE_KEY, // funded testnet key
+});
+
+const payload = new TextEncoder().encode(JSON.stringify({ hi: "0G" }));
+
+try {
+  const { root, tx } = await storage.upload(payload);
+  console.log(`root ${root} — tx ${tx.txHash} (${tx.latencyMs} ms)`);
+
+  // Poll for finalization (exists returns false on transport errors too):
+  let ready = false;
+  for (let i = 0; i < 10 && !ready; i++) {
+    ready = await storage.exists(root);
+    if (!ready) await new Promise((r) => setTimeout(r, 2000));
+  }
+
+  const bytes = await storage.download(root);
+  console.log("round-trip ok:", new TextDecoder().decode(bytes));
+} catch (err) {
+  if (err instanceof ZeroGError) {
+    console.error(`[${err.code}] ${err.message}\n→ ${err.hint}`);
+  } else {
+    throw err;
+  }
+}
+```
+
+## Common errors
+
+| Symptom                                                            | Cause                                       | Fix                                                                |
+| ------------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------ |
+| `ConfigError: Storage.upload requires a privateKey`                | `upload` with no `privateKey` in config.    | Pass `{ privateKey }` (a funded key) to the `Storage` constructor. |
+| `ConfigError: @0gfoundation/0g-storage-ts-sdk could not be loaded` | Optional peer not installed.                | `npm install @0gfoundation/0g-storage-ts-sdk ethers`.              |
+| `ConfigError: ethers could not be loaded`                          | `ethers` peer missing.                      | `npm install ethers`.                                              |
+| `NetworkError: 0G Storage upload failed…`                          | Indexer/RPC unreachable or signer unfunded. | Check the indexer + RPC; fund the signer (testnet faucet).         |
+| `NetworkError: 0G Storage returned an empty blob…`                 | Root not finalized yet.                     | Retry shortly — use `exists` as a poll.                            |
+
+## Related
+
+[core](/packages/core) · CLI: [`0g storage`](/cli#0g-storage) · MCP:
+`og_storage_*` ([MCP guide](/mcp)) · React:
+[`useUpload` / `useDownload`](/react). Template:
+`npx degit rajkaria/0G-ai-kit/templates/storage-app`.

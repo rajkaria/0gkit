@@ -1,0 +1,154 @@
+---
+title: Concepts
+---
+
+# Concepts
+
+Five ideas run through every 0gkit package. Learn them once and every package
+behaves predictably.
+
+## The `Receipt` envelope
+
+Every 0gkit operation that touches the chain returns a uniform `Receipt`
+(`@foundryprotocol/0gkit-core`). It is the single result shape you handle
+everywhere.
+
+```ts
+interface Receipt {
+  /** Transaction hash. `0x${string} | string` — the `| string` is a
+   *  deliberate escape hatch so an untyped JSON/HTTP source (e.g. a faucet
+   *  response) can be assigned without a cast. */
+  txHash?: `0x${string}` | string;
+  /** Present only when the active network preset has a verified explorer. */
+  explorerUrl?: string;
+  blockNumber?: bigint;
+  /** Wall-clock duration of the operation, milliseconds. Always present. */
+  latencyMs: number;
+  /** Opaque here; @foundryprotocol/0gkit-attestation gives it a concrete type. */
+  attestation?: unknown;
+}
+```
+
+Only `latencyMs` is guaranteed. `txHash`, `explorerUrl`, and `blockNumber` are
+optional by design — a local faucet may not return a tx hash, a network may
+have no explorer. Always null-check them.
+
+## The `ZeroGError` taxonomy
+
+No 0gkit code path fails silently. Every error 0gkit throws is a `ZeroGError`
+(or a subclass) carrying two extra fields:
+
+- `.code` — a `ZeroGErrorCode`: `"CONFIG" | "NETWORK" | "CHAIN" | "ATTESTATION"`.
+- `.hint` — an actionable string: the exact remedy (the missing env var, run
+  `0g doctor`, which attestation check failed).
+
+```ts
+import { ZeroGError } from "@foundryprotocol/0gkit-core";
+
+try {
+  await storage.upload(bytes);
+} catch (err) {
+  if (err instanceof ZeroGError) {
+    console.error(`[${err.code}] ${err.message}`);
+    console.error(`→ ${err.hint}`); // do exactly this to fix it
+  } else {
+    throw err;
+  }
+}
+```
+
+### Every error class
+
+| Class              | `code`        | Thrown when…                                                                                                                                                                                                                                  |
+| ------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ZeroGError`       | _(base)_      | The base. You usually catch this — every other class extends it. Carries `code` + `hint`.                                                                                                                                                     |
+| `ConfigError`      | `CONFIG`      | Misconfiguration: unknown network, missing `privateKey`/`brokerKey`/`provider`, an unresolved preset (`createClient` with no rpcUrl/chainId), an optional peer (`ethers`, the 0G SDK) not installed, a malformed digest, a non-JSON envelope. |
+| `NetworkError`     | `NETWORK`     | A reachable endpoint failed: balance read failed, faucet HTTP error / unreachable, storage indexer / DA encoder error or unexpected result shape, a compute provider returned non-2xx.                                                        |
+| `ChainError`       | `CHAIN`       | A chain interaction failed: a transaction did not confirm (`waitForReceipt`).                                                                                                                                                                 |
+| `AttestationError` | `ATTESTATION` | An attestation envelope is structurally invalid (`parseEnvelope`) or `signEnvelope` got an invalid private key. Note: `verifyEnvelope` never throws — a bad signature resolves `ok:false`.                                                    |
+
+`ConfigError`, `NetworkError`, `ChainError`, and `AttestationError` all extend
+`ZeroGError`, so `instanceof ZeroGError` catches every 0gkit failure. Catch the
+specific subclass when you want to branch (e.g. retry on `NetworkError`,
+prompt for a key on `ConfigError`).
+
+## Networks & presets
+
+A `NetworkPreset` (`@foundryprotocol/0gkit-core`) is the static description of
+a 0G network:
+
+```ts
+interface NetworkPreset {
+  readonly name: NetworkName; // "aristotle" | "galileo" | "local"
+  readonly chainId?: number; // undefined ⇒ createClient throws ConfigError
+  readonly rpcUrl?: string; // undefined ⇒ createClient throws ConfigError
+  readonly explorer?: string; // undefined ⇒ explorerUrl() throws
+  readonly faucetUrl?: string; // programmatic faucet endpoint (testnet)
+  readonly faucetWebUrl?: string; // human faucet page, used in faucet()'s hint
+  readonly testnet: boolean;
+}
+```
+
+Get one with `getNetwork(name)` (throws a `ConfigError` for an unknown name),
+or import the singletons `aristotle`, `galileo`, `local`, or the
+`networks` record. See [Getting started → networks](/getting-started#supported-networks)
+for the resolved values.
+
+## The viem client factory
+
+`createClient` (`@foundryprotocol/0gkit-core`) turns a preset (plus optional
+overrides) into a `ZeroGClient`:
+
+```ts
+import { createClient } from "@foundryprotocol/0gkit-core";
+
+const client = createClient({
+  network: "aristotle",
+  // optional overrides:
+  // rpcUrl: "https://my-node",
+  // chainId: 16661,
+  // privateKey: process.env.ZEROG_PRIVATE_KEY, // adds client.wallet
+});
+
+client.network; // the resolved NetworkPreset
+client.public; // a viem PublicClient — read anything
+client.wallet; // a viem WalletClient, only if privateKey was passed
+client.public.chain?.id; // 16661
+```
+
+`ZeroGClient` is `{ network, public, wallet? }`. `public` is a full viem
+[`PublicClient`](https://viem.sh) and `wallet` (present iff you passed a
+`privateKey`) is a viem `WalletClient` — this is your escape hatch to raw viem.
+`buildChain(preset, rpcUrl?, chainId?)` is exported too if you only want the
+viem `Chain` object. An unresolved preset or a malformed private key throws a
+`ConfigError` (with a hint pointing at the exact fix).
+
+## Canonical JSON & the cross-package digest
+
+`@foundryprotocol/0gkit-core` exports two pure helpers used by DA and
+Attestation so a digest is identical across packages and on-chain:
+
+- `canonicalJsonStringify(value)` — deterministic JSON: object keys sorted
+  recursively, no whitespace, arrays keep order. Two logically-equal objects
+  always produce the identical string.
+- `digestJson(value)` — `keccak256` of the canonical JSON encoding. This is the
+  cross-package, on-chain digest anchor.
+
+```ts
+import { canonicalJsonStringify, digestJson } from "@foundryprotocol/0gkit-core";
+
+canonicalJsonStringify({ b: 1, a: 2 }); // '{"a":2,"b":1}'
+digestJson({ a: 2, b: 1 }) === digestJson({ b: 1, a: 2 }); // true
+```
+
+## The escape hatch to the raw SDK
+
+0gkit is a thin, faithful wrapper, never a cage. When you outgrow a wrapper,
+drop straight to the underlying SDK without leaving your code:
+
+- `Storage#raw()` → the loaded `@0gfoundation/0g-storage-ts-sdk` module.
+- `Compute#raw()` → the underlying broker `{ inference }`.
+- `Compute#openai()` → a drop-in OpenAI-style `chat.completions.create` shim.
+- `createClient(...).public` / `.wallet` → raw viem clients.
+
+You are never blocked waiting for 0gkit to wrap a feature.

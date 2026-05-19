@@ -1,0 +1,177 @@
+---
+title: CLI reference
+---
+
+# CLI reference
+
+The `0g` command line (`@foundryprotocol/0gkit-cli`) is the universal,
+language-agnostic surface for 0G. Every command mirrors a primitive package;
+`--json` makes it scriptable from any language.
+
+```bash
+npm install -g @foundryprotocol/0gkit-cli   # or: npx 0g <command>
+```
+
+## Global flags
+
+These apply to every command and are inherited by subcommands.
+
+| Flag                  | Env                 | Default    | Meaning                                           |
+| --------------------- | ------------------- | ---------- | ------------------------------------------------- |
+| `--network <name>`    | `ZEROG_NETWORK`     | `galileo`  | `aristotle` \| `galileo` \| `local`.              |
+| `--rpc <url>`         | `ZEROG_RPC_URL`     | preset RPC | Override the network RPC URL.                     |
+| `--private-key <hex>` | `ZEROG_PRIVATE_KEY` | _(none)_   | Signer key (funds storage tx).                    |
+| `--json`              | —                   | off        | Machine-readable JSON output.                     |
+| `--foundry`           | —                   | off        | Force-show the optional Foundry plugin namespace. |
+| `--version`           | —                   | —          | Prints `0.1.0`.                                   |
+
+Precedence: **flag > env > preset default**. Additional env vars:
+`ZEROG_BROKER_KEY`, `ZEROG_PROVIDER` (for `infer`).
+
+## Output & exit codes
+
+- Human mode: pretty lines; errors print `✗ <message>` then `→ <hint>`.
+- `--json` mode: success is `{ "ok": true, ... }`; failure is
+  `{ "ok": false, "error": { "code", "message", "hint" } }`.
+- **Exit code `0`** on success. **Exit code `1`** when a command throws
+  (any `ZeroGError`), when `0g doctor` has a failing required check, or when
+  `0g attest verify` does not verify.
+
+## `0g init [name]`
+
+Scaffold a runnable, testnet-default project. Defaults the directory name to
+`0g-app`. Writes `package.json`, `.env.example`, `index.mjs`, `README.md`,
+`.gitignore`. **Errors** (`ConfigError`) if the target directory exists and is
+non-empty.
+
+```bash
+0g init my-app
+cd my-app && npm install
+0g doctor
+npm start
+```
+
+## `0g doctor`
+
+Preflight every 0G surface for the selected network. Checks, in order:
+
+1. **rpc** (required) — RPC reachable and reports the preset's chain id.
+2. **signer** (soft) — key present and the address is funded (read-only is
+   valid; absence is not a failure).
+3. **storage-indexer** (soft) — indexer endpoint reachable (HTTP < 500).
+4. **da-encoder** (soft) — DA encoder reachable (falls back to local mode).
+5. **faucet** (informational) — faucet guidance for the network.
+
+Exit `1` only if a **required** check fails (i.e. RPC).
+
+```bash
+0g doctor --network galileo
+0g doctor --json | jq '.checks[] | select(.ok==false)'
+```
+
+## `0g chain`
+
+Native-chain helpers.
+
+| Subcommand                   | What                                                      |
+| ---------------------------- | --------------------------------------------------------- |
+| `0g chain faucet <address>`  | Request testnet funds (galileo points at the web faucet). |
+| `0g chain balance <address>` | Native 0G balance (prints `0G` and wei).                  |
+| `0g chain tx <hash>`         | Wait for a tx receipt + explorer link.                    |
+
+```bash
+0g chain balance 0xYourAddress --network aristotle
+0g chain tx 0xYourTxHash --json
+0g chain faucet 0xNew --network galileo   # → https://faucet.0g.ai
+```
+
+## `0g storage`
+
+0G Storage. Networks restricted to `aristotle` | `galileo` (a `ConfigError`
+otherwise).
+
+| Subcommand                    | What                                                                 |
+| ----------------------------- | -------------------------------------------------------------------- |
+| `0g storage put <file>`       | Upload a file's bytes; prints `root` + `tx`. **Needs a signer key.** |
+| `0g storage get <root> [out]` | Download by root; writes to `[out]` or prints byte count.            |
+| `0g storage exists <root>`    | `true` if the root is retrievable.                                   |
+
+```bash
+export ZEROG_PRIVATE_KEY=0x...   # funds the upload tx
+ROOT=$(0g storage put model.bin --network galileo --json | jq -r .root)
+0g storage get "$ROOT" ./out.bin
+0g storage exists "$ROOT" --json
+```
+
+## `0g infer`
+
+Run a chat completion against a 0G compute provider. Requires a broker key
+(`ZEROG_BROKER_KEY`, falling back to `ZEROG_PRIVATE_KEY` / `--private-key`)
+and a provider (`--provider` or `ZEROG_PROVIDER`).
+
+| Flag                   | Meaning                                 |
+| ---------------------- | --------------------------------------- |
+| `-m, --message <text>` | Prompt text (default: read stdin).      |
+| `--provider <address>` | 0G inference provider (or env).         |
+| `--model <name>`       | Model id (provider default if omitted). |
+| `--temperature <n>`    | Sampling temperature.                   |
+
+```bash
+export ZEROG_BROKER_KEY=0x... ZEROG_PROVIDER=0xPROVIDER
+0g infer -m "Summarize 0G in one line" --network galileo
+echo "What is 0G DA?" | 0g infer --json | jq -r .output
+```
+
+## `0g da`
+
+0G Data Availability.
+
+| Subcommand                     | What                                                     |
+| ------------------------------ | -------------------------------------------------------- |
+| `0g da publish <file>`         | Publish a blob (`-` = stdin); local-digest mode off-net. |
+| `0g da verify <file> <digest>` | Local integrity check: recompute the digest and compare. |
+
+```bash
+0g da publish payload.json --network galileo --json | jq -r .digest
+echo '{"a":1}' | 0g da publish - --json
+0g da verify payload.json 0xDIGEST   # prints MATCH / MISMATCH
+```
+
+## `0g attest`
+
+TEE attestation. Operates on a `SignedEnvelope` JSON file
+(`{ envelope, digest, signature }`).
+
+| Subcommand                                   | What                                                                                               |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `0g attest verify <file> --signer <address>` | Verify digest integrity **and** signer identity. `--signer` is required. Exit `1` if not verified. |
+| `0g attest report <file>`                    | Human-readable summary of the signed envelope.                                                     |
+
+```bash
+0g attest verify signed.json --signer 0xCoordinator
+0g attest report signed.json --json
+```
+
+## `0g foundry …` (opt-in, hidden)
+
+The optional Foundry plugin namespace. Hidden unless `@foundryprotocol/mcp`
+is installed or you pass `--foundry`. Absent by default — the neutrality
+boundary stays green by construction.
+
+## Scripting from any language
+
+`--json` is stable and meaningful exit codes make `0g` a clean subprocess:
+
+```bash
+# Python
+import json, subprocess
+r = subprocess.run(["0g","storage","exists",root,"--json"],
+                    capture_output=True, text=True)
+print(json.loads(r.stdout)["exists"])
+```
+
+## Related
+
+[storage](/packages/storage) · [compute](/packages/compute) ·
+[da](/packages/da) · [attestation](/packages/attestation) · [MCP
+guide](/mcp) (the same surface for agents).

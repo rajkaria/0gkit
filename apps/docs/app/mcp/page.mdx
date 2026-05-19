@@ -1,0 +1,143 @@
+---
+title: MCP guide
+---
+
+# MCP guide
+
+`@foundryprotocol/0gkit-mcp` is the neutral 0G [Model Context
+Protocol](https://modelcontextprotocol.io) server. It exposes every 0G
+primitive as an `og_*` tool so Claude Desktop, Cursor, Cline, or any
+MCP-capable agent runtime can drive 0G directly — no glue code. It runs over
+stdio; clients launch it with `npx`.
+
+Defaults to the **Galileo testnet** — no real funds needed. Foundry tools are
+a separate, opt-in plugin (`ZEROG_FOUNDRY=1`), absent by default.
+
+## The tools
+
+Nine tools, mirroring the `0g` CLI 1:1. Every error is returned as JSON with
+`error`, `code`, and an actionable `hint` (and `isError: true`).
+
+| Tool                | Required args               | Optional args                                                      | Returns                                      |
+| ------------------- | --------------------------- | ------------------------------------------------------------------ | -------------------------------------------- |
+| `og_storage_put`    | `data` (UTF-8 text)         | `network`, `rpc`, `private_key`                                    | `{ root, txHash, explorerUrl, bytes }`       |
+| `og_storage_get`    | `root`                      | `network`, `rpc`                                                   | `{ root, bytes, text }`                      |
+| `og_storage_exists` | `root`                      | `network`, `rpc`                                                   | `{ root, exists }`                           |
+| `og_infer`          | `message`                   | `provider`, `model`, `temperature`, `network`, `rpc`, `broker_key` | `{ output, provider, txHash, latencyMs }`    |
+| `og_da_publish`     | `payload` (UTF-8)           | `network`                                                          | `{ digest, daRef, blobId, mode, latencyMs }` |
+| `og_da_verify`      | `payload`, `digest`         | `network`                                                          | `{ digest, verified }`                       |
+| `og_chain_faucet`   | `address`                   | `network`                                                          | `{ address, network, txHash }`               |
+| `og_chain_balance`  | `address`                   | `network`, `rpc`                                                   | `{ address, network, wei, zg }`              |
+| `og_attest_verify`  | `signed_envelope`, `signer` | —                                                                  | `{ verified, checks, signer, report }`       |
+
+`network` is `aristotle` \| `galileo` \| `local`, defaulting to
+`ZEROG_NETWORK` or `galileo`. `signed_envelope` is a JSON string
+`{ envelope, digest, signature }`. `og_attest_verify` never errors for a bad
+signature — it returns `verified: false` with per-check detail.
+
+## Environment
+
+| Var                 | Purpose                                       |
+| ------------------- | --------------------------------------------- |
+| `ZEROG_NETWORK`     | `galileo` (default), `aristotle`, or `local`. |
+| `ZEROG_RPC_URL`     | Override the preset RPC.                      |
+| `ZEROG_PRIVATE_KEY` | Signer key (funds storage uploads).           |
+| `ZEROG_BROKER_KEY`  | Funded broker key for inference.              |
+| `ZEROG_PROVIDER`    | Default 0G inference provider address.        |
+| `ZEROG_FOUNDRY`     | `1` to enable the opt-in Foundry plugin.      |
+
+## Client configuration
+
+### Claude Desktop
+
+Edit `claude_desktop_config.json` (macOS:
+`~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "0gkit": {
+      "command": "npx",
+      "args": ["-y", "@foundryprotocol/0gkit-mcp"],
+      "env": {
+        "ZEROG_NETWORK": "galileo",
+        "ZEROG_PRIVATE_KEY": "0x...",
+        "ZEROG_PROVIDER": "0x..."
+      }
+    }
+  }
+}
+```
+
+### Cursor
+
+In `~/.cursor/mcp.json` (or the project `.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "0gkit": {
+      "command": "npx",
+      "args": ["-y", "@foundryprotocol/0gkit-mcp"],
+      "env": {
+        "ZEROG_NETWORK": "galileo",
+        "ZEROG_PRIVATE_KEY": "0x..."
+      }
+    }
+  }
+}
+```
+
+### Cline
+
+In the Cline MCP settings (`cline_mcp_settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "0gkit": {
+      "command": "npx",
+      "args": ["-y", "@foundryprotocol/0gkit-mcp"],
+      "env": {
+        "ZEROG_NETWORK": "galileo",
+        "ZEROG_PRIVATE_KEY": "0x...",
+        "ZEROG_BROKER_KEY": "0x...",
+        "ZEROG_PROVIDER": "0x..."
+      }
+    }
+  }
+}
+```
+
+After saving, restart the client. The nine `og_*` tools appear in the tool
+list. Ask the agent things like _"upload this README to 0G storage and give me
+the root"_ or _"verify this attestation against 0xCoordinator"_.
+
+## Embedding programmatically
+
+```ts
+import { create0gMcpServer, VERSION } from "@foundryprotocol/0gkit-mcp";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+const server = await create0gMcpServer();
+// Pass { foundryPlugin: null } to force-disable the opt-in Foundry load,
+// or { deps } to inject test doubles.
+await server.connect(new StdioServerTransport());
+console.error(`0gkit-mcp v${VERSION} ready`);
+```
+
+## The Foundry plugin (opt-in)
+
+Set `ZEROG_FOUNDRY=1` and install `@foundryprotocol/mcp`. The neutral server
+then also lists its tools (`list_ingots`, `run_inference`, `get_ingot`,
+`get_lineage`, `get_attestation`), loaded via a computed specifier so the
+neutrality boundary (`pnpm boundary:check`) stays green. Without the opt-in,
+those tools do not appear at all.
+
+## Related
+
+[CLI reference](/cli) (the same surface for humans/scripts) · the primitive
+packages: [storage](/packages/storage), [compute](/packages/compute),
+[da](/packages/da), [attestation](/packages/attestation),
+[chain](/packages/chain). Template:
+`npx degit rajkaria/0G-ai-kit/templates/mcp-agent`.

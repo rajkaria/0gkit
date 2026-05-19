@@ -1,0 +1,41 @@
+{
+  "name": "0gkit",
+  "private": true,
+  "version": "0.0.0",
+  "description": "0gkit — the neutral, MIT, defacto builder toolkit for the 0G network. Storage, Compute, DA, Attestation, Chain, a 0g CLI, an MCP server, and React hooks.",
+  "homepage": "https://github.com/rajkaria/0G-ai-kit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajkaria/0G-ai-kit.git"
+  },
+  "license": "MIT",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.10"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "boundary:check": "depcruise \"packages/0gkit-*/src\" --config .dependency-cruiser.cjs",
+    "templates:check": "node scripts/check-templates.mjs",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css,yml,yaml}\"",
+    "clean": "turbo run clean && rimraf node_modules"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.10",
+    "dependency-cruiser": "^16.0.0",
+    "next": "^16.0.0",
+    "prettier": "^3.3.3",
+    "prettier-plugin-tailwindcss": "^0.8.0",
+    "rimraf": "^6.0.1",
+    "turbo": "^2.3.0",
+    "typescript": "^5.6.3"
+  }
+}

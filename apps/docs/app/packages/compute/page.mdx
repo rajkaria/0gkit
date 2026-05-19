@@ -1,0 +1,196 @@
+---
+title: "@foundryprotocol/0gkit-compute"
+---
+
+# @foundryprotocol/0gkit-compute
+
+> Neutral 0G Compute: provider discovery, broker inference, and an
+> OpenAI-compatible shim.
+
+## What it does
+
+Wraps the 0G compute broker SDK behind one class. Discover registered
+inference providers, run a chat completion against one (the broker handles
+acknowledgement, request headers, and best-effort on-chain fee settlement),
+and get the result plus an on-chain fee `Receipt`. A drop-in OpenAI-style
+shim is included so existing OpenAI code works unchanged.
+
+## When to use it
+
+- Running LLM inference paid for on 0G, against a registered provider.
+- Migrating OpenAI code to 0G with minimal changes (the `openai()` shim).
+- Listing available providers / models programmatically.
+
+## Where to use it
+
+**Node only** for live inference — the broker SDK
+(`@0gfoundation/0g-compute-ts-sdk`, fallback `@0glabs/0g-serving-broker`) and
+`ethers` are dynamically imported. The broker import is intentionally
+non-analyzable + ignore-commented so it never breaks a bundler — but the SDK
+itself is Node-only, so run inference on a server / script / via the CLI.
+
+## Install
+
+```bash
+npm install @foundryprotocol/0gkit-compute @foundryprotocol/0gkit-core viem
+npm install @0gfoundation/0g-compute-ts-sdk ethers
+```
+
+## API reference
+
+### `class Compute`
+
+```ts
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+interface ComputeConfig {
+  network?: "aristotle" | "galileo";
+  brokerRpc?: string; // default https://evmrpc.0g.ai
+  brokerKey?: string; // funded broker private key (required for any call)
+  provider?: string; // on-chain inference provider address
+  model?: string; // default model id
+  fetch?: typeof fetch; // inject fetch (testing)
+  loadBroker?: (name: string) => Promise<unknown>; // inject the broker SDK
+  loadEthers?: () => Promise<typeof import("ethers")>;
+}
+interface InferenceResult {
+  output: string; // the assistant message content
+  receipt: Receipt; // { txHash?, latencyMs } — the on-chain fee receipt
+  raw: unknown; // the raw provider JSON
+}
+new Compute(config: ComputeConfig);
+```
+
+#### `compute.inference(args)`
+
+```ts
+inference(args: {
+  model?: string;
+  messages: ChatMessage[];
+  temperature?: number;
+}): Promise<InferenceResult>;
+```
+
+Acknowledges the provider signer (non-fatal if already done), fetches service
+metadata, signs request headers, POSTs to `<endpoint>/v1/chat/completions`,
+and best-effort settles the fee (non-fatal). **Throws** `ConfigError` for a
+missing `brokerKey`/`provider` or unloadable SDK/`ethers`; **throws**
+`NetworkError` for metadata/header/HTTP failures.
+
+#### `compute.listProviders()`
+
+```ts
+listProviders(): Promise<unknown[]>;
+```
+
+Lists registered providers via the broker. **Throws** `ConfigError` if
+`brokerKey` is missing, `NetworkError` if the listing fails.
+
+#### `compute.openai()`
+
+```ts
+openai(): {
+  chat: {
+    completions: {
+      create(params: {
+        model?: string;
+        messages: ChatMessage[];
+        temperature?: number;
+      }): Promise<{
+        id: string;
+        object: "chat.completion";
+        model: string;
+        choices: Array<{
+          index: number;
+          message: { role: "assistant"; content: string };
+          finish_reason: "stop";
+        }>;
+        _0gReceipt: Receipt; // the 0G fee receipt, attached for you
+      }>;
+    };
+  };
+};
+```
+
+An OpenAI-shaped `chat.completions.create`. The 0G fee `Receipt` is attached
+as `_0gReceipt` on the response.
+
+#### `compute.raw()`
+
+```ts
+raw(): Promise<{ inference: BrokerInference }>; // the underlying broker
+```
+
+The escape hatch — the underlying broker object.
+
+## Examples
+
+### Minimal — one completion
+
+```ts
+import { Compute } from "@foundryprotocol/0gkit-compute";
+
+const compute = new Compute({
+  network: "galileo",
+  brokerKey: process.env.ZEROG_BROKER_KEY, // funded broker key
+  provider: process.env.ZEROG_PROVIDER, // on-chain provider address
+});
+
+const { output, receipt } = await compute.inference({
+  messages: [{ role: "user", content: "Say hello to 0G in five words." }],
+});
+console.log(output);
+console.log(`fee tx ${receipt.txHash ?? "(none)"} — ${receipt.latencyMs} ms`);
+```
+
+### Realistic — OpenAI drop-in with error handling
+
+```ts
+import { Compute } from "@foundryprotocol/0gkit-compute";
+import { ZeroGError } from "@foundryprotocol/0gkit-core";
+
+const compute = new Compute({
+  network: "galileo",
+  brokerKey: process.env.ZEROG_BROKER_KEY,
+  provider: process.env.ZEROG_PROVIDER,
+  model: "llama-3.3-70b-instruct",
+});
+
+const oa = compute.openai(); // existing OpenAI code path
+
+try {
+  const res = await oa.chat.completions.create({
+    messages: [
+      { role: "system", content: "You are terse." },
+      { role: "user", content: "What is 0G Data Availability?" },
+    ],
+    temperature: 0.2,
+  });
+  console.log(res.choices[0].message.content);
+  console.log("0G fee receipt:", res._0gReceipt); // attached by 0gkit
+} catch (err) {
+  if (err instanceof ZeroGError) {
+    console.error(`[${err.code}] ${err.message}\n→ ${err.hint}`);
+  } else {
+    throw err;
+  }
+}
+```
+
+## Common errors
+
+| Symptom                                             | Cause                                      | Fix                                                            |
+| --------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------- |
+| `ConfigError: Compute requires a brokerKey`         | No `brokerKey` in config.                  | Pass `{ brokerKey }` (a funded broker key).                    |
+| `ConfigError: Compute requires a provider address`  | No `provider` in config.                   | Pass `{ provider }` (the on-chain inference provider address). |
+| `ConfigError: 0G compute SDK not found…`            | Optional broker peer not installed.        | `npm install @0gfoundation/0g-compute-ts-sdk ethers`.          |
+| `NetworkError: Failed to fetch service metadata…`   | Provider not registered / broker unfunded. | Verify the provider address and fund the broker ledger.        |
+| `NetworkError: 0G compute provider returned HTTP …` | Provider rejected the request.             | Verify the provider address and broker ledger balance.         |
+
+## Related
+
+[core](/packages/core) · CLI: [`0g infer`](/cli#0g-infer) · MCP: `og_infer`
+([MCP guide](/mcp)) · React: [`useInference`](/react). Template:
+`npx degit rajkaria/0G-ai-kit/templates/inference-app`.

@@ -1,0 +1,41 @@
+{
+  "name": "@foundryprotocol/0gkit-playground",
+  "version": "0.0.0",
+  "private": true,
+  "description": "0gkit playground — zero-setup web console: upload, infer, verify, copy working code (CLI/TS/curl/MCP).",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0 --config eslint.config.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "e2e": "playwright test",
+    "clean": "rimraf .next .turbo"
+  },
+  "dependencies": {
+    "@foundryprotocol/0gkit-core": "workspace:*",
+    "@foundryprotocol/0gkit-react": "workspace:*",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.16.0",
+    "postcss": "^8.4.49",
+    "rimraf": "^6.0.1",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.59.3",
+    "vitest": "^2.1.8"
+  }
+}

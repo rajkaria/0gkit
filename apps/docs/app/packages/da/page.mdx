@@ -1,0 +1,151 @@
+---
+title: "@foundryprotocol/0gkit-da"
+---
+
+# @foundryprotocol/0gkit-da
+
+> Neutral 0G Data Availability: deterministic digest, encoder publish, and a
+> local integrity verify.
+
+## What it does
+
+Computes a deterministic `keccak256` digest of a payload (objects via
+canonical JSON, strings and bytes raw), optionally publishes the bytes to a 0G
+DA encoder, and verifies a payload against an expected digest **locally** (no
+network). With no encoder configured it runs in `"local"` digest mode — useful
+offline and in tests.
+
+## When to use it
+
+- Anchoring a payload's digest on-chain (the digest matches
+  `@foundryprotocol/0gkit-core`'s `digestJson` and on-chain keccak).
+- Publishing a blob to the 0G DA layer for availability.
+- Tamper-checking a payload you received against a digest you trust —
+  `verify()` is a pure local integrity check.
+
+## Where to use it
+
+Anywhere — pure `viem` + `fetch`. `digest()`/`verify()` are fully local
+(browser-safe). `publish()` needs network access to the encoder (or runs in
+local mode with no encoder).
+
+## Install
+
+```bash
+npm install @foundryprotocol/0gkit-da @foundryprotocol/0gkit-core viem
+```
+
+## API reference
+
+### `class DA`
+
+```ts
+interface DAConfig {
+  network?: "aristotle" | "galileo"; // selects the preset encoder URL
+  encoderUrl?: string; // overrides the preset encoder
+  apiKey?: string; // Bearer token for the encoder
+  fetch?: typeof fetch; // inject fetch (testing)
+}
+interface DAPublishResult {
+  digest: Hex; // 0x… keccak256
+  daRef?: string; // encoder ref (live mode)
+  blobId?: string; // encoder blob id (live mode)
+  mode: "live" | "local"; // "local" when no encoder is configured
+  latencyMs: number;
+  raw?: unknown;
+}
+new DA(config: DAConfig);
+```
+
+With no `network` and no `encoderUrl`, `publish` runs in `"local"` mode (digest
+only, no network). With a `network`, the encoder defaults to
+`https://da-encoder.0g.network` (aristotle) or
+`https://da-encoder-testnet.0g.ai` (galileo).
+
+#### `da.digest(payload)`
+
+```ts
+digest(payload: unknown): Hex;
+```
+
+`keccak256` of the exact wire bytes: an object → keccak of the canonical-JSON
+encoding (identical to `core`'s `digestJson`); a string → keccak of raw UTF-8;
+a `Uint8Array` → keccak of the raw bytes. Pure, local, never throws.
+
+#### `da.publish(payload)`
+
+```ts
+publish(payload: unknown): Promise<DAPublishResult>;
+```
+
+Computes the digest, then (if an encoder is configured) POSTs the bytes to
+`<encoder>/blob`. Returns `mode: "local"` with just the digest when no encoder
+is set. **Throws** `NetworkError` if the encoder request fails or returns
+non-2xx.
+
+#### `da.verify(payload, expectedDigest)`
+
+```ts
+verify(payload: unknown, expectedDigest: string): boolean;
+```
+
+Recomputes the digest and compares (case-insensitive). A **local** integrity
+check — no network. **Throws** `ConfigError` if `expectedDigest` is not a
+32-byte `0x` hex string.
+
+## Examples
+
+### Minimal — local digest + verify (no network, no keys)
+
+```ts
+import { DA } from "@foundryprotocol/0gkit-da";
+
+const da = new DA({}); // no network ⇒ local mode
+const payload = { model: "m1", score: 0.92 };
+
+const { digest, mode } = await da.publish(payload);
+console.log(mode); // "local"
+console.log(da.verify(payload, digest)); // true
+console.log(da.verify({ model: "m1", score: 0.93 }, digest)); // false
+```
+
+### Realistic — publish to the testnet encoder with error handling
+
+```ts
+import { DA } from "@foundryprotocol/0gkit-da";
+import { ZeroGError } from "@foundryprotocol/0gkit-core";
+
+const da = new DA({ network: "galileo" }); // ⇒ testnet encoder, live mode
+
+try {
+  const res = await da.publish({ event: "eval", at: Date.now() });
+  console.log(`mode ${res.mode} — digest ${res.digest}`);
+  if (res.daRef) console.log(`daRef ${res.daRef} (${res.latencyMs} ms)`);
+
+  // Later, anywhere, verify a copy of the payload against the digest:
+  const ok = da.verify({ event: "eval", at: res.raw }, res.digest);
+  console.log("integrity:", ok);
+} catch (err) {
+  if (err instanceof ZeroGError) {
+    // NetworkError ⇒ encoder unreachable; ConfigError ⇒ bad digest format
+    console.error(`[${err.code}] ${err.message}\n→ ${err.hint}`);
+  } else {
+    throw err;
+  }
+}
+```
+
+## Common errors
+
+| Symptom                                                | Cause                         | Fix                                                            |
+| ------------------------------------------------------ | ----------------------------- | -------------------------------------------------------------- |
+| `ConfigError: expectedDigest is not a 32-byte 0x hex…` | Bad value passed to `verify`. | Pass the value returned by `da.digest()` / `publish().digest`. |
+| `NetworkError: DA encoder request failed…`             | Encoder unreachable.          | Check the encoder URL, or omit it for local-digest mode.       |
+| `NetworkError: DA encoder returned HTTP …`             | Encoder rejected the request. | Verify the encoder URL / API key, or use local mode.           |
+
+## Related
+
+[core](/packages/core) (`digestJson` matches `da.digest`) · CLI:
+[`0g da`](/cli#0g-da) · MCP: `og_da_publish` / `og_da_verify`
+([MCP guide](/mcp)). Template:
+`npx degit rajkaria/0G-ai-kit/templates/attestation-verify`.

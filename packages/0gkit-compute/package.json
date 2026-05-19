@@ -1,0 +1,78 @@
+{
+  "name": "@foundryprotocol/0gkit-compute",
+  "version": "0.1.0",
+  "description": "Neutral 0G Compute client — provider discovery, broker inference, OpenAI-compatible shim.",
+  "license": "MIT",
+  "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/0gkit-compute",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajkaria/0G-ai-kit.git",
+    "directory": "packages/0gkit-compute"
+  },
+  "bugs": {
+    "url": "https://github.com/rajkaria/0G-ai-kit/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
+    "clean": "rimraf dist",
+    "prepublishOnly": "pnpm run clean && pnpm run build"
+  },
+  "dependencies": {
+    "@foundryprotocol/0gkit-core": "workspace:*",
+    "viem": "^2.21.0"
+  },
+  "peerDependencies": {
+    "viem": "^2.21.0",
+    "@0gfoundation/0g-compute-ts-sdk": "^0.8.3",
+    "ethers": "^6.16.0"
+  },
+  "peerDependenciesMeta": {
+    "@0gfoundation/0g-compute-ts-sdk": {
+      "optional": true
+    },
+    "ethers": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@0gfoundation/0g-compute-ts-sdk": "^0.8.3",
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "dependency-cruiser": "^16.0.0",
+    "ethers": "^6.16.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "0g",
+    "0g-compute",
+    "inference",
+    "openai",
+    "toolkit"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

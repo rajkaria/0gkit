@@ -1,0 +1,95 @@
+---
+title: Templates
+---
+
+# Templates
+
+0gkit ships five starter projects so you can go from zero to a running 0G app
+in one command. Each is a minimal, correct, copy-and-go example focused on one
+surface.
+
+Grab any of them with [`degit`](https://github.com/Rich-Harris/degit) (no git
+history, just the files):
+
+```bash
+npx degit rajkaria/0G-ai-kit/templates/<name> my-app
+cd my-app && npm install
+```
+
+> The CLI also scaffolds a minimal read-only project with no template needed:
+> `npx 0g init my-app` (writes `package.json`, `.env.example`, `index.mjs`,
+> `README.md`, `.gitignore`). Use that for a bare start; use a template below
+> for a focused, surface-specific example.
+
+## The starters
+
+### `storage-app`
+
+A Node script that uploads bytes to 0G Storage and reads them back, with a
+`computeRoot` content-address step that needs no keys. Uses
+[`@foundryprotocol/0gkit-storage`](/packages/storage) +
+[`@foundryprotocol/0gkit-core`](/packages/core).
+
+```bash
+npx degit rajkaria/0G-ai-kit/templates/storage-app my-storage-app
+```
+
+Best when: persisting datasets/artifacts to 0G, or learning the
+upload/download/exists loop.
+
+### `inference-app`
+
+A Node script that runs a chat completion against a 0G compute provider and
+prints the on-chain fee receipt, including the OpenAI drop-in shim. Uses
+[`@foundryprotocol/0gkit-compute`](/packages/compute).
+
+```bash
+npx degit rajkaria/0G-ai-kit/templates/inference-app my-inference-app
+```
+
+Best when: running paid LLM inference on 0G, or migrating OpenAI code.
+
+### `attestation-verify`
+
+A pure, no-network, no-keys example that signs and verifies a TEE attestation
+envelope and prints a report. Uses
+[`@foundryprotocol/0gkit-attestation`](/packages/attestation) +
+[`@foundryprotocol/0gkit-da`](/packages/da) for the digest anchor.
+
+```bash
+npx degit rajkaria/0G-ai-kit/templates/attestation-verify my-attest-app
+```
+
+Best when: producing or checking signed eval-result attestations.
+
+### `mcp-agent`
+
+A ready-to-wire MCP setup so Claude / Cursor / Cline can drive 0G. Includes
+the client config blocks from the [MCP guide](/mcp) and an embedding example
+with [`@foundryprotocol/0gkit-mcp`](/packages/mcp).
+
+```bash
+npx degit rajkaria/0G-ai-kit/templates/mcp-agent my-agent
+```
+
+Best when: giving an LLM agent direct, glue-free 0G access.
+
+### `react-app`
+
+A Next.js client component using the
+[`@foundryprotocol/0gkit-react`](/packages/react) hooks — browser-side
+attestation verify plus a server route for the Node-only upload/inference
+path.
+
+```bash
+npx degit rajkaria/0G-ai-kit/templates/react-app my-react-app
+```
+
+Best when: building a 0G-powered React UI.
+
+## After scaffolding
+
+Every template is testnet-first (Galileo) — no real funds needed. Run
+`npx 0g doctor` to preflight, then follow the template's `README`. See
+[Getting started](/getting-started) for environment variables and
+[Troubleshooting](/troubleshooting) if a peer dependency complains.

@@ -1,0 +1,55 @@
+---
+title: "@foundryprotocol/0gkit-mcp"
+---
+
+# @foundryprotocol/0gkit-mcp
+
+> The neutral 0G MCP server — every 0G primitive as an `og_*` MCP tool for
+> Claude / Cursor / Cline / any agent runtime.
+
+## What it does
+
+Runs a stdio MCP server exposing nine `og_*` tools (storage put/get/exists,
+infer, DA publish/verify, chain faucet/balance, attest verify) that mirror the
+`0g` CLI 1:1. Every error is a `ZeroGError` with an actionable `hint`. Foundry
+tools are a separate, opt-in plugin (`ZEROG_FOUNDRY=1`), absent by default.
+
+## When to use it
+
+- You want an LLM agent to drive 0G directly — no glue code.
+- You use Claude Desktop, Cursor, Cline, or any MCP-capable runtime.
+
+## Where to use it
+
+As a subprocess of an MCP client (stdio transport), or embedded
+programmatically via `create0gMcpServer()`.
+
+## Install
+
+No install needed — MCP clients launch it with `npx`:
+
+```bash
+npx -y @foundryprotocol/0gkit-mcp
+```
+
+## API surface
+
+```ts
+import { create0gMcpServer, VERSION } from "@foundryprotocol/0gkit-mcp";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+const server = await create0gMcpServer(); // attempts opt-in Foundry load
+await server.connect(new StdioServerTransport());
+```
+
+Also exported: `TOOLS`, `makeHandlers`, `defaultDeps`, `loadFoundryPlugin`,
+and the `McpDeps` / `ZeroGMcpOptions` / `FoundryPlugin` / `ToolCallResult`
+types for embedding and testing.
+
+The complete tool list, JSON arg schemas, and copy-paste client config for
+Claude Desktop / Cursor / Cline are in the dedicated **[MCP guide](/mcp)**.
+
+## Related
+
+Wraps every primitive. Full guide: **[MCP guide](/mcp)**. Template:
+`npx degit rajkaria/0G-ai-kit/templates/mcp-agent`.

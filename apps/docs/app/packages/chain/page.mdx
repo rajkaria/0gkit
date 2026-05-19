@@ -1,0 +1,151 @@
+---
+title: "@foundryprotocol/0gkit-chain"
+---
+
+# @foundryprotocol/0gkit-chain
+
+> Neutral 0G native-chain helpers: explorer URLs, native balance,
+> `waitForReceipt`, and the testnet faucet.
+
+## What it does
+
+Four small functions over a `ZeroGClient` / `NetworkPreset`: build a
+block-explorer URL, read a native 0G balance, wait for a transaction to mine
+(returning a normalized `Receipt` with an explorer link attached), and request
+testnet funds.
+
+## When to use it
+
+- When you need a human-readable explorer link for a tx or address.
+- When you want a native-token balance in wei.
+- When you submitted a tx (via raw viem or another tool) and need to block
+  until it confirms with a uniform `Receipt`.
+- When onboarding a testnet wallet (the faucet helper).
+
+## Where to use it
+
+Node scripts and servers (pure viem + fetch — no Node-only SDK). `faucet` and
+`balance` use `fetch`, which exists in modern browsers too, but you would not
+normally call a faucet from client code.
+
+## Install
+
+```bash
+npm install @foundryprotocol/0gkit-chain @foundryprotocol/0gkit-core viem
+```
+
+## API reference
+
+### `explorerUrl(network, target)`
+
+```ts
+type ExplorerTarget = { tx: string } | { address: string };
+function explorerUrl(network: NetworkPreset, target: ExplorerTarget): string;
+```
+
+Builds `<explorer>/tx/<hash>` or `<explorer>/address/<addr>` (trailing slashes
+on the base are stripped). **Throws** `ConfigError` if the network has no
+`explorer` (e.g. `local`).
+
+### `attachExplorerUrl(receipt, network)`
+
+```ts
+function attachExplorerUrl(receipt: Receipt, network: NetworkPreset): Receipt;
+```
+
+Returns a copy of `receipt` with `explorerUrl` filled from `receipt.txHash`
+when the network has an explorer. A no-op (returns the receipt unchanged) when
+there is no explorer or no `txHash`. **Never throws.**
+
+### `balance(client, address)`
+
+```ts
+function balance(client: ZeroGClient, address: `0x${string}` | string): Promise<bigint>;
+```
+
+Native 0G balance in **wei**. **Throws** `NetworkError` if the RPC read fails
+(the hint suggests `0g doctor` / a working `rpcUrl`).
+
+### `waitForReceipt(client, txHash)`
+
+```ts
+function waitForReceipt(
+  client: ZeroGClient,
+  txHash: `0x${string}` | string
+): Promise<Receipt>;
+```
+
+Waits for the tx to mine, returns a normalized `Receipt`
+(`{ txHash, blockNumber, latencyMs, explorerUrl? }`) with the explorer link
+already attached when the network has one. **Throws** `ChainError` if it does
+not confirm.
+
+### `faucet(network, address)`
+
+```ts
+function faucet(
+  network: NetworkPreset,
+  address: `0x${string}` | string
+): Promise<Receipt>;
+```
+
+If the preset has a programmatic `faucetUrl`, POSTs `{ address }` to it and
+returns a `Receipt` (`txHash` may be `undefined` — that is fine, it is
+optional). If there is no programmatic endpoint it **throws** `ConfigError`
+whose hint points at the human faucet page (for `galileo`,
+`https://faucet.0g.ai`). A network/HTTP failure **throws** `NetworkError`.
+
+## Examples
+
+### Minimal — balance + explorer link
+
+```ts
+import { createClient } from "@foundryprotocol/0gkit-core";
+import { balance, explorerUrl } from "@foundryprotocol/0gkit-chain";
+
+const client = createClient({ network: "aristotle" });
+const wei = await balance(client, "0xYourAddress");
+console.log(`${wei} wei`);
+console.log(explorerUrl(client.network, { address: "0xYourAddress" }));
+// https://chainscan.0g.ai/address/0xYourAddress
+```
+
+### Realistic — wait for a tx, then faucet onboarding on testnet
+
+```ts
+import { createClient, getNetwork, ZeroGError } from "@foundryprotocol/0gkit-core";
+import { waitForReceipt, faucet } from "@foundryprotocol/0gkit-chain";
+
+const client = createClient({ network: "galileo" });
+
+// Block until a previously-broadcast tx confirms:
+const receipt = await waitForReceipt(client, "0xYourTxHash");
+console.log(`mined in block ${receipt.blockNumber} (${receipt.latencyMs} ms)`);
+if (receipt.explorerUrl) console.log(receipt.explorerUrl);
+
+// Onboard a fresh testnet address. Galileo has no programmatic faucet, so
+// this throws a ConfigError whose hint is the web faucet URL — handle it:
+try {
+  await faucet(getNetwork("galileo"), "0xNewAddress");
+} catch (err) {
+  if (err instanceof ZeroGError) {
+    console.log(err.hint); // "Visit https://faucet.0g.ai and request funds…"
+  } else {
+    throw err;
+  }
+}
+```
+
+## Common errors
+
+| Symptom                                          | Cause                                              | Fix                                                            |
+| ------------------------------------------------ | -------------------------------------------------- | -------------------------------------------------------------- |
+| `ConfigError: Network '…' has no block explorer` | `explorerUrl`/explorer link on `local`.            | Only call `explorerUrl` for networks with an explorer.         |
+| `NetworkError: Failed to read balance…`          | RPC unreachable.                                   | Run `0g doctor`, or pass a working `rpcUrl` to `createClient`. |
+| `ChainError: Transaction … did not confirm`      | Wrong hash, or it was sent to a different network. | Verify the hash and the network it was broadcast to.           |
+| `ConfigError: No programmatic faucet endpoint…`  | `faucet()` on `galileo` (web-only faucet).         | Visit the URL in `err.hint` (`https://faucet.0g.ai`).          |
+
+## Related
+
+[core](/packages/core) · CLI: [`0g chain`](/cli#0g-chain). Template:
+`npx degit rajkaria/0G-ai-kit/templates/storage-app`.

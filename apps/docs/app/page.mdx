@@ -1,0 +1,78 @@
+---
+title: 0gkit — the neutral 0G builder toolkit
+---
+
+# 0gkit
+
+**0gkit** is the neutral, MIT-licensed, defacto builder toolkit for the
+[0G network](https://0g.ai). It gives you small, composable TypeScript packages
+for every 0G surface — Storage, Compute (inference), Data Availability, TEE
+Attestation, and the native chain — plus a language-agnostic `0g` CLI, an MCP
+server for AI agents, and React hooks.
+
+It is **not a framework**. Every package is a thin, faithful wrapper that you
+can drop at any time: each one exposes an escape hatch back to the raw 0G SDK.
+The toolkit is a help, never a cage.
+
+## The neutrality principle
+
+0gkit is deliberately vendor-neutral. No `@foundryprotocol/0gkit-*` package
+imports `@foundryprotocol/*` (the Foundry product) or any non-`@0gkit`
+workspace package. This is enforced in CI by `pnpm boundary:check`
+(dependency-cruiser). Foundry-specific functionality ships as a **separate,
+opt-in plugin** that is absent by default — you turn it on explicitly
+(`ZEROG_FOUNDRY=1`) and it is loaded through a computed specifier so the
+neutrality boundary stays green by construction.
+
+What this means for you: 0gkit has zero hidden coupling. It is just 0G, viem,
+and (optionally) the official 0G SDKs.
+
+## The package map
+
+| Package                              | What it gives you                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `@foundryprotocol/0gkit-core`        | Network presets, a viem client factory, the `Receipt` envelope, the `ZeroGError` taxonomy. |
+| `@foundryprotocol/0gkit-chain`       | Explorer URLs, native balance, `waitForReceipt`, the testnet faucet.                       |
+| `@foundryprotocol/0gkit-storage`     | `Storage`: `upload` / `download` / `computeRoot` / `exists`.                               |
+| `@foundryprotocol/0gkit-compute`     | `Compute`: provider discovery, broker inference, an OpenAI-compatible shim.                |
+| `@foundryprotocol/0gkit-da`          | `DA`: deterministic digest, encoder publish, local integrity verify.                       |
+| `@foundryprotocol/0gkit-attestation` | Parse / sign / recover / verify / report a TEE attestation envelope (pure crypto).         |
+| `@foundryprotocol/0gkit-cli`         | The `0g` command line: `init`, `doctor`, `chain`, `storage`, `infer`, `da`, `attest`.      |
+| `@foundryprotocol/0gkit-mcp`         | Every primitive as an MCP `og_*` tool for Claude / Cursor / Cline / any agent runtime.     |
+| `@foundryprotocol/0gkit-react`       | `useUpload` / `useDownload` / `useInference` / `useAttestation`.                           |
+
+The dependency direction is always one way: `chain`, `storage`, `compute`,
+`da`, and `attestation` build on `core`; the `cli`, `mcp`, and `react` packages
+build on the primitives. `core` depends on nothing but `viem`.
+
+## When to reach for 0gkit vs the raw 0G SDKs
+
+**Reach for 0gkit when you want:**
+
+- One consistent surface across every 0G capability instead of five different
+  SDK shapes.
+- Actionable errors. Every failure is a `ZeroGError` with a `.code` and a
+  `.hint` that tells you the exact remedy (missing env var, run `0g doctor`,
+  which attestation check failed). No silent failures, ever.
+- A uniform [`Receipt`](/concepts#the-receipt-envelope) for everything that
+  touches the chain (tx hash, block, latency, explorer link).
+- A language-agnostic surface — the `0g` CLI with `--json` lets any stack
+  (Python, Go, shell) drive 0G.
+- Agent-native access — the MCP server exposes every primitive to an LLM with
+  no glue code.
+
+**Reach for the raw 0G SDK when:**
+
+- You need an SDK feature 0gkit does not wrap yet. Every package has an escape
+  hatch — `Storage#raw()`, `Compute#raw()`, or just use the underlying viem
+  client from `createClient` — so you are never blocked.
+
+## Next steps
+
+- [Getting started](/getting-started) — install and a 60-second end-to-end
+  example.
+- [Concepts](/concepts) — `Receipt`, the `ZeroGError` taxonomy, networks, the
+  client factory, the escape hatch.
+- [Packages](/packages) — one detailed page per package with full API
+  reference and runnable examples.
+- [CLI reference](/cli) · [MCP guide](/mcp) · [React guide](/react)

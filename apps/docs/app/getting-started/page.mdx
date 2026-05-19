@@ -1,0 +1,105 @@
+---
+title: Getting started
+---
+
+# Getting started
+
+## Install
+
+0gkit packages are published independently under the
+`@foundryprotocol/0gkit-*` scope at version `0.1.0`. Install only what you
+need. Every primitive depends on `@foundryprotocol/0gkit-core` and `viem`.
+
+```bash
+# Core + a primitive (storage shown):
+npm install @foundryprotocol/0gkit-core @foundryprotocol/0gkit-storage viem
+
+# Storage uploads also need the optional Node-only 0G SDK peers:
+npm install @0gfoundation/0g-storage-ts-sdk ethers
+```
+
+Prefer the CLI? You do not have to install anything:
+
+```bash
+npx 0g doctor
+```
+
+Requirements: Node `>=20.10`. `viem` `^2.21` is a peer dependency of every
+primitive. `@0gfoundation/0g-storage-ts-sdk`, `@0gfoundation/0g-compute-ts-sdk`,
+and `ethers` are **optional** peers — install them only for live storage
+uploads / compute inference. (See [Troubleshooting](/troubleshooting) for the
+exact peer matrix.)
+
+## A 60-second end-to-end example
+
+Upload bytes to 0G Storage and read them back. This is a Node script — storage
+uploads need a funded signer and the Node-only SDK peers.
+
+```ts
+import { Storage } from "@foundryprotocol/0gkit-storage";
+
+const storage = new Storage({
+  network: "galileo", // testnet — no real funds needed
+  privateKey: process.env.ZEROG_PRIVATE_KEY,
+});
+
+// upload returns { root, tx, raw }
+const { root, tx } = await storage.upload(new TextEncoder().encode("hello 0G"));
+console.log("stored at root:", root);
+console.log("funding tx:", tx.txHash, `(${tx.latencyMs} ms)`);
+
+// download by root → Uint8Array
+const bytes = await storage.download(root);
+console.log("read back:", new TextDecoder().decode(bytes)); // "hello 0G"
+```
+
+Or do the same thing without writing any code, using the CLI:
+
+```bash
+echo "hello 0G" > hello.txt
+export ZEROG_NETWORK=galileo
+export ZEROG_PRIVATE_KEY=0x...                       # funded testnet key
+ROOT=$(npx 0g storage put hello.txt --json | jq -r .root)
+npx 0g storage get "$ROOT" out.txt
+cat out.txt
+```
+
+## Environment & keys
+
+Every entrypoint reads the same environment variables. Flags always override
+env; env overrides the preset default.
+
+| Variable            | Purpose                                                        |
+| ------------------- | -------------------------------------------------------------- |
+| `ZEROG_NETWORK`     | `galileo` (default), `aristotle`, or `local`.                  |
+| `ZEROG_RPC_URL`     | Override the preset JSON-RPC URL.                              |
+| `ZEROG_PRIVATE_KEY` | Signer key — funds storage upload transactions.                |
+| `ZEROG_BROKER_KEY`  | Funded 0G compute broker key for inference.                    |
+| `ZEROG_PROVIDER`    | Default 0G inference provider address.                         |
+| `ZEROG_FOUNDRY`     | `1` to enable the opt-in Foundry plugin (MCP). Off by default. |
+
+> Keys fund real transactions. Use a **testnet** key on `galileo` while
+> developing — you never need real funds there. See
+> [Troubleshooting → key handling](/troubleshooting#key-handling--safety).
+
+## Supported networks
+
+These are the network presets from `@foundryprotocol/0gkit-core`
+(`networks.ts`). `getNetwork(name)` returns the `NetworkPreset`.
+
+| Name        | Chain ID | RPC                            | Explorer                          | Testnet | Notes                                                         |
+| ----------- | -------- | ------------------------------ | --------------------------------- | ------- | ------------------------------------------------------------- |
+| `aristotle` | `16661`  | `https://evmrpc.0g.ai`         | `https://chainscan.0g.ai`         | no      | Mainnet. Chain id + RPC + explorer verified.                  |
+| `galileo`   | `16602`  | `https://evmrpc-testnet.0g.ai` | `https://chainscan-galileo.0g.ai` | yes     | Testnet. Web faucet: `https://faucet.0g.ai`. **The default.** |
+| `local`     | `31337`  | `http://127.0.0.1:8545`        | _(none)_                          | yes     | Local Anvil defaults. No explorer, no faucet.                 |
+
+`aristotle` and `local` are fully resolved. `galileo` is the default
+everywhere (testnet-first). A preset with no `rpcUrl`/`chainId` makes
+`createClient` throw a `ConfigError` — pass `{ rpcUrl, chainId }` explicitly to
+target a custom network.
+
+## Where to go next
+
+- [Concepts](/concepts) — the shared `Receipt`, the error taxonomy, the client
+  factory, the escape hatch.
+- [Packages](/packages) — full API reference and examples for all 9 packages.

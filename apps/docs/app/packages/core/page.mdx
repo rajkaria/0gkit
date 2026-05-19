@@ -1,0 +1,195 @@
+---
+title: "@foundryprotocol/0gkit-core"
+---
+
+# @foundryprotocol/0gkit-core
+
+> The neutral 0G foundation: network presets, a viem client factory, the
+> `Receipt` envelope, the `ZeroGError` taxonomy, and canonical JSON.
+
+## What it does
+
+`core` is the shared base every other primitive builds on. It has zero
+runtime dependencies beyond `viem`. It owns four things: the network presets
+(`aristotle`, `galileo`, `local`), the `createClient` viem factory, the
+uniform `Receipt` shape, and the `ZeroGError` error taxonomy. It also provides
+the deterministic JSON digest used by DA and Attestation.
+
+## When to use it
+
+- Always — it is a transitive dependency of every primitive. You use it
+  directly when you need a viem client, want to read a network preset, or want
+  to catch `ZeroGError`.
+- When you want raw viem access to 0G: `createClient(...).public` is a full
+  viem `PublicClient`.
+
+## Where to use it
+
+Node scripts, servers, edge runtimes, the browser — it is pure TypeScript +
+viem with no Node-only dependency. (The Node-only 0G SDK peers live in
+`storage`/`compute`, not here.)
+
+## Install
+
+```bash
+npm install @foundryprotocol/0gkit-core viem
+```
+
+## API reference
+
+### `networks` / `aristotle` / `galileo` / `local`
+
+```ts
+const aristotle: NetworkPreset; // mainnet, chainId 16661
+const galileo: NetworkPreset; // testnet, chainId 16602 (the default everywhere)
+const local: NetworkPreset; // local Anvil, chainId 31337
+const networks: Record<NetworkName, NetworkPreset>;
+```
+
+`NetworkName` is `"aristotle" | "galileo" | "local"`. See
+[Getting started → networks](/getting-started#supported-networks) for the
+resolved field values.
+
+### `getNetwork(name)`
+
+```ts
+function getNetwork(name: NetworkName): NetworkPreset;
+```
+
+Returns the preset for `name`. **Throws** `ConfigError` if `name` is not a
+known network (the hint lists the valid names).
+
+### `type NetworkPreset`
+
+```ts
+interface NetworkPreset {
+  readonly name: NetworkName;
+  readonly chainId?: number; // undefined ⇒ createClient throws ConfigError
+  readonly rpcUrl?: string; // undefined ⇒ createClient throws ConfigError
+  readonly explorer?: string; // undefined ⇒ explorerUrl() throws
+  readonly faucetUrl?: string; // programmatic faucet endpoint (testnet)
+  readonly faucetWebUrl?: string; // human faucet page, used in faucet()'s hint
+  readonly testnet: boolean;
+}
+```
+
+### `createClient(options)`
+
+```ts
+interface CreateClientOptions {
+  network: NetworkName;
+  rpcUrl?: string; // overrides the preset RPC (required if preset has none)
+  chainId?: number; // overrides the preset chain id
+  privateKey?: string; // leading 0x optional; when set, a wallet is returned
+}
+interface ZeroGClient {
+  network: NetworkPreset;
+  public: PublicClient; // viem
+  wallet?: WalletClient; // viem, only if privateKey was passed
+}
+function createClient(opts: CreateClientOptions): ZeroGClient;
+```
+
+**Throws** `ConfigError` when the preset has no `rpcUrl`/`chainId` and none was
+passed, or when `privateKey` is not a valid 32-byte hex string.
+
+### `buildChain(preset, rpcUrl?, chainId?)`
+
+```ts
+function buildChain(preset: NetworkPreset, rpcUrl?: string, chainId?: number): Chain; // a viem Chain
+```
+
+The lower-level helper `createClient` uses internally. **Throws**
+`ConfigError` if neither the preset nor the override supplies a `rpcUrl` /
+`chainId`.
+
+### `type Receipt`
+
+The uniform result envelope. See
+[Concepts → Receipt](/concepts#the-receipt-envelope) for the full shape and
+why `txHash` is a `0x`-hex-or-`string` union.
+
+### Errors: `ZeroGError`, `ConfigError`, `NetworkError`, `ChainError`, `AttestationError`
+
+```ts
+type ZeroGErrorCode = "CONFIG" | "NETWORK" | "CHAIN" | "ATTESTATION";
+
+class ZeroGError extends Error {
+  readonly code: ZeroGErrorCode;
+  readonly hint: string;
+  constructor(code: ZeroGErrorCode, message: string, hint: string);
+}
+class ConfigError extends ZeroGError {} // code "CONFIG"
+class NetworkError extends ZeroGError {} // code "NETWORK"
+class ChainError extends ZeroGError {} // code "CHAIN"
+class AttestationError extends ZeroGError {} // code "ATTESTATION"
+```
+
+Full taxonomy and "thrown when" table: [Concepts → the ZeroGError
+taxonomy](/concepts#the-zerogerror-taxonomy).
+
+### `canonicalJsonStringify(value)` / `digestJson(value)`
+
+```ts
+function canonicalJsonStringify(value: unknown): string; // deterministic JSON
+function digestJson(value: unknown): Hex; // keccak256 of the canonical JSON
+```
+
+`digestJson` is the cross-package, on-chain digest anchor used by DA and
+Attestation.
+
+## Examples
+
+### Minimal — resolve a network and read the chain id
+
+```ts
+import { createClient, getNetwork } from "@foundryprotocol/0gkit-core";
+
+const preset = getNetwork("aristotle");
+console.log(preset.chainId); // 16661
+
+const client = createClient({ network: "aristotle" });
+console.log(client.public.chain?.id); // 16661
+```
+
+### Realistic — a signing client + actionable error handling
+
+```ts
+import { createClient, ZeroGError, ConfigError } from "@foundryprotocol/0gkit-core";
+
+try {
+  const client = createClient({
+    network: "galileo",
+    privateKey: process.env.ZEROG_PRIVATE_KEY, // adds client.wallet
+  });
+
+  const address = client.wallet?.account?.address;
+  const block = await client.public.getBlockNumber(); // raw viem escape hatch
+  console.log(`signer ${address} — head block ${block}`);
+} catch (err) {
+  if (err instanceof ConfigError) {
+    // e.g. malformed private key, or galileo preset edge case
+    console.error(`config problem: ${err.message}\n→ ${err.hint}`);
+  } else if (err instanceof ZeroGError) {
+    console.error(`[${err.code}] ${err.message}\n→ ${err.hint}`);
+  } else {
+    throw err;
+  }
+}
+```
+
+## Common errors
+
+| Symptom                                                   | Cause                                       | Fix                                                                                  |
+| --------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `ConfigError: Unknown network '…'`                        | Bad `NetworkName` passed to `getNetwork`.   | Use `aristotle`, `galileo`, or `local`.                                              |
+| `ConfigError: Network '…' has no rpcUrl/chainId`          | An unresolved preset (or a custom network). | Pass `{ rpcUrl, chainId }` to `createClient`.                                        |
+| `ConfigError: Invalid privateKey: must be a 32-byte hex…` | `privateKey` is not 64 hex chars.           | Pass a 64-char hex key (with or without `0x`), e.g. the output of `cast wallet new`. |
+
+## Related
+
+Built on by every package. Start with [Getting
+started](/getting-started), then explore [chain](/packages/chain) /
+[storage](/packages/storage) / [compute](/packages/compute) /
+[da](/packages/da) / [attestation](/packages/attestation). Template:
+`npx degit rajkaria/0G-ai-kit/templates/storage-app`.
