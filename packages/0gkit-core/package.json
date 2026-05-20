@@ -33,8 +33,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
-    "clean": "rimraf dist",
-    "prepublishOnly": "pnpm run clean && pnpm run build"
+    "clean": "rimraf dist"
   },
   "dependencies": {
     "viem": "^2.21.0"

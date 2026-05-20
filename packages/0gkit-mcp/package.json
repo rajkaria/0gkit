@@ -37,8 +37,7 @@
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
-    "clean": "rimraf dist",
-    "prepublishOnly": "pnpm run clean && pnpm run build"
+    "clean": "rimraf dist"
   },
   "dependencies": {
     "@foundryprotocol/0gkit-attestation": "workspace:*",

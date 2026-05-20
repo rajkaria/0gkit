@@ -40,10 +40,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # The DTS chain must build before publish/version.
-      - run: pnpm --filter @foundryprotocol/0gkit-core build
-
-      - run: pnpm --filter "@foundryprotocol/0gkit-*" build
+      # Build via turbo so every package's DTS step runs after its workspace
+      # dependencies have produced dist/*.d.ts. The per-package
+      # `prepublishOnly` hook has been removed precisely because parallel
+      # `clean && build` invocations during `changeset publish` race on
+      # cross-package `.d.ts` reads — the build below is the authoritative
+      # pre-publish build, and `changeset publish` then just packs the
+      # current dist for each package.
+      - run: pnpm build
 
       - id: npmtoken
         run: echo "has=${{ secrets.NPM_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
