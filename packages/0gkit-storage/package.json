@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-storage",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Neutral 0G Storage client — upload/download/computeRoot/exists over @0gfoundation/0g-storage-ts-sdk.",
   "license": "MIT",
   "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/0gkit-storage",
