@@ -1,20 +1,26 @@
 {
-  "name": "@foundryprotocol/0gkit-cli",
-  "version": "0.1.1",
-  "description": "The neutral 0G command line — init, doctor, chain, storage, infer, da, attest. Foundry is a separate opt-in plugin.",
+  "name": "@foundryprotocol/0gkit-devnet",
+  "version": "0.1.0",
+  "description": "Local chain + storage + compute + DA stack for 0G app development (`0g dev`).",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/0gkit-cli",
+  "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/0gkit-devnet",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0G-ai-kit.git",
-    "directory": "packages/0gkit-cli"
+    "directory": "packages/0gkit-devnet"
   },
   "bugs": {
     "url": "https://github.com/rajkaria/0G-ai-kit/issues"
   },
   "type": "module",
-  "bin": {
-    "0g": "./dist/cli.js"
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "files": [
     "dist",
@@ -31,14 +37,8 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@foundryprotocol/0gkit-attestation": "workspace:*",
-    "@foundryprotocol/0gkit-chain": "workspace:*",
-    "@foundryprotocol/0gkit-compute": "workspace:*",
     "@foundryprotocol/0gkit-core": "workspace:*",
-    "@foundryprotocol/0gkit-da": "workspace:*",
-    "@foundryprotocol/0gkit-devnet": "workspace:*",
-    "@foundryprotocol/0gkit-storage": "workspace:*",
-    "commander": "^14.0.0",
+    "execa": "^9.0.0",
     "viem": "^2.21.0"
   },
   "devDependencies": {
@@ -52,9 +52,11 @@
   },
   "keywords": [
     "0g",
-    "0g-network",
-    "cli",
-    "toolkit"
+    "0gkit",
+    "devnet",
+    "local",
+    "anvil",
+    "mock"
   ],
   "publishConfig": {
     "access": "public"

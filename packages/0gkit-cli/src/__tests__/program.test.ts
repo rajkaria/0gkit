@@ -19,6 +19,13 @@ function fakeDeps(over: Partial<ProgramDeps> = {}): ProgramDeps {
       verifyEnvelope: vi.fn(),
       reportEnvelope: vi.fn(),
     },
+    devnet: {
+      startDevnet: vi.fn(),
+      stopDevnet: vi.fn(),
+      isRunning: vi.fn(async () => false),
+      readState: vi.fn(() => null),
+      clearState: vi.fn(),
+    },
     loadFoundry: vi.fn(async () => null),
     fs: {
       readFile: vi.fn(),
@@ -44,7 +51,7 @@ describe("buildProgram", () => {
     const program = buildProgram(fakeDeps());
     const names = program.commands.map((c) => c.name()).sort();
     expect(names).toEqual(
-      ["attest", "chain", "da", "doctor", "infer", "init", "storage"].sort()
+      ["attest", "chain", "da", "dev", "doctor", "infer", "init", "storage"].sort()
     );
   });
 

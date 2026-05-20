@@ -16,6 +16,13 @@ import {
   verifyEnvelope,
   reportEnvelope,
 } from "@foundryprotocol/0gkit-attestation";
+import {
+  startDevnet,
+  stopDevnet,
+  isRunning,
+  readState,
+  clearState,
+} from "@foundryprotocol/0gkit-devnet";
 import { buildProgram, type ProgramDeps } from "./program.js";
 import { loadFoundry } from "./foundry-loader.js";
 
@@ -37,6 +44,7 @@ const deps: ProgramDeps = {
   makeCompute: (cfg) => new Compute(cfg),
   makeDA: (cfg) => new DA(cfg),
   attest: { parseEnvelope, verifyEnvelope, reportEnvelope },
+  devnet: { startDevnet, stopDevnet, isRunning, readState, clearState },
   loadFoundry,
   fs: {
     readFile: (p) => readFile(p).then((b) => new Uint8Array(b)),

@@ -16,10 +16,18 @@ import {
   verifyEnvelope,
   reportEnvelope,
 } from "@foundryprotocol/0gkit-attestation";
+import type {
+  startDevnet,
+  stopDevnet,
+  isRunning,
+  readState,
+  clearState,
+} from "@foundryprotocol/0gkit-devnet";
 import { createOutput, type CommandResult } from "./output.js";
 import { resolveContext, type CliContext, type GlobalFlags } from "./context.js";
 import type { FoundryPlugin } from "./foundry-loader.js";
 import { registerChain } from "./commands/chain.js";
+import { registerDev } from "./commands/dev.js";
 import { registerDoctor } from "./commands/doctor.js";
 import { registerInit } from "./commands/init.js";
 import { registerStorage } from "./commands/storage.js";
@@ -53,6 +61,13 @@ export interface ProgramDeps {
     parseEnvelope: typeof parseEnvelope;
     verifyEnvelope: typeof verifyEnvelope;
     reportEnvelope: typeof reportEnvelope;
+  };
+  devnet: {
+    startDevnet: typeof startDevnet;
+    stopDevnet: typeof stopDevnet;
+    isRunning: typeof isRunning;
+    readState: typeof readState;
+    clearState: typeof clearState;
   };
   loadFoundry: () => Promise<FoundryPlugin | null>;
   fs: FsLike;
@@ -119,6 +134,7 @@ export function buildProgram(deps: ProgramDeps): Command {
     .exitOverride();
 
   registerChain(program, deps);
+  registerDev(program, deps);
   registerDoctor(program, deps);
   registerInit(program, deps);
   registerStorage(program, deps);
