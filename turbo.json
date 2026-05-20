@@ -22,6 +22,14 @@
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },
+    "@foundryprotocol/0gkit-cli#test": {
+      "dependsOn": ["^build", "@foundryprotocol/0gkit-chain#test"],
+      "outputs": ["coverage/**"]
+    },
+    "@foundryprotocol/0gkit-mcp#test": {
+      "dependsOn": ["^build", "@foundryprotocol/0gkit-chain#test"],
+      "outputs": ["coverage/**"]
+    },
     "clean": {
       "cache": false
     }
