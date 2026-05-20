@@ -17,6 +17,23 @@ framework or protocol. Install only what you need.
 ## Quick start
 
 ```bash
+npm create 0g-app@latest my-app
+cd my-app
+0g dev          # in another terminal — starts the local devnet
+npm run dev
+```
+
+That is the whole thing. `create-0g-app` clones a template, writes a
+network-aware `.env.example`, runs install, and `git init`s — so the only
+thing left for you is `cd` + run.
+
+Five templates ship today: `storage-app`, `inference-app`,
+`attestation-verify`, `mcp-agent`, `react-app`. Pick one with
+`--template <name>` or interactively at the prompt.
+
+### Or install primitives directly
+
+```bash
 # One primitive at a time — install only what you use
 npm i @foundryprotocol/0gkit-storage   # upload / download / Merkle root
 npm i @foundryprotocol/0gkit-compute   # provider discovery + inference

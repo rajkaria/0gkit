@@ -4,7 +4,23 @@ title: Getting started
 
 # Getting started
 
-## Install
+## One command: `create-0g-app`
+
+The fastest path from zero to a running 0G app — pick a template, get a
+runnable project with `.env.example`, `git init`, and dependencies installed.
+
+```bash
+npm create 0g-app@latest my-app
+cd my-app
+0g dev          # in another terminal — starts the local devnet
+npm run dev
+```
+
+Works with `npm`, `pnpm`, `yarn`, and `bun`. See the
+[`create-0g-app` reference](/getting-started/create-0g-app) for flags,
+template descriptions, and troubleshooting.
+
+## Install the packages directly
 
 0gkit packages are published independently under the
 `@foundryprotocol/0gkit-*` scope at version `0.1.0`. Install only what you

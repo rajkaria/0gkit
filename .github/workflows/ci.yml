@@ -51,3 +51,39 @@ jobs:
       - run: pnpm --filter @foundryprotocol/0gkit-playground exec playwright install --with-deps chromium
 
       - run: pnpm --filter @foundryprotocol/0gkit-playground exec playwright test
+
+  create-0g-app-e2e:
+    name: create-0g-app · scaffolds a project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter create-0g-app build
+
+      # Smoke the binary: should write package.json + .env.example into a
+      # fresh tmpdir, exit 0, with --no-install / --no-git for speed. Uses
+      # OGKIT_TEMPLATE_REF=main so we test against the current branch, not
+      # the (not-yet-tagged) v0.2.x release ref.
+      - name: Scaffold storage-app (local network, no install)
+        env:
+          OGKIT_TEMPLATE_REF: main
+        run: |
+          set -euo pipefail
+          WORK=$(mktemp -d)
+          cd "$WORK"
+          node "$GITHUB_WORKSPACE/packages/create-0g-app/dist/bin.js" demo \
+            --template storage-app --network local --no-install --no-git
+          test -f demo/package.json
+          test -f demo/.env.example
+          grep -q '^NETWORK=local$' demo/.env.example

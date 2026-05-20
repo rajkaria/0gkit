@@ -1,0 +1,116 @@
+---
+title: create-0g-app
+---
+
+# `create-0g-app`
+
+The fastest way to start a 0G project — one command, a runnable app, no
+manual setup. Pairs with [`0g dev`](/cli) for zero-faucet local development.
+
+```bash
+npm create 0g-app@latest my-app
+cd my-app
+0g dev          # in another terminal — starts the local devnet
+npm run dev     # runs the scaffolded app
+```
+
+Works with any package manager (`npm`, `pnpm`, `yarn`, `bun`) — `npm create
+0g-app` will install dependencies with whichever one you invoked it through.
+
+## What it does
+
+`create-0g-app` is a thin scaffolder:
+
+1. Downloads the chosen [template](/templates) (degit a subtree of
+   [`rajkaria/0G-ai-kit/templates/<name>`](https://github.com/rajkaria/0G-ai-kit/tree/main/templates))
+   into your new project directory.
+2. Writes a network-aware `.env.example` — `local` ports for `0g dev`, or
+   the public Galileo testnet RPC.
+3. Installs dependencies with your package manager (skippable with
+   `--no-install`).
+4. Runs `git init` and creates a single bootstrap commit (skippable with
+   `--no-git`).
+5. Prints a "next step" banner telling you exactly what to run.
+
+The whole flow is interactive by default. Pass `--template` and a name to skip
+the prompts.
+
+## Templates
+
+| Name                 | Use case                                                            |
+| -------------------- | ------------------------------------------------------------------- |
+| `storage-app`        | Upload + download a file, verify the Merkle root.                   |
+| `inference-app`      | OpenAI-shaped chat against 0G Compute.                              |
+| `attestation-verify` | Parse + verify a TEE attestation report (pure crypto, no network).  |
+| `mcp-agent`          | Expose every 0G primitive as MCP tools for Claude/Cursor/Cline/etc. |
+| `react-app`          | Next.js App Router app using `@foundryprotocol/0gkit-react` hooks.  |
+
+See [Templates](/templates) for descriptions, what each one uses, and how the
+file layout is organised.
+
+## Flags
+
+| Flag                     | Default           | Description                                 |
+| ------------------------ | ----------------- | ------------------------------------------- |
+| `-t, --template <name>`  | _(prompt)_        | One of the five templates above.            |
+| `-n, --network <name>`   | `local`           | `local` (pairs with `0g dev`) or `galileo`. |
+| `--package-manager <pm>` | _(auto-detected)_ | `pnpm` / `npm` / `yarn` / `bun`.            |
+| `--no-install`           | install enabled   | Skip dependency install.                    |
+| `--no-git`               | git init enabled  | Skip git init.                              |
+
+`--network local` writes a `.env.example` that points at the ports
+[`0g dev`](/cli) exposes (`8545` for the chain, `5678` for storage, etc.).
+`--network galileo` points the same keys at the public testnet endpoints —
+you'll need a [funded Galileo key](https://faucet.0g.ai).
+
+## Project names
+
+`create-0g-app` validates the project name and refuses anything that could
+escape the current directory or that npm would balk at:
+
+- ASCII letters, digits, `_` and `-` only.
+- Max 64 characters.
+- No `.`, `..`, slashes, spaces, or path-escape sequences.
+
+If the target directory already exists and is non-empty, the command exits
+with an error and writes nothing.
+
+## What gets generated
+
+For `--template storage-app --network local --no-git`:
+
+```
+my-app/
+├── package.json        # template-provided
+├── tsconfig.json       # template-provided
+├── src/
+│   └── index.ts        # template-provided
+├── README.md           # template-provided
+├── .gitignore          # template-provided
+└── .env.example        # WRITTEN by create-0g-app, points at 0g dev ports
+```
+
+After `npm install` you have a runnable script. `npm run dev` (or whatever
+the template defines) starts it.
+
+## Defensive alias
+
+We also publish [`create-0gkit-app`](https://www.npmjs.com/package/create-0gkit-app)
+— a 3-line shim that prints an error and exits. The canonical name is
+`create-0g-app`; the alias just protects users who mistype.
+
+## Troubleshooting
+
+**`Directory ./my-app is not empty`** — pick a different name, or remove the
+existing folder.
+
+**`Template fetch failed`** — usually a network or GitHub-API issue. The
+templates are pulled from the public `rajkaria/0G-ai-kit` repository; check
+your connection and retry. Behind a corporate proxy, set `HTTPS_PROXY`.
+
+**The dev command didn't work** — make sure you `cd` into the new directory
+first. The banner reminds you, but it's the most common first-day mistake.
+
+**Wrong package manager** — `create-0g-app` detects the package manager from
+`npm_config_user_agent`. Force it with `--package-manager pnpm` (or `npm` /
+`yarn` / `bun`).

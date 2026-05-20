@@ -1,0 +1,62 @@
+{
+  "name": "create-0g-app",
+  "version": "0.1.0",
+  "description": "Scaffold a 0G app in seconds. `npm create 0g-app@latest`.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "create-0g-app": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "coverage": "vitest run --coverage",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "commander": "^14.0.0",
+    "execa": "^9.0.0",
+    "giget": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "license": "MIT",
+  "keywords": [
+    "0g",
+    "0gkit",
+    "scaffold",
+    "create",
+    "initializer"
+  ],
+  "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/create-0g-app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajkaria/0G-ai-kit.git",
+    "directory": "packages/create-0g-app"
+  },
+  "bugs": {
+    "url": "https://github.com/rajkaria/0G-ai-kit/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "create-0gkit-app",
+  "version": "0.1.0",
+  "description": "Defensive name registration — use `npm create 0g-app` instead.",
+  "type": "module",
+  "bin": {
+    "create-0gkit-app": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/create-0gkit-app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajkaria/0G-ai-kit.git",
+    "directory": "packages/create-0gkit-app"
+  },
+  "bugs": {
+    "url": "https://github.com/rajkaria/0G-ai-kit/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
