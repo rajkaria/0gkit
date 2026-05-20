@@ -8,7 +8,9 @@ OpenAI-compatible shim. Built on @foundryprotocol/0gkit-core. The
 
 ```bash
 npm install @foundryprotocol/0gkit-compute @foundryprotocol/0gkit-core viem
-npm install @0gfoundation/0g-compute-ts-sdk ethers
+npm install @0gfoundation/0g-compute-ts-sdk ethers@6.13.1
+# ethers is pinned to 6.13.1 by @0gfoundation/0g-storage-ts-sdk; using the same
+# version here keeps the two SDKs installable side by side.
 ```
 
 ## Use

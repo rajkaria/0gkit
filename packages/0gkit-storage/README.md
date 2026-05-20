@@ -8,7 +8,7 @@ peers (install them for uploads).
 
 ```bash
 npm install @foundryprotocol/0gkit-storage @foundryprotocol/0gkit-core viem
-npm install @0gfoundation/0g-storage-ts-sdk ethers # for uploads
+npm install @0gfoundation/0g-storage-ts-sdk ethers@6.13.1 # for uploads (the upstream SDK pins ethers to 6.13.1)
 ```
 
 ## Use
