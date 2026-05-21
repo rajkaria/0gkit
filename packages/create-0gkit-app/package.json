@@ -1,6 +1,6 @@
 {
   "name": "create-0gkit-app",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Scaffold a 0G app in seconds. `npm create 0gkit-app@latest`.",
   "type": "module",
   "bin": {

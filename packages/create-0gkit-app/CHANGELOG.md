@@ -1,5 +1,13 @@
 # create-0gkit-app
 
+## 0.3.0
+
+### Minor Changes
+
+- 94e7fd6: Make `create-0gkit-app` the working npm-create front door. It now bundles the
+  scaffolder implementation, exposes the `create-0gkit-app` binary, and replaces
+  the old defensive shim that redirected to the unavailable `create-0g-app` name.
+
 ## 0.2.0
 
 ### Minor Changes
