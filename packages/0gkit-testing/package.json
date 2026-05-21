@@ -1,13 +1,13 @@
 {
-  "name": "@foundryprotocol/0gkit-attestation",
-  "version": "0.2.0",
-  "description": "Neutral 0G TEE attestation — parse, sign, recover, verify, report. Pure crypto on @foundryprotocol/0gkit-core + viem.",
+  "name": "@foundryprotocol/0gkit-testing",
+  "version": "0.0.0",
+  "description": "Test toolkit for 0gkit: deterministic mock providers for storage/compute/DA, signed fixture attestations + receipts, an HD-derived testWallet, a setupLocalDevnet() vitest helper that wraps `0g dev`, and four vitest matchers (toBeConfirmedOn0G, toHaveRootMatching, toBeValidAttestation, toBeZeroGError).",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-attestation",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-testing",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",
-    "directory": "packages/0gkit-attestation"
+    "directory": "packages/0gkit-testing"
   },
   "bugs": {
     "url": "https://github.com/rajkaria/0gkit/issues"
@@ -20,6 +20,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./matchers": {
+      "types": "./dist/matchers.d.ts",
+      "import": "./dist/matchers.js"
+    },
+    "./mocks": {
+      "types": "./dist/mocks.d.ts",
+      "import": "./dist/mocks.js"
+    },
+    "./fixtures": {
+      "types": "./dist/fixtures.d.ts",
+      "import": "./dist/fixtures.js"
     }
   },
   "files": [
@@ -32,7 +44,6 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "coverage": "vitest run --coverage",
     "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
     "clean": "rimraf dist"
   },
@@ -41,11 +52,16 @@
     "viem": "^2.21.0"
   },
   "peerDependencies": {
-    "viem": "^2.21.0"
+    "viem": "^2.21.0",
+    "vitest": "^2.1.8"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@foundryprotocol/0gkit-testing": "workspace:*",
-    "@foundryprotocol/0gkit-wallet": "workspace:*",
+    "@foundryprotocol/0gkit-devnet": "workspace:*",
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "^2.1.8",
     "dependency-cruiser": "^16.0.0",
@@ -56,9 +72,11 @@
   },
   "keywords": [
     "0g",
-    "tee",
-    "attestation",
-    "eip191",
+    "0g-network",
+    "testing",
+    "vitest",
+    "mocks",
+    "fixtures",
     "toolkit"
   ],
   "publishConfig": {

@@ -47,6 +47,7 @@
     "viem": "^2.21.0"
   },
   "devDependencies": {
+    "@foundryprotocol/0gkit-testing": "workspace:*",
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "^2.1.8",
     "dependency-cruiser": "^16.0.0",

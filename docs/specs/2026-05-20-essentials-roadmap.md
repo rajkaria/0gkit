@@ -290,7 +290,9 @@ const events = await c.events.Transfer({ fromBlock: 0n });
 
 ---
 
-### SP5 — `@foundryprotocol/0gkit-testing`
+### SP5 — `@foundryprotocol/0gkit-testing` ✅ SHIPPED
+
+**Status:** shipped 2026-05-21. Implementation plan: `docs/plans/2026-05-21-sp5-0gkit-testing.md`. Released on `main`.
 
 **Goal:** Mock providers, fixture receipts, deterministic test environments, and vitest matchers for 0G semantics.
 

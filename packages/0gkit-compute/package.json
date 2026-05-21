@@ -51,10 +51,14 @@
     },
     "ethers": {
       "optional": true
+    },
+    "@foundryprotocol/0gkit-testing": {
+      "optional": true
     }
   },
   "devDependencies": {
     "@0gfoundation/0g-compute-ts-sdk": "^0.8.3",
+    "@foundryprotocol/0gkit-testing": "workspace:*",
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "^2.1.8",
     "dependency-cruiser": "^16.0.0",

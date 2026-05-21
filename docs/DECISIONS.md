@@ -174,3 +174,36 @@ the ~80 lines we actually need (`const out = \`...\` + JSON.stringify(abi)`)
 is a poor trade. Template strings are also byte-deterministic
 (snapshot-testable) and editable. If we ever need AST-level rewriting (rare),
 we'll add `ts-morph` then.
+
+---
+
+## D17 — `testWallet` re-uses anvil's dev mnemonic
+
+**Date:** 2026-05-21 · **SP:** SP5
+
+`testWallet({ index: 0 })` produces a Signer derived from the same
+`"test test test test test test test test test test test junk"` mnemonic that
+`0g dev`'s anvil pre-funds. So a test that hits the local devnet with
+`testWallet({ index: 0 })` immediately has gas, no faucet round-trip required.
+The mnemonic is the universal "anvil dev seed" — every Ethereum developer
+recognizes it.
+
+---
+
+## D18 — Matchers live under `/matchers` sub-path and self-register on import
+
+**Date:** 2026-05-21 · **SP:** SP5
+
+`import "@foundryprotocol/0gkit-testing/matchers"` is a side-effect import —
+each matcher file calls `expect.extend(...)` at top level. The sub-path means
+users who don't need matchers (or only want the mocks / fixtures) don't pay
+the dependency cost. Mirrors how `chai-as-promised` and
+`@testing-library/jest-dom` work — the pattern is industry-standard.
+
+The matcher for `toBeValidAttestation` lazy-imports
+`@foundryprotocol/0gkit-attestation` via a computed-specifier dynamic import
+(`["@foundryprotocol", "0gkit-attestation"].join("/")`), matching the
+foundry-plugin loader pattern from D4. This keeps the testing package free of
+a static dep on attestation — important because the migrated test in
+`0gkit-attestation` depends on `0gkit-testing`, so a static edge in either
+direction would create a build cycle.
