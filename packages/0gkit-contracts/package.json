@@ -1,20 +1,30 @@
 {
-  "name": "@foundryprotocol/0gkit-cli",
-  "version": "0.2.0",
-  "description": "The neutral 0G command line — init, doctor, chain, storage, infer, da, attest. Foundry is a separate opt-in plugin.",
+  "name": "@foundryprotocol/0gkit-contracts",
+  "version": "0.0.0",
+  "description": "Typed contract clients for 0G. Five standard 0G contracts pre-bundled (ERC-20, ERC-721, Multicall3, provider registry, attestation verifier) plus `forge build` → typed TS codegen. Wagmi-style .read.method() / .write.method() / .events.Event(); no hand-written ABIs.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-cli",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-contracts",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",
-    "directory": "packages/0gkit-cli"
+    "directory": "packages/0gkit-contracts"
   },
   "bugs": {
     "url": "https://github.com/rajkaria/0gkit/issues"
   },
   "type": "module",
-  "bin": {
-    "0g": "./dist/cli.js"
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./codegen": {
+      "types": "./dist/codegen.d.ts",
+      "import": "./dist/codegen.js"
+    }
   },
   "files": [
     "dist",
@@ -26,20 +36,14 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "coverage": "vitest run --coverage",
     "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@foundryprotocol/0gkit-attestation": "workspace:*",
-    "@foundryprotocol/0gkit-chain": "workspace:*",
-    "@foundryprotocol/0gkit-compute": "workspace:*",
-    "@foundryprotocol/0gkit-contracts": "workspace:*",
     "@foundryprotocol/0gkit-core": "workspace:*",
-    "@foundryprotocol/0gkit-da": "workspace:*",
-    "@foundryprotocol/0gkit-devnet": "workspace:*",
-    "@foundryprotocol/0gkit-storage": "workspace:*",
-    "commander": "^14.0.0",
+    "viem": "^2.21.0"
+  },
+  "peerDependencies": {
     "viem": "^2.21.0"
   },
   "devDependencies": {
@@ -54,7 +58,11 @@
   "keywords": [
     "0g",
     "0g-network",
-    "cli",
+    "viem",
+    "contracts",
+    "abi",
+    "codegen",
+    "wagmi-style",
     "toolkit"
   ],
   "publishConfig": {

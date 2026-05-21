@@ -51,7 +51,17 @@ describe("buildProgram", () => {
     const program = buildProgram(fakeDeps());
     const names = program.commands.map((c) => c.name()).sort();
     expect(names).toEqual(
-      ["attest", "chain", "da", "dev", "doctor", "infer", "init", "storage"].sort()
+      [
+        "attest",
+        "chain",
+        "contracts",
+        "da",
+        "dev",
+        "doctor",
+        "infer",
+        "init",
+        "storage",
+      ].sort()
     );
   });
 

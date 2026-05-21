@@ -35,6 +35,7 @@ import { registerDa } from "./commands/da.js";
 import { registerAttest } from "./commands/attest.js";
 import { registerInfer } from "./commands/infer.js";
 import { registerFoundry } from "./commands/foundry.js";
+import { registerContracts } from "./commands/contracts.js";
 
 export const VERSION = "0.1.0";
 
@@ -70,6 +71,28 @@ export interface ProgramDeps {
     clearState: typeof clearState;
   };
   loadFoundry: () => Promise<FoundryPlugin | null>;
+  contracts: {
+    generate: (opts: {
+      abiPath: string;
+      outDir: string;
+      name?: string;
+    }) => Promise<{ name: string; outputPath: string; bytesWritten: number }>;
+    listStandard: (network: string) => Array<{
+      name: string;
+      address: `0x${string}` | null;
+      description: string;
+    }>;
+    getStandard: (
+      name: string,
+      network: string
+    ) => {
+      name: string;
+      address: `0x${string}` | null;
+      description: string;
+      methods: readonly string[];
+      events: readonly string[];
+    } | null;
+  };
   fs: FsLike;
   readStdin: () => Promise<Uint8Array>;
   /** Injected so `0g doctor` reachability probes are testable (no real net). */
@@ -141,6 +164,7 @@ export function buildProgram(deps: ProgramDeps): Command {
   registerDa(program, deps);
   registerAttest(program, deps);
   registerInfer(program, deps);
+  registerContracts(program, deps);
   registerFoundry(program, deps);
 
   return program;

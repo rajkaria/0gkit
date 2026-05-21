@@ -232,7 +232,9 @@ const isValid = await siwe.verify({ message, signature, expectedNonce: nonce });
 
 ---
 
-### SP4 — `@foundryprotocol/0gkit-contracts`
+### SP4 — `@foundryprotocol/0gkit-contracts` ✅ SHIPPED
+
+**Status:** shipped 2026-05-21. Implementation plan: `docs/plans/2026-05-21-sp4-0gkit-contracts.md`. Released on `main`.
 
 **Goal:** wagmi-style codegen for typed contract clients. Out of the box: ABIs for the 0G "standard" on-chain contracts (registry, attestation verifier, token contracts, multicall). Out of the box: a `0g contracts generate` command that consumes Foundry/Hardhat artifacts and emits a fully typed client.
 
