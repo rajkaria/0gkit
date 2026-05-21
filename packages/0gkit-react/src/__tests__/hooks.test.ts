@@ -106,20 +106,20 @@ describe("useDownload", () => {
 });
 
 describe("useUpload", () => {
-  it("surfaces a ConfigError when no privateKey is configured", async () => {
+  it("surfaces a ConfigError when no signer or privateKey is configured", async () => {
     const { result } = renderHook(() =>
       useUpload({ network: "galileo", loadSdk: vi.fn() })
     );
 
     await act(async () => {
       await expect(result.current.upload(new Uint8Array([1]))).rejects.toThrow(
-        /privateKey/i
+        /private key/i
       );
     });
 
     expect(result.current.data).toBeUndefined();
     expect(result.current.error).toBeInstanceOf(Error);
-    expect(result.current.error?.message).toMatch(/privateKey/i);
+    expect(result.current.error?.message).toMatch(/private key/i);
     expect(result.current.loading).toBe(false);
   });
 });
