@@ -4,7 +4,7 @@ title: Packages
 
 # Packages
 
-0gkit is nine independently published packages under the
+0gkit is eleven independently published packages under the
 `@foundryprotocol/0gkit-*` scope (version `0.1.0`). Each page below documents
 the **real** exported API, derived from source, with copy-pasteable examples,
 the errors it throws and how to handle them, and exactly where each package is
@@ -13,7 +13,8 @@ meant to run.
 ## The primitives (build on `@foundryprotocol/0gkit-core`)
 
 - [**@foundryprotocol/0gkit-core**](/packages/core) — network presets, the
-  viem client factory, `Receipt`, the `ZeroGError` taxonomy, canonical JSON.
+  viem client factory, `Receipt`, the `ZeroGError` taxonomy, canonical JSON,
+  and the `Signer` interface.
 - [**@foundryprotocol/0gkit-chain**](/packages/chain) — explorer URLs, native
   balance, `waitForReceipt`, the testnet faucet.
 - [**@foundryprotocol/0gkit-storage**](/packages/storage) — `Storage`:
@@ -24,6 +25,16 @@ meant to run.
   encoder publish, local integrity verify.
 - [**@foundryprotocol/0gkit-attestation**](/packages/attestation) — parse /
   sign / recover / verify / report a TEE attestation envelope (pure crypto).
+
+## Wallet
+
+- [**@foundryprotocol/0gkit-wallet**](/packages/wallet) — Node wallet loaders:
+  `fromPrivateKey`, `fromFile` (keystore-v3), `fromEnv` (auto-pick), `fromKMS`
+  (AWS KMS), and SIWE (EIP-4361) helpers. Returns a `Signer` every primitive
+  accepts.
+- [**@foundryprotocol/0gkit-wallet-react**](/packages/wallet-react) — React +
+  wagmi v2 browser wallet: `ZeroGWalletProvider`, `useWallet`, `useConnect`,
+  `useSwitchNetwork`, and `adaptWagmi`.
 
 ## The surfaces (build on the primitives)
 

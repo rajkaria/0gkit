@@ -1,0 +1,265 @@
+---
+title: "@foundryprotocol/0gkit-wallet-react"
+---
+
+# @foundryprotocol/0gkit-wallet-react
+
+> React + wagmi v2 wallet integration for 0G: `ZeroGWalletProvider`,
+> `useWallet`, `useConnect`, `useSwitchNetwork`, and `adaptWagmi`.
+
+## What it does
+
+Wraps [wagmi v2](https://wagmi.sh) (injected + WalletConnect connectors) behind
+a 0G-aware provider and three hooks. Every hook returns a `Signer` — the same
+interface the 0G primitives accept — so you can pass `useWallet().signer`
+directly to `new Storage({ signer })` without any adapter code.
+
+## When to use it
+
+- A Next.js / React app where the user connects their browser wallet (MetaMask,
+  Rainbow, WalletConnect, etc.) and signs storage uploads or attestations.
+- Anywhere you need a reactive `isConnected` / `address` alongside a 0G-typed
+  `Signer`.
+
+## Where to use it
+
+**Client components only.** All exports carry `"use client"` at the top of their
+module — they use React hooks internally and cannot be imported in React Server
+Components. The provider must live in a client component somewhere above the
+tree; hooks only work below it.
+
+## Install
+
+```bash
+npm install @foundryprotocol/0gkit-wallet-react @foundryprotocol/0gkit-core
+# Peer dependencies — must be installed separately:
+npm install react viem wagmi @tanstack/react-query
+```
+
+## API reference
+
+### `ZeroGWalletProvider`
+
+```ts
+interface ZeroGWalletConfig {
+  network: "galileo" | "aristotle" | "local";
+  connectors?: Array<"injected" | "walletConnect">; // default ["injected"]
+  walletConnectProjectId?: string; // required when "walletConnect" is listed
+}
+
+function ZeroGWalletProvider(props: {
+  config: ZeroGWalletConfig;
+  children: ReactNode;
+  queryClient?: QueryClient; // optional — a fresh one is created if omitted
+}): JSX.Element;
+```
+
+Sets up a `WagmiProvider` + `QueryClientProvider` for the chosen 0G network.
+The chain RPC is preset per network (`galileo` → `https://evmrpc-testnet.0g.ai`,
+`aristotle` → `https://evmrpc.0g.ai`, `local` → `http://127.0.0.1:8545`).
+
+### `useWallet()`
+
+```ts
+interface UseWalletResult {
+  address: `0x${string}` | undefined;
+  isConnected: boolean;
+  signer: Signer | null; // null when no wallet is connected
+  disconnect: () => void;
+}
+
+function useWallet(): UseWalletResult;
+```
+
+The primary hook. Returns the connected address, connection state, a
+`Signer` wrapping the wagmi account (ready to pass to 0G primitives), and a
+`disconnect` callback.
+
+### `useConnect()`
+
+```ts
+interface UseConnectResult {
+  connect: (connectorId?: string) => Promise<unknown>;
+  connectors: readonly Connector[];
+  isPending: boolean;
+  error: Error | null;
+  reset: () => void;
+}
+
+function useConnect(): UseConnectResult;
+```
+
+Calls `connect(connectorId)` to trigger the connection flow for a specific
+connector (`"injected"`, `"walletConnect"`, or a wagmi connector `id`). With
+no argument, picks the first registered connector.
+
+### `useSwitchNetwork()`
+
+```ts
+interface UseSwitchNetworkResult {
+  switchNetwork: (chainId: number) => Promise<Chain>;
+  isPending: boolean;
+  error: Error | null;
+}
+
+function useSwitchNetwork(): UseSwitchNetworkResult;
+```
+
+Asks the wallet to switch to `chainId`. Useful when the user is on the wrong
+network (e.g. they are on mainnet Ethereum but the app is on Galileo).
+
+### `adaptWagmi(adapter)` — low-level escape hatch
+
+```ts
+interface WagmiAccountAdapter {
+  address: `0x${string}` | undefined;
+  signMessageAsync: (args: { message: string }) => Promise<`0x${string}`>;
+  signTypedDataAsync: (args: SignTypedDataArgs) => Promise<`0x${string}`>;
+  sendTransactionAsync: (tx: SignableTx) => Promise<`0x${string}`>;
+}
+
+function adaptWagmi(adapter: WagmiAccountAdapter): Signer | null;
+```
+
+Converts raw wagmi hook results into a `Signer`. `useWallet` uses this
+internally. Call it directly only when you need to compose your own wagmi setup
+and want to reuse the `Signer` contract.
+
+## Examples
+
+### Root layout — add the provider
+
+```tsx
+// app/layout.tsx (or pages/_app.tsx)
+"use client";
+
+import { ZeroGWalletProvider } from "@foundryprotocol/0gkit-wallet-react";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <ZeroGWalletProvider config={{ network: "galileo" }}>
+          {children}
+        </ZeroGWalletProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+> **Next.js App Router:** `RootLayout` is a Server Component by default. If you
+> add `"use client"` to it you lose RSC streaming for the whole tree. Instead,
+> extract the provider into its own file:
+
+```tsx
+// app/providers.tsx
+"use client";
+import { ZeroGWalletProvider } from "@foundryprotocol/0gkit-wallet-react";
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <ZeroGWalletProvider config={{ network: "galileo" }}>
+      {children}
+    </ZeroGWalletProvider>
+  );
+}
+```
+
+```tsx
+// app/layout.tsx — stays a Server Component
+import { Providers } from "./providers";
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+### `useWallet` — read address and sign
+
+```tsx
+"use client";
+import { useWallet } from "@foundryprotocol/0gkit-wallet-react";
+import { Storage } from "@foundryprotocol/0gkit-storage";
+
+export function UploadButton({ data }: { data: Uint8Array }) {
+  const { address, isConnected, signer } = useWallet();
+
+  async function handleUpload() {
+    if (!signer) return;
+    // signer is a Signer — pass it directly to any 0G primitive
+    const storage = new Storage({ network: "galileo", signer });
+    const { root } = await storage.upload(data);
+    console.log("uploaded:", root);
+  }
+
+  if (!isConnected) return <p>Connect your wallet first.</p>;
+  return <button onClick={handleUpload}>Upload from {address}</button>;
+}
+```
+
+### `useConnect` — connect button
+
+```tsx
+"use client";
+import { useConnect } from "@foundryprotocol/0gkit-wallet-react";
+
+export function ConnectButton() {
+  const { connect, connectors, isPending, error } = useConnect();
+
+  return (
+    <>
+      {connectors.map((c) => (
+        <button key={c.id} onClick={() => connect(c.id)} disabled={isPending}>
+          {isPending ? "Connecting…" : `Connect ${c.name}`}
+        </button>
+      ))}
+      {error && <p style={{ color: "red" }}>{error.message}</p>}
+    </>
+  );
+}
+```
+
+### `useSwitchNetwork` — wrong-network banner
+
+```tsx
+"use client";
+import { useSwitchNetwork } from "@foundryprotocol/0gkit-wallet-react";
+import { useChainId } from "wagmi";
+
+const GALILEO_CHAIN_ID = 16602;
+
+export function WrongNetworkBanner() {
+  const chainId = useChainId();
+  const { switchNetwork, isPending } = useSwitchNetwork();
+
+  if (chainId === GALILEO_CHAIN_ID) return null;
+  return (
+    <div>
+      Wrong network — please switch to 0G Galileo.
+      <button onClick={() => switchNetwork(GALILEO_CHAIN_ID)} disabled={isPending}>
+        Switch
+      </button>
+    </div>
+  );
+}
+```
+
+## RSC note
+
+The `"use client"` boundary is baked into every module of this package.
+Importing any export from `@foundryprotocol/0gkit-wallet-react` in a React
+Server Component will cause a build error. Keep all wallet UI in client
+components, and fetch data server-side (e.g. `new Storage({ signer: await fromEnv() })`)
+from server actions or API routes using
+[`@foundryprotocol/0gkit-wallet`](/packages/wallet).
+
+## Related
+
+[wallet](/packages/wallet) (Node loaders — use in server actions / scripts) ·
+[storage](/packages/storage) · [compute](/packages/compute) ·
+[core](/packages/core) (the `Signer` interface)

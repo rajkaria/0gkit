@@ -44,6 +44,7 @@ interface DAConfig {
   network?: "aristotle" | "galileo"; // selects the preset encoder URL
   encoderUrl?: string; // overrides the preset encoder
   apiKey?: string; // Bearer token for the encoder
+  signer?: Signer; // accepted for symmetry with other primitives (reserved)
   fetch?: typeof fetch; // inject fetch (testing)
 }
 interface DAPublishResult {
@@ -61,6 +62,11 @@ With no `network` and no `encoderUrl`, `publish` runs in `"local"` mode (digest
 only, no network). With a `network`, the encoder defaults to
 `https://da-encoder.0g.network` (aristotle) or
 `https://da-encoder-testnet.0g.ai` (galileo).
+
+> **`signer` is accepted but reserved.** The current DA encoder API uses bearer
+> `apiKey` authentication, not a wallet signature. The `signer` field is
+> accepted for constructor symmetry with other primitives and will be wired when
+> DA introduces on-chain fee settlement. Passing one today has no effect.
 
 #### `da.digest(payload)`
 

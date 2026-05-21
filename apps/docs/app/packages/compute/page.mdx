@@ -48,7 +48,8 @@ interface ChatMessage {
 interface ComputeConfig {
   network?: "aristotle" | "galileo";
   brokerRpc?: string; // default https://evmrpc.0g.ai
-  brokerKey?: string; // funded broker private key (required for any call)
+  signer?: Signer; // preferred — use fromEnv() / fromPrivateKey() / etc.
+  brokerKey?: string; // legacy — deprecated, use signer instead
   provider?: string; // on-chain inference provider address
   model?: string; // default model id
   fetch?: typeof fetch; // inject fetch (testing)
@@ -62,6 +63,11 @@ interface InferenceResult {
 }
 new Compute(config: ComputeConfig);
 ```
+
+Pass a `Signer` (from `@foundryprotocol/0gkit-wallet`) to `Compute` so key
+management is independent of the inference client. The legacy `brokerKey`
+string continues to work but emits a deprecation warning — see
+[Legacy (deprecated)](#legacy-deprecated) below.
 
 #### `compute.inference(args)`
 
@@ -127,15 +133,36 @@ The escape hatch — the underlying broker object.
 
 ## Examples
 
+### With `signer` — recommended
+
+```ts
+import { Compute } from "@foundryprotocol/0gkit-compute";
+import { fromEnv } from "@foundryprotocol/0gkit-wallet";
+
+const signer = await fromEnv(); // KMS_KEY_ID > KEY_FILE > PRIVATE_KEY
+const compute = new Compute({
+  network: "galileo",
+  signer,
+  provider: process.env.ZEROG_PROVIDER!,
+});
+
+const { output, receipt } = await compute.inference({
+  messages: [{ role: "user", content: "Say hello to 0G in five words." }],
+});
+console.log(output);
+```
+
 ### Minimal — one completion
 
 ```ts
 import { Compute } from "@foundryprotocol/0gkit-compute";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 
+const signer = await fromPrivateKey(process.env.ZEROG_BROKER_KEY!);
 const compute = new Compute({
   network: "galileo",
-  brokerKey: process.env.ZEROG_BROKER_KEY, // funded broker key
-  provider: process.env.ZEROG_PROVIDER, // on-chain provider address
+  signer,
+  provider: process.env.ZEROG_PROVIDER!, // on-chain provider address
 });
 
 const { output, receipt } = await compute.inference({
@@ -150,11 +177,13 @@ console.log(`fee tx ${receipt.txHash ?? "(none)"} — ${receipt.latencyMs} ms`);
 ```ts
 import { Compute } from "@foundryprotocol/0gkit-compute";
 import { ZeroGError } from "@foundryprotocol/0gkit-core";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 
+const signer = await fromPrivateKey(process.env.ZEROG_BROKER_KEY!);
 const compute = new Compute({
   network: "galileo",
-  brokerKey: process.env.ZEROG_BROKER_KEY,
-  provider: process.env.ZEROG_PROVIDER,
+  signer,
+  provider: process.env.ZEROG_PROVIDER!,
   model: "llama-3.3-70b-instruct",
 });
 
@@ -179,18 +208,41 @@ try {
 }
 ```
 
+### Legacy (deprecated)
+
+Passing `brokerKey` directly is still supported but deprecated. It emits a
+`DeprecationWarning` and will be removed in the next major version.
+
+```ts
+// ⚠ deprecated — works today, removed in v1.0
+const compute = new Compute({
+  network: "galileo",
+  brokerKey: process.env.ZEROG_BROKER_KEY,
+  provider: process.env.ZEROG_PROVIDER!,
+});
+```
+
+Migrate by wrapping with `fromPrivateKey`:
+
+```ts
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+const signer = await fromPrivateKey(process.env.ZEROG_BROKER_KEY!);
+const compute = new Compute({ network: "galileo", signer, provider: "0x…" });
+```
+
 ## Common errors
 
-| Symptom                                             | Cause                                      | Fix                                                            |
-| --------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------- |
-| `ConfigError: Compute requires a brokerKey`         | No `brokerKey` in config.                  | Pass `{ brokerKey }` (a funded broker key).                    |
-| `ConfigError: Compute requires a provider address`  | No `provider` in config.                   | Pass `{ provider }` (the on-chain inference provider address). |
-| `ConfigError: 0G compute SDK not found…`            | Optional broker peer not installed.        | `npm install @0gfoundation/0g-compute-ts-sdk ethers`.          |
-| `NetworkError: Failed to fetch service metadata…`   | Provider not registered / broker unfunded. | Verify the provider address and fund the broker ledger.        |
-| `NetworkError: 0G compute provider returned HTTP …` | Provider rejected the request.             | Verify the provider address and broker ledger balance.         |
+| Symptom                                               | Cause                                      | Fix                                                                |
+| ----------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| `ConfigError: Compute requires a signer or brokerKey` | No credentials in config.                  | Pass `{ signer }` (from `fromEnv()`) to the `Compute` constructor. |
+| `ConfigError: Compute requires a provider address`    | No `provider` in config.                   | Pass `{ provider }` (the on-chain inference provider address).     |
+| `ConfigError: 0G compute SDK not found…`              | Optional broker peer not installed.        | `npm install @0gfoundation/0g-compute-ts-sdk ethers`.              |
+| `NetworkError: Failed to fetch service metadata…`     | Provider not registered / broker unfunded. | Verify the provider address and fund the broker ledger.            |
+| `NetworkError: 0G compute provider returned HTTP …`   | Provider rejected the request.             | Verify the provider address and broker ledger balance.             |
 
 ## Related
 
-[core](/packages/core) · CLI: [`0g infer`](/cli#0g-infer) · MCP: `og_infer`
-([MCP guide](/mcp)) · React: [`useInference`](/react). Template:
+[core](/packages/core) · [wallet](/packages/wallet) (loaders: `fromEnv`, `fromKMS`, …) ·
+CLI: [`0g infer`](/cli#0g-infer) · MCP: `og_infer` ([MCP guide](/mcp)) ·
+React: [`useInference`](/react). Template:
 `npx degit rajkaria/0G-ai-kit/templates/inference-app`.

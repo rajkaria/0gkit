@@ -82,3 +82,18 @@ Codes look like `STORAGE_QUOTA_EXCEEDED`, `COMPUTE_PROVIDER_UNREACHABLE`, `DA_VE
 **Date:** 2026-05-20 · **SP:** roadmap-wide
 
 Every sub-project in the essentials roadmap (SP1–SP12) works against Galileo today and will work against mainnet day one — the only thing that changes is a network preset. Mainnet launch triggers a marketing pass (release notes, blog, `1.0.0` cut), not a re-plan.
+
+---
+
+## D11 — `Signer` interface lives in `0gkit-core`, not `0gkit-wallet`
+
+**Date:** 2026-05-21 · **SP:** SP3
+
+Layer-1 primitives (`0gkit-storage`/`0gkit-compute`/`0gkit-da`/`0gkit-attestation`/`0gkit-chain`)
+need to consume a `Signer` type. If that type lived in `0gkit-wallet`, every
+primitive would have to peerDepend on the wallet package — creating a
+fan-out the dep-cruiser rule can flag as suspicious AND a real install-time
+weight problem (KMS, wagmi, etc. would tunnel into every storage user). By
+defining the interface in `0gkit-core` (the package every other 0gkit-\* already
+depends on), primitives consume only a type and stay weightless. Wallet
+implements; primitives consume; no cycle, no extra installs.

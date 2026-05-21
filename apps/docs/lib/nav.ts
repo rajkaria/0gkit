@@ -35,6 +35,11 @@ export const NAV: NavSection[] = [
         title: "@foundryprotocol/0gkit-attestation",
         href: "/packages/attestation",
       },
+      { title: "@foundryprotocol/0gkit-wallet", href: "/packages/wallet" },
+      {
+        title: "@foundryprotocol/0gkit-wallet-react",
+        href: "/packages/wallet-react",
+      },
       { title: "@foundryprotocol/0gkit-cli", href: "/packages/cli" },
       { title: "@foundryprotocol/0gkit-mcp", href: "/packages/mcp" },
       { title: "@foundryprotocol/0gkit-react", href: "/packages/react" },
