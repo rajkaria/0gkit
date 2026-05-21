@@ -9,6 +9,8 @@ export type {
 
 export {
   standardContracts,
+  standardContractsMeta,
+  type StandardContractMeta,
   Erc20Abi,
   Erc721Abi,
   Multicall3Abi,
