@@ -2,6 +2,7 @@ export {
   parseEnvelope,
   digestEnvelope,
   signEnvelope,
+  signEnvelopeWithSigner,
   recoverSigner,
   verifyEnvelope,
   reportEnvelope,

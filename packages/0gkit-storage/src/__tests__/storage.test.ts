@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
-import { Storage } from "../storage.js";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Storage, __resetDeprecationWarning } from "../storage.js";
 import { ConfigError, NetworkError } from "@foundryprotocol/0gkit-core";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 
 function fakeSdk(opts: {
   uploadResult?: unknown;
@@ -45,7 +46,13 @@ const cfg = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+const TEST_PK = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
 describe("Storage", () => {
+  beforeEach(() => {
+    __resetDeprecationWarning();
+  });
+
   it("resolves the galileo indexer default", () => {
     const s = new Storage(cfg());
     expect(s.indexerUrl).toBe("https://indexer-storage-testnet.0g.ai");
@@ -158,5 +165,46 @@ describe("Storage", () => {
     const sdk = (await s.raw()) as { MemData: unknown; Indexer: unknown };
     expect(sdk.MemData).toBeDefined();
     expect(sdk.Indexer).toBeDefined();
+  });
+
+  it("accepts a Signer via { signer } and can upload", async () => {
+    const signer = await fromPrivateKey(TEST_PK);
+    const s = new Storage({
+      network: "galileo",
+      signer,
+      loadSdk: async () => fakeSdk({}),
+    });
+    const r = await s.upload(new Uint8Array([1]));
+    expect(r.root).toBe("0xroot");
+    expect(r.tx.txHash).toBe("0xtx");
+  });
+
+  it("warns once on { privateKey } (deprecation) and not again", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    new Storage(cfg({ loadSdk: async () => fakeSdk({}) }));
+    new Storage(cfg({ loadSdk: async () => fakeSdk({}) }));
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain("deprecated");
+    warn.mockRestore();
+  });
+
+  it("throws ConfigError for KMS-backed Signer (no privateKey) on write", async () => {
+    // Simulate a KMS signer that has no privateKey
+    const kmsSigner = {
+      address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
+      source: "kms" as const,
+      privateKey: undefined,
+      signMessage: async () => "0xsig" as `0x${string}`,
+      signTypedData: async () => "0xsig" as `0x${string}`,
+      sendTransaction: async () => "0xtx" as `0x${string}`,
+    };
+    const s = new Storage({
+      network: "galileo",
+      signer: kmsSigner,
+      loadSdk: async () => fakeSdk({}),
+    });
+    await expect(s.upload(new Uint8Array([1]))).rejects.toMatchObject({
+      code: "CONFIG",
+    });
   });
 });

@@ -1,4 +1,9 @@
-import { ConfigError, NetworkError, type Receipt } from "@foundryprotocol/0gkit-core";
+import {
+  ConfigError,
+  NetworkError,
+  type Receipt,
+  type Signer,
+} from "@foundryprotocol/0gkit-core";
 
 const DEFAULT_RPC = "https://evmrpc.0g.ai";
 const PKG_NEW = "@0gfoundation/0g-compute-ts-sdk";
@@ -12,6 +17,18 @@ export interface ChatMessage {
 export interface ComputeConfig {
   network?: "aristotle" | "galileo";
   brokerRpc?: string;
+  /**
+   * Preferred: pass a Signer from `@foundryprotocol/0gkit-wallet`.
+   * Loaders that hold the plaintext key (`fromPrivateKey`, `fromFile`, `fromEnv`)
+   * expose `signer.privateKey` — the SDK adapter uses that for now.
+   * KMS-backed signers don't expose `privateKey`; they are accepted here but
+   * writes will throw a clear ConfigError until the SDK adapter is updated.
+   */
+  signer?: Signer;
+  /**
+   * @deprecated Pass `{ signer }` from `@foundryprotocol/0gkit-wallet` instead.
+   * Will be removed in v0.3.
+   */
   brokerKey?: string;
   provider?: string;
   model?: string;
@@ -19,6 +36,14 @@ export interface ComputeConfig {
   loadBroker?: (name: string) => Promise<unknown>;
   loadEthers?: () => Promise<typeof import("ethers")>;
 }
+
+/** @internal — exposed only for test isolation; not part of the public API. */
+export let __resetDeprecationWarning: () => void;
+
+let warnedBrokerKey = false;
+__resetDeprecationWarning = () => {
+  warnedBrokerKey = false;
+};
 
 export interface InferenceResult {
   output: string;
@@ -40,11 +65,27 @@ interface BrokerInference {
 export class Compute {
   private readonly cfg: ComputeConfig;
   private readonly fetchImpl: typeof fetch;
+  private readonly resolvedBrokerKey?: string;
   private broker?: { inference: BrokerInference };
 
   constructor(config: ComputeConfig) {
     this.cfg = config;
     this.fetchImpl = config.fetch ?? globalThis.fetch;
+
+    if (config.signer) {
+      // signer.privateKey may be undefined for KMS-backed signers — intentional.
+      // The getBroker() path will throw a clear ConfigError if a key is needed.
+      this.resolvedBrokerKey = config.signer.privateKey;
+    } else if (config.brokerKey !== undefined) {
+      if (!warnedBrokerKey) {
+        console.warn(
+          "@foundryprotocol/0gkit-compute: `{ brokerKey }` is deprecated and will be removed in v0.3.\n" +
+            "  Migrate to `{ signer: await fromEnv() }` (or fromPrivateKey/fromKMS) from @foundryprotocol/0gkit-wallet."
+        );
+        warnedBrokerKey = true;
+      }
+      this.resolvedBrokerKey = config.brokerKey;
+    }
   }
 
   private async loadBrokerMod(): Promise<{
@@ -80,10 +121,10 @@ export class Compute {
 
   private async getBroker(): Promise<{ inference: BrokerInference }> {
     if (this.broker) return this.broker;
-    if (!this.cfg.brokerKey) {
+    if (!this.resolvedBrokerKey) {
       throw new ConfigError(
-        `Compute requires a brokerKey.`,
-        `Pass { brokerKey } (a funded 0G broker private key) to the constructor.`
+        `Compute requires a signer or brokerKey.`,
+        `Pass { signer: await fromPrivateKey(key) } from @foundryprotocol/0gkit-wallet to the constructor.`
       );
     }
     let ethers: typeof import("ethers");
@@ -100,7 +141,7 @@ export class Compute {
       );
     }
     const provider = new ethers.JsonRpcProvider(this.cfg.brokerRpc ?? DEFAULT_RPC);
-    const wallet = new ethers.Wallet(this.cfg.brokerKey, provider);
+    const wallet = new ethers.Wallet(this.resolvedBrokerKey, provider);
     const mod = await this.loadBrokerMod();
     if (typeof mod.createZGComputeNetworkBroker !== "function") {
       throw new ConfigError(

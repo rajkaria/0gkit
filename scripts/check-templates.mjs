@@ -9,9 +9,7 @@ import { join } from "node:path";
 const root = new URL("../templates", import.meta.url).pathname;
 const REQUIRED = ["README.md", "package.json", ".gitignore", ".env.example"];
 
-const dirs = readdirSync(root).filter((d) =>
-  statSync(join(root, d)).isDirectory()
-);
+const dirs = readdirSync(root).filter((d) => statSync(join(root, d)).isDirectory());
 
 let failed = 0;
 for (const dir of dirs) {

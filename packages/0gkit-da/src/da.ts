@@ -2,6 +2,7 @@ import {
   ConfigError,
   NetworkError,
   canonicalJsonStringify,
+  type Signer,
 } from "@foundryprotocol/0gkit-core";
 import { keccak256, toHex, type Hex } from "viem";
 
@@ -15,6 +16,12 @@ export interface DAConfig {
   encoderUrl?: string;
   apiKey?: string;
   fetch?: typeof fetch;
+  /**
+   * Optional Signer — currently unused (DA writes don't sign).
+   * Accepted for ctor symmetry with other primitives; reserved for future
+   * authenticated DA endpoints.
+   */
+  signer?: Signer;
 }
 
 export interface DAPublishResult {
@@ -30,12 +37,15 @@ export class DA {
   private readonly encoderUrl?: string;
   private readonly apiKey?: string;
   private readonly fetchImpl: typeof fetch;
+  /** Reserved for future authenticated DA endpoints; currently unused. */
+  readonly signer?: Signer;
 
   constructor(config: DAConfig) {
     this.encoderUrl =
       config.encoderUrl ?? (config.network ? ENCODERS[config.network] : undefined);
     this.apiKey = config.apiKey;
     this.fetchImpl = config.fetch ?? globalThis.fetch;
+    this.signer = config.signer;
   }
 
   private toBytes(payload: unknown): Uint8Array<ArrayBuffer> {

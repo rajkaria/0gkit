@@ -1,0 +1,201 @@
+---
+title: "@foundryprotocol/0gkit-wallet"
+---
+
+# @foundryprotocol/0gkit-wallet
+
+> Node wallet loaders for 0G: `fromPrivateKey`, `fromFile`, `fromEnv`,
+> `fromKMS`, and SIWE (EIP-4361) helpers.
+
+## What it does
+
+Provides a uniform `Signer` interface that every 0G primitive accepts. Four
+loaders create a `Signer` from different key sources: a raw hex private key,
+an eth-keystore-v3 file, environment-variable auto-detection, or an AWS KMS
+key. A `siwe` namespace ships EIP-4361 message building, parsing, and
+verification for server-side sign-in flows.
+
+## When to use it
+
+- Server scripts or API routes that need to sign storage uploads, inference
+  requests, or attestations.
+- Production deployments where the private key is in AWS KMS (`fromKMS`).
+- Sign-in with Ethereum flows (`siwe.*`).
+
+## Where to use it
+
+**Node only.** `fromFile` uses `fs`, `fromKMS` uses `@aws-sdk/client-kms`,
+and `fromEnv` delegates to whichever loader applies. None of these run in the
+browser — use [`@foundryprotocol/0gkit-wallet-react`](/packages/wallet-react)
+for browser wallet integration.
+
+## Install
+
+```bash
+npm install @foundryprotocol/0gkit-wallet @foundryprotocol/0gkit-core
+# KMS support — install the AWS SDK only if you use fromKMS / fromEnv with KMS_KEY_ID:
+npm install @aws-sdk/client-kms
+```
+
+## API reference
+
+### Loaders
+
+```ts
+function fromPrivateKey(privateKey: string): Promise<Signer>;
+function fromFile(path: string, opts: { password: string }): Promise<Signer>;
+function fromEnv(opts?: { env?: NodeJS.ProcessEnv }): Promise<Signer>;
+function fromKMS(opts: { keyId: string; region?: string }): Promise<Signer>;
+```
+
+All loaders return a `Signer`. All throw `ConfigError` (from
+`@foundryprotocol/0gkit-core`) when credentials are invalid or unavailable.
+
+### `type Signer`
+
+Re-exported from `@foundryprotocol/0gkit-core`. Every 0G primitive accepts a
+`Signer` in place of the legacy `privateKey` string.
+
+```ts
+interface Signer {
+  readonly address: `0x${string}`;
+  readonly source: "local" | "file" | "env" | "kms" | "wagmi" | string;
+  signMessage(
+    input: string | Uint8Array | { raw: string | Uint8Array }
+  ): Promise<`0x${string}`>;
+  signTypedData(args: SignTypedDataArgs): Promise<`0x${string}`>;
+  sendTransaction(tx: SignableTx): Promise<`0x${string}`>;
+}
+```
+
+### `siwe` namespace
+
+```ts
+import * as siwe from "@foundryprotocol/0gkit-wallet";
+// or: import { siwe } from "@foundryprotocol/0gkit-wallet";
+
+siwe.generateNonce(): string;
+siwe.buildMessage(args: BuildMessageArgs): string;
+siwe.verify(args: VerifyArgs): Promise<VerifyResult>;
+// VerifyResult = { ok: true; address: `0x${string}`; fields: ParsedSiwe }
+//              | { ok: false; reason: string }
+```
+
+`buildMessage` follows the EIP-4361 grammar exactly. `verify` recovers the
+signer from the signature and checks the nonce + expiration — it **never
+throws** for bad signatures, returning `{ ok: false, reason }` instead.
+
+### Type re-exports
+
+`Signer`, `SignTypedDataArgs`, `SignableTx`, `FromFileOptions`, `FromKMSOptions`,
+`FromEnvOptions` are all re-exported from this package.
+
+## Examples
+
+### `fromPrivateKey`
+
+```ts
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+import { Storage } from "@foundryprotocol/0gkit-storage";
+
+const signer = await fromPrivateKey(process.env.PRIVATE_KEY!);
+
+const storage = new Storage({ network: "galileo", signer });
+const { root, tx } = await storage.upload(new TextEncoder().encode("hello"));
+console.log(`root ${root} — tx ${tx.txHash}`);
+```
+
+### `fromFile` (eth-keystore-v3)
+
+```ts
+import { fromFile } from "@foundryprotocol/0gkit-wallet";
+
+const signer = await fromFile("./secrets/keystore.json", {
+  password: process.env.KEY_PASSWORD!,
+});
+console.log(signer.address); // 0x…
+```
+
+### `fromEnv` (environment auto-pick)
+
+`fromEnv` inspects env in this order:
+
+1. `KMS_KEY_ID` — delegates to `fromKMS` (uses `AWS_REGION` / `KMS_REGION`)
+2. `KEY_FILE` + `KEY_PASSWORD` — delegates to `fromFile`
+3. `PRIVATE_KEY` — delegates to `fromPrivateKey`
+
+```ts
+import { fromEnv } from "@foundryprotocol/0gkit-wallet";
+
+// In production, set KMS_KEY_ID. In dev, set PRIVATE_KEY.
+// The caller doesn't need to know which is active.
+const signer = await fromEnv();
+console.log(signer.address, signer.source); // "kms" | "env" | …
+```
+
+### `fromKMS` (AWS KMS secp256k1)
+
+```ts
+import { fromKMS } from "@foundryprotocol/0gkit-wallet";
+
+const signer = await fromKMS({
+  keyId: "arn:aws:kms:us-east-1:123456789012:key/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  region: "us-east-1",
+});
+console.log(signer.address); // derived from the KMS public key
+// signer.privateKey — does NOT exist; key material never leaves KMS
+```
+
+### SIWE — server-side sign-in
+
+```ts
+import { siwe } from "@foundryprotocol/0gkit-wallet";
+
+// 1. Issue a nonce challenge (server):
+const nonce = siwe.generateNonce(); // store in session
+
+// 2. Build the message the client will sign:
+const message = siwe.buildMessage({
+  domain: "example.com",
+  address: "0xUserWalletAddress",
+  uri: "https://example.com/login",
+  nonce,
+  chainId: 16602, // 0G Galileo
+  statement: "Sign in to Example",
+  expirationTime: new Date(Date.now() + 5 * 60_000),
+});
+
+// 3. Client signs with their wallet, POSTs { message, signature } back.
+// 4. Server verifies:
+const result = await siwe.verify({
+  message,
+  signature: "0xClientSignatureHex",
+  expectedNonce: nonce, // prevents replay
+});
+
+if (result.ok) {
+  console.log("authenticated as", result.address);
+  console.log("chain", result.fields.chainId);
+} else {
+  console.error("SIWE failed:", result.reason);
+}
+```
+
+## Gotchas
+
+- **KMS key spec must be `ECC_SECG_P256K1`.** The Ethereum curve is secp256k1,
+  not the NIST P-256 (`ECC_NIST_P256`) used by TLS. Creating a KMS key with
+  the wrong spec results in an `InvalidSignatureException` at sign time.
+- **KMS signers have no `signer.privateKey`.** The key material never leaves
+  KMS — that is the point. Any code that expects `signer.privateKey` needs to
+  be updated to use `signer.signMessage` / `signer.signTypedData` instead.
+- **`fromEnv` precedence is `KMS_KEY_ID > KEY_FILE+KEY_PASSWORD > PRIVATE_KEY`.**
+  If `KMS_KEY_ID` is set _and_ the KMS call fails, `fromEnv` throws immediately
+  rather than falling through to the next loader.
+
+## Related
+
+[core](/packages/core) (the `Signer` interface lives here) ·
+[wallet-react](/packages/wallet-react) (browser wallet for React/Next.js) ·
+[storage](/packages/storage) · [compute](/packages/compute) ·
+[attestation](/packages/attestation)

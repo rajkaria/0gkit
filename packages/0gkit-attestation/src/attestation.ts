@@ -1,4 +1,4 @@
-import { AttestationError, digestJson } from "@foundryprotocol/0gkit-core";
+import { AttestationError, digestJson, type Signer } from "@foundryprotocol/0gkit-core";
 import { hashMessage, recoverAddress, type Address, type Hex } from "viem";
 import { sign } from "viem/accounts";
 
@@ -76,6 +76,23 @@ export async function signEnvelope(
       "Provide a 64-char hex private key (with or without 0x), e.g. the output of `cast wallet new`."
     );
   }
+  return { envelope, digest, signature };
+}
+
+/**
+ * Sign an attestation envelope using the Signer abstraction from
+ * `@foundryprotocol/0gkit-wallet`. Works with any loader:
+ * `fromPrivateKey`, `fromFile`, `fromEnv`, `fromKMS`, or a wagmi connector.
+ *
+ * The EIP-191 personal-sign is applied over the raw digest (matching
+ * `signEnvelope` exactly), so `verifyEnvelope` round-trips correctly.
+ */
+export async function signEnvelopeWithSigner(
+  envelope: AttestationEnvelope,
+  signer: Signer
+): Promise<SignedEnvelope> {
+  const digest = digestEnvelope(envelope);
+  const signature = await signer.signMessage({ raw: digest });
   return { envelope, digest, signature };
 }
 

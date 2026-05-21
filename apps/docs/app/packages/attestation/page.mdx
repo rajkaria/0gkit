@@ -79,7 +79,21 @@ function digestEnvelope(envelope: AttestationEnvelope): Hex;
 `keccak256` of the canonical envelope JSON — the on-chain anchor (this is
 `core`'s `digestJson` applied to the envelope).
 
-### `signEnvelope(envelope, privateKey)`
+### `signEnvelopeWithSigner(envelope, signer)`
+
+```ts
+function signEnvelopeWithSigner(
+  envelope: AttestationEnvelope,
+  signer: Signer
+): Promise<SignedEnvelope>;
+```
+
+EIP-191 personal-sign over the digest using a `Signer` from
+`@foundryprotocol/0gkit-wallet`. Use this when the signing key is in AWS KMS,
+a browser wallet, or another managed store — anywhere that a raw private key
+string is not available. **Throws** `AttestationError` if signing fails.
+
+### `signEnvelope(envelope, privateKey)` — legacy (deprecated)
 
 ```ts
 function signEnvelope(
@@ -91,6 +105,10 @@ function signEnvelope(
 EIP-191 personal-sign over the digest (matches on-chain ecrecover). Leading
 `0x` on the key is optional. **Throws** `AttestationError` for an invalid
 private key.
+
+> **Deprecated.** Prefer `signEnvelopeWithSigner` — it accepts the `Signer`
+> interface and works with KMS / browser wallets. `signEnvelope` continues to
+> work but emits a deprecation warning and will be removed in v1.0.
 
 ### `recoverSigner(signed)`
 
@@ -127,18 +145,18 @@ scores, timestamp, digest, truncated signature).
 
 ## Examples
 
-### Minimal — sign then verify
+### Minimal — sign then verify (recommended)
 
 ```ts
 import {
-  signEnvelope,
+  signEnvelopeWithSigner,
   verifyEnvelope,
   type AttestationEnvelope,
 } from "@foundryprotocol/0gkit-attestation";
-import { privateKeyToAccount } from "viem/accounts";
+import { fromEnv } from "@foundryprotocol/0gkit-wallet";
 
-const pk = process.env.ZEROG_PRIVATE_KEY as `0x${string}`;
-const coordinator = privateKeyToAccount(pk).address;
+const signer = await fromEnv(); // KMS_KEY_ID > KEY_FILE > PRIVATE_KEY
+const coordinator = signer.address;
 
 const envelope: AttestationEnvelope = {
   kind: "foundry/eval-result/v1",
@@ -150,7 +168,7 @@ const envelope: AttestationEnvelope = {
   timestamp: Math.floor(Date.now() / 1000),
 };
 
-const signed = await signEnvelope(envelope, pk);
+const signed = await signEnvelopeWithSigner(envelope, signer);
 const result = await verifyEnvelope(signed, coordinator);
 console.log(result.ok); // true
 console.log(result.checks); // { digest: true, signer: true }
@@ -202,7 +220,7 @@ function checkUntrusted(raw: unknown, expectedSigner: string) {
 
 ## Related
 
-[core](/packages/core) (`digestJson`) · [da](/packages/da) (digest anchor) ·
-CLI: [`0g attest`](/cli#0g-attest) · MCP: `og_attest_verify`
-([MCP guide](/mcp)) · React: [`useAttestation`](/react). Template:
-`npx degit rajkaria/0G-ai-kit/templates/attestation-verify`.
+[core](/packages/core) (`digestJson`) · [wallet](/packages/wallet) (`signEnvelopeWithSigner`) ·
+[da](/packages/da) (digest anchor) · CLI: [`0g attest`](/cli#0g-attest) ·
+MCP: `og_attest_verify` ([MCP guide](/mcp)) · React: [`useAttestation`](/react).
+Template: `npx degit rajkaria/0G-ai-kit/templates/attestation-verify`.

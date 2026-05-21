@@ -4,12 +4,14 @@ import {
   parseEnvelope,
   digestEnvelope,
   signEnvelope,
+  signEnvelopeWithSigner,
   recoverSigner,
   verifyEnvelope,
   reportEnvelope,
   type AttestationEnvelope,
 } from "../attestation.js";
 import { AttestationError } from "@foundryprotocol/0gkit-core";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 
 function makeEnv(): AttestationEnvelope {
   return {
@@ -132,5 +134,35 @@ describe("reportEnvelope", () => {
       generatePrivateKey()
     );
     expect(reportEnvelope(signed)).toContain("0g-da:blob_9");
+  });
+});
+
+describe("signEnvelopeWithSigner", () => {
+  it("round-trips with verifyEnvelope using a fromPrivateKey signer", async () => {
+    const pk = generatePrivateKey();
+    const addr = privateKeyToAccount(pk).address;
+    const signer = await fromPrivateKey(pk);
+
+    const signed = await signEnvelopeWithSigner(makeEnv(), signer);
+    expect(signed.digest).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(signed.signature).toMatch(/^0x[0-9a-f]+$/);
+
+    const result = await verifyEnvelope(signed, addr);
+    expect(result.ok).toBe(true);
+    expect(result.checks.digest).toBe(true);
+    expect(result.checks.signer).toBe(true);
+    expect(result.signer.toLowerCase()).toBe(addr.toLowerCase());
+  });
+
+  it("produces identical digest to signEnvelope for the same key", async () => {
+    const pk = generatePrivateKey();
+    const signer = await fromPrivateKey(pk);
+    const envelope = makeEnv();
+
+    const withKey = await signEnvelope(envelope, pk);
+    const withSigner = await signEnvelopeWithSigner(envelope, signer);
+
+    expect(withSigner.digest).toBe(withKey.digest);
+    expect(withSigner.signature).toBe(withKey.signature);
   });
 });

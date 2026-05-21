@@ -50,26 +50,31 @@ npm i @foundryprotocol/0gkit-react
 ```
 
 ```ts
-import { StorageClient } from "@foundryprotocol/0gkit-storage";
+import { fromEnv } from "@foundryprotocol/0gkit-wallet";
+import { Storage } from "@foundryprotocol/0gkit-storage";
 
-const storage = new StorageClient({ privateKey: process.env.PRIVATE_KEY });
-const { root, receipt } = await storage.upload(new TextEncoder().encode("gm"));
+// fromEnv() auto-picks: KMS_KEY_ID > KEY_FILE+KEY_PASSWORD > PRIVATE_KEY
+const signer = await fromEnv();
+const storage = new Storage({ network: "galileo", signer });
+const { root, tx } = await storage.upload(new TextEncoder().encode("gm"));
 const bytes = await storage.download(root);
 ```
 
 ## Packages
 
-| Package                                                              | What it does                                                                             |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [`@foundryprotocol/0gkit-core`](./packages/0gkit-core)               | Network presets, viem client factory, `Receipt`, `ZeroGError` taxonomy. The shared base. |
-| [`@foundryprotocol/0gkit-chain`](./packages/0gkit-chain)             | Explorer URLs, balance, `waitForReceipt`, testnet faucet.                                |
-| [`@foundryprotocol/0gkit-storage`](./packages/0gkit-storage)         | `upload` / `download` / `computeRoot` / `exists`.                                        |
-| [`@foundryprotocol/0gkit-compute`](./packages/0gkit-compute)         | Provider discovery, broker inference, OpenAI-compatible shim.                            |
-| [`@foundryprotocol/0gkit-da`](./packages/0gkit-da)                   | Data Availability publish + verify (canonical digest).                                   |
-| [`@foundryprotocol/0gkit-attestation`](./packages/0gkit-attestation) | TEE attestation parse / sign / recover / verify / report.                                |
-| [`@foundryprotocol/0gkit-cli`](./packages/0gkit-cli)                 | The `0g` command line — `init`, `doctor`, `chain`, `storage`, `infer`, `da`, `attest`.   |
-| [`@foundryprotocol/0gkit-mcp`](./packages/0gkit-mcp)                 | Every primitive as an MCP tool for Claude / Cursor / Cline / any agent.                  |
-| [`@foundryprotocol/0gkit-react`](./packages/0gkit-react)             | `useUpload` / `useDownload` / `useInference` / `useAttestation`.                         |
+| Package                                                                | What it does                                                                             |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [`@foundryprotocol/0gkit-core`](./packages/0gkit-core)                 | Network presets, viem client factory, `Receipt`, `ZeroGError` taxonomy. The shared base. |
+| [`@foundryprotocol/0gkit-chain`](./packages/0gkit-chain)               | Explorer URLs, balance, `waitForReceipt`, testnet faucet.                                |
+| [`@foundryprotocol/0gkit-storage`](./packages/0gkit-storage)           | `upload` / `download` / `computeRoot` / `exists`.                                        |
+| [`@foundryprotocol/0gkit-compute`](./packages/0gkit-compute)           | Provider discovery, broker inference, OpenAI-compatible shim.                            |
+| [`@foundryprotocol/0gkit-da`](./packages/0gkit-da)                     | Data Availability publish + verify (canonical digest).                                   |
+| [`@foundryprotocol/0gkit-attestation`](./packages/0gkit-attestation)   | TEE attestation parse / sign / recover / verify / report.                                |
+| [`@foundryprotocol/0gkit-wallet`](./packages/0gkit-wallet)             | Node wallet loaders: `fromPrivateKey`, `fromFile`, `fromEnv`, `fromKMS`, SIWE.           |
+| [`@foundryprotocol/0gkit-wallet-react`](./packages/0gkit-wallet-react) | React + wagmi v2: `ZeroGWalletProvider`, `useWallet`, `useConnect`, `useSwitchNetwork`.  |
+| [`@foundryprotocol/0gkit-cli`](./packages/0gkit-cli)                   | The `0g` command line — `init`, `doctor`, `chain`, `storage`, `infer`, `da`, `attest`.   |
+| [`@foundryprotocol/0gkit-mcp`](./packages/0gkit-mcp)                   | Every primitive as an MCP tool for Claude / Cursor / Cline / any agent.                  |
+| [`@foundryprotocol/0gkit-react`](./packages/0gkit-react)               | `useUpload` / `useDownload` / `useInference` / `useAttestation`.                         |
 
 ## Documentation
 

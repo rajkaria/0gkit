@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { Compute } from "../compute.js";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Compute, __resetDeprecationWarning } from "../compute.js";
 import { ConfigError, NetworkError } from "@foundryprotocol/0gkit-core";
 
 function fakeBrokerMod(over: Record<string, unknown> = {}) {
@@ -19,12 +19,69 @@ function fakeBrokerMod(over: Record<string, unknown> = {}) {
   };
 }
 
+const ANVIL_KEY =
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as `0x${string}`;
+
 const baseCfg = {
-  brokerKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+  brokerKey: ANVIL_KEY,
   provider: "0xprov",
 };
 
 describe("Compute", () => {
+  beforeEach(() => {
+    __resetDeprecationWarning();
+  });
+
+  it("accepts { signer } and uses signer.privateKey as the broker key", async () => {
+    const mod = fakeBrokerMod();
+    const signer = {
+      privateKey: ANVIL_KEY,
+      address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" as `0x${string}`,
+      signMessage: vi.fn(),
+      signTypedData: vi.fn(),
+      sendTransaction: vi.fn(),
+      source: "private-key" as const,
+    };
+    const c = new Compute({
+      signer,
+      provider: "0xprov",
+      loadBroker: async () => mod as never,
+      loadEthers: async () =>
+        ({ Wallet: class {}, JsonRpcProvider: class {} }) as never,
+    });
+    const list = await c.listProviders();
+    expect(list).toBeDefined();
+  });
+
+  it("emits a deprecation warning once for { brokerKey }, not again on repeat", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const mod = fakeBrokerMod();
+    const make = () =>
+      new Compute({
+        ...baseCfg,
+        loadBroker: async () => mod as never,
+        loadEthers: async () =>
+          ({ Wallet: class {}, JsonRpcProvider: class {} }) as never,
+      });
+    await make().listProviders();
+    await make().listProviders();
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toContain("brokerKey");
+    warnSpy.mockRestore();
+  });
+
+  it("accepts a KMS-style signer (no privateKey) and throws ConfigError on getBroker", async () => {
+    const kmsSigner = {
+      address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" as `0x${string}`,
+      signMessage: vi.fn(),
+      signTypedData: vi.fn(),
+      sendTransaction: vi.fn(),
+      source: "kms" as const,
+    };
+    const c = new Compute({ signer: kmsSigner, provider: "0xprov" });
+    await expect(c.listProviders()).rejects.toMatchObject({ code: "CONFIG" });
+  });
+
   it("listProviders returns the broker service list", async () => {
     const mod = fakeBrokerMod();
     const c = new Compute({
@@ -76,7 +133,7 @@ describe("Compute", () => {
     ).rejects.toMatchObject({ code: "NETWORK" });
   });
 
-  it("throws ConfigError when brokerKey is missing", async () => {
+  it("throws ConfigError when neither signer nor brokerKey is provided", async () => {
     const c = new Compute({ provider: "0xprov" });
     await expect(c.listProviders()).rejects.toMatchObject({ code: "CONFIG" });
   });

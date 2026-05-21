@@ -45,7 +45,8 @@ interface StorageConfig {
   network?: "aristotle" | "galileo"; // default "aristotle"
   indexerUrl?: string; // overrides the preset indexer
   rpcUrl?: string; // default https://evmrpc.0g.ai
-  privateKey?: string; // required for upload (funds the tx)
+  signer?: Signer; // preferred — use fromEnv() / fromPrivateKey() / etc.
+  privateKey?: string; // legacy — deprecated, use signer instead
   loadSdk?: () => Promise<StorageSdk>; // inject the SDK (testing)
 }
 interface UploadResult {
@@ -60,6 +61,11 @@ The default network is `aristotle`. The indexer is chosen from the network
 (`https://indexer-storage.0g.network` for aristotle,
 `https://indexer-storage-testnet.0g.ai` for galileo) unless `indexerUrl` is
 set.
+
+Pass a `Signer` (from `@foundryprotocol/0gkit-wallet`) to `upload` so the
+key is managed independently of the `Storage` class. The legacy `privateKey`
+string continues to work but emits a deprecation warning — see
+[Legacy (deprecated)](#legacy-deprecated) below.
 
 #### `storage.upload(data)`
 
@@ -110,6 +116,19 @@ The escape hatch — the underlying SDK module.
 
 ## Examples
 
+### With `signer` — recommended
+
+```ts
+import { Storage } from "@foundryprotocol/0gkit-storage";
+import { fromEnv } from "@foundryprotocol/0gkit-wallet";
+
+const signer = await fromEnv(); // KMS_KEY_ID > KEY_FILE > PRIVATE_KEY
+const storage = new Storage({ network: "galileo", signer });
+
+const { root, tx } = await storage.upload(new TextEncoder().encode("hello 0G"));
+console.log(`root ${root} — tx ${tx.txHash}`);
+```
+
 ### Minimal — content-address without uploading
 
 ```ts
@@ -127,11 +146,10 @@ console.log(await storage.exists(root)); // false until uploaded
 ```ts
 import { Storage } from "@foundryprotocol/0gkit-storage";
 import { ZeroGError } from "@foundryprotocol/0gkit-core";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 
-const storage = new Storage({
-  network: "galileo",
-  privateKey: process.env.ZEROG_PRIVATE_KEY, // funded testnet key
-});
+const signer = await fromPrivateKey(process.env.ZEROG_PRIVATE_KEY!);
+const storage = new Storage({ network: "galileo", signer });
 
 const payload = new TextEncoder().encode(JSON.stringify({ hi: "0G" }));
 
@@ -157,11 +175,32 @@ try {
 }
 ```
 
+### Legacy (deprecated)
+
+Passing `privateKey` directly is still supported but deprecated. It emits a
+`DeprecationWarning` and will be removed in the next major version.
+
+```ts
+// ⚠ deprecated — works today, removed in v1.0
+const storage = new Storage({
+  network: "galileo",
+  privateKey: process.env.ZEROG_PRIVATE_KEY,
+});
+```
+
+Migrate by wrapping with `fromPrivateKey`:
+
+```ts
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+const signer = await fromPrivateKey(process.env.ZEROG_PRIVATE_KEY!);
+const storage = new Storage({ network: "galileo", signer });
+```
+
 ## Common errors
 
 | Symptom                                                            | Cause                                       | Fix                                                                |
 | ------------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------ |
-| `ConfigError: Storage.upload requires a privateKey`                | `upload` with no `privateKey` in config.    | Pass `{ privateKey }` (a funded key) to the `Storage` constructor. |
+| `ConfigError: Storage.upload requires a signer or privateKey`      | `upload` with no credentials in config.     | Pass `{ signer }` (from `fromEnv()`) to the `Storage` constructor. |
 | `ConfigError: @0gfoundation/0g-storage-ts-sdk could not be loaded` | Optional peer not installed.                | `npm install @0gfoundation/0g-storage-ts-sdk ethers`.              |
 | `ConfigError: ethers could not be loaded`                          | `ethers` peer missing.                      | `npm install ethers`.                                              |
 | `NetworkError: 0G Storage upload failed…`                          | Indexer/RPC unreachable or signer unfunded. | Check the indexer + RPC; fund the signer (testnet faucet).         |
@@ -169,7 +208,7 @@ try {
 
 ## Related
 
-[core](/packages/core) · CLI: [`0g storage`](/cli#0g-storage) · MCP:
-`og_storage_*` ([MCP guide](/mcp)) · React:
-[`useUpload` / `useDownload`](/react). Template:
+[core](/packages/core) · [wallet](/packages/wallet) (loaders: `fromEnv`, `fromKMS`, …) ·
+CLI: [`0g storage`](/cli#0g-storage) · MCP: `og_storage_*` ([MCP guide](/mcp)) ·
+React: [`useUpload` / `useDownload`](/react). Template:
 `npx degit rajkaria/0G-ai-kit/templates/storage-app`.

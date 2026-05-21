@@ -1,0 +1,76 @@
+{
+  "name": "@foundryprotocol/0gkit-wallet",
+  "version": "0.1.0",
+  "description": "Neutral wallet abstraction for 0G — Signer interface, key loaders (env/file/KMS), and SIWE helpers.",
+  "license": "MIT",
+  "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/0gkit-wallet",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajkaria/0G-ai-kit.git",
+    "directory": "packages/0gkit-wallet"
+  },
+  "bugs": {
+    "url": "https://github.com/rajkaria/0G-ai-kit/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@foundryprotocol/0gkit-core": "workspace:*",
+    "ethereumjs-wallet": "^1.0.2",
+    "viem": "^2.21.0"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-kms": "^3.600.0",
+    "viem": "^2.21.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-kms": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@aws-sdk/client-kms": "^3.600.0",
+    "@noble/curves": "^1.9.7",
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "aws-sdk-client-mock": "^4.0.2",
+    "dependency-cruiser": "^16.0.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "0g",
+    "wallet",
+    "signer",
+    "siwe",
+    "kms",
+    "toolkit"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

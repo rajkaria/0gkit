@@ -1,4 +1,9 @@
-import { ConfigError, NetworkError, type Receipt } from "@foundryprotocol/0gkit-core";
+import {
+  ConfigError,
+  NetworkError,
+  type Receipt,
+  type Signer,
+} from "@foundryprotocol/0gkit-core";
 
 const INDEXERS = {
   aristotle: "https://indexer-storage.0g.network",
@@ -31,6 +36,19 @@ export interface StorageConfig {
   network?: "aristotle" | "galileo";
   indexerUrl?: string;
   rpcUrl?: string;
+  /**
+   * Preferred: pass a Signer from `@foundryprotocol/0gkit-wallet`.
+   * Loaders that hold the plaintext key (`fromPrivateKey`, `fromFile`, `fromEnv`)
+   * expose `signer.privateKey` — the SDK adapter uses that for now.
+   * KMS-backed signers don't expose `privateKey`; they are accepted here but
+   * writes will throw a clear ConfigError until SP10 swaps the adapter to
+   * accept a Signer directly.
+   */
+  signer?: Signer;
+  /**
+   * @deprecated Pass `{ signer }` from `@foundryprotocol/0gkit-wallet` instead.
+   * Will be removed in v0.3.
+   */
   privateKey?: string;
   loadSdk?: () => Promise<StorageSdk>;
 }
@@ -45,6 +63,14 @@ function normalizeHex(s: string): string {
   return s.startsWith("0x") ? s : `0x${s}`;
 }
 
+/** @internal — exposed only for test isolation; not part of the public API. */
+export let __resetDeprecationWarning: () => void;
+
+let warnedPrivateKey = false;
+__resetDeprecationWarning = () => {
+  warnedPrivateKey = false;
+};
+
 export class Storage {
   readonly indexerUrl: string;
   readonly rpcUrl: string;
@@ -52,11 +78,38 @@ export class Storage {
   private readonly loadSdk: () => Promise<StorageSdk>;
   private cached?: StorageSdk;
 
+  /**
+   * @param config - StorageConfig.
+   *   When `signer` is provided, it is used in preference over `privateKey`.
+   *   Loaders that hold the plaintext key (`fromPrivateKey`, `fromFile`,
+   *   `fromEnv` for PRIVATE_KEY, wagmi LocalAccount) expose `signer.privateKey`
+   *   — that's what the SDK adapter consumes for now.
+   *
+   *   KMS-backed signers don't expose `privateKey`; they're still accepted but
+   *   writes will throw a clear ConfigError until SP10 swaps the SDK adapter
+   *   to accept a Signer directly.
+   */
   constructor(config: StorageConfig) {
     const net = config.network ?? "aristotle";
     this.indexerUrl = config.indexerUrl ?? INDEXERS[net];
     this.rpcUrl = config.rpcUrl ?? DEFAULT_RPC;
-    this.privateKey = config.privateKey;
+
+    if (config.signer) {
+      // signer.privateKey may be undefined for KMS-backed signers — that is
+      // intentional. The SDK adapter will throw a clear ConfigError if a write
+      // path is hit without a key.
+      this.privateKey = config.signer.privateKey;
+    } else if (config.privateKey !== undefined) {
+      if (!warnedPrivateKey) {
+        console.warn(
+          "@foundryprotocol/0gkit-storage: `{ privateKey }` is deprecated and will be removed in v0.3.\n" +
+            "  Migrate to `{ signer: await fromEnv() }` (or fromPrivateKey/fromKMS) from @foundryprotocol/0gkit-wallet."
+        );
+        warnedPrivateKey = true;
+      }
+      this.privateKey = config.privateKey;
+    }
+
     this.loadSdk =
       config.loadSdk ??
       (() =>
@@ -81,8 +134,8 @@ export class Storage {
   private async signer(): Promise<unknown> {
     if (!this.privateKey) {
       throw new ConfigError(
-        `Storage.upload requires a privateKey.`,
-        `Pass { privateKey } to the Storage constructor (funds the upload tx).`
+        `Storage.upload requires a private key. When using a KMS-backed Signer, writes are not yet supported (planned for SP10).`,
+        `Pass { signer: await fromPrivateKey(key) } or { signer: await fromEnv() } to the Storage constructor.`
       );
     }
     try {
