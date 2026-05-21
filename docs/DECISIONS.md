@@ -207,3 +207,32 @@ foundry-plugin loader pattern from D4. This keeps the testing package free of
 a static dep on attestation — important because the migrated test in
 `0gkit-attestation` depends on `0gkit-testing`, so a static edge in either
 direction would create a build cycle.
+
+---
+
+## D19 — `0gkit-indexer` cursor backends: sqlite direct dep, redis optional peer
+
+**Date:** 2026-05-22 · **SP:** SP6
+
+`better-sqlite3` is a direct dependency: it ships with the package, ~2 MB
+install, synchronous (no event-loop hop per cursor write), and gives every user
+persistent cursors out of the box without an extra install step. `ioredis` is
+an `optionalPeerDependency`: redis is a multi-process / clustered deployment
+concern, and forcing every user to install it would balloon the install
+footprint for the common (single-process) case. Sub-path exports
+(`/cursors/sqlite`, `/cursors/redis`) let tree-shaking strip the unused backend
+from production bundles.
+
+---
+
+## D20 — `0gkit-indexer` uses polling, not WebSocket subscriptions
+
+**Date:** 2026-05-22 · **SP:** SP6
+
+EVM RPC WebSocket subscriptions are notoriously unreliable (silently drop, miss
+reconnects, inconsistent across providers). Polling with `getLogs` works against
+every RPC, is restartable across process crashes via the persisted cursor, and
+gives us a uniform place to insert reorg detection. The 2-second default poll
+interval is plenty for the dapp use cases this indexer targets (event-driven
+UIs, side-effect reactors). Sub-second latency users can override
+`pollIntervalMs`.

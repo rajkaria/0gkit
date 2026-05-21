@@ -24,55 +24,55 @@
 
 ### New package: `packages/0gkit-indexer/`
 
-| File                                  | Responsibility                                                                                                                               |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `package.json`                        | Workspace metadata, deps, exports map (`.` + `./cursors/sqlite` + `./cursors/redis` sub-paths so consumers can tree-shake unused backends).  |
-| `tsconfig.json`                       | Extends repo root; `outDir: ./dist`.                                                                                                         |
-| `tsup.config.ts`                      | Three entries: `index`, `cursors/sqlite`, `cursors/redis`. ESM, dts, target es2022, externals: viem + 0gkit + better-sqlite3 + ioredis.      |
-| `vitest.config.ts`                    | 80/80/80/70 coverage gate; excludes `src/index.ts` + `src/__tests__/**`.                                                                     |
-| `README.md`                           | Quickstart + API + cursor backends + reorg semantics.                                                                                        |
-| `LICENSE`                             | MIT.                                                                                                                                         |
-| `src/index.ts`                        | Re-exports: `Indexer`, types, `MemoryCursorStore`. (sqlite/redis stores are sub-path imports.)                                               |
-| `src/types.ts`                        | Public types: `IndexerOptions`, `SubscribeOptions`, `DecodedEvent`, `Subscription`, `CursorState`, `CursorStore`, `IndexerStatus`.           |
-| `src/indexer.ts`                      | The `Indexer` class — poll loop, subscription registry, reorg detection, lifecycle (`start` / `stop` / `status`).                            |
-| `src/backoff.ts`                      | Pure `expBackoffWithJitter(attempt, opts?)` — exponential delay + decorrelated jitter, used on every `getLogs`/`getBlock` failure.           |
-| `src/block-tracker.ts`                | Bounded-window block-hash chain (`BlockTracker.push`, `.findCommonAncestor`, `.headHash`, `.size`).                                          |
-| `src/log-decoder.ts`                  | Pure helpers: `decodeOne(abi, log) → DecodedEvent`, `topicForEvent(abi, name) → Hex`.                                                        |
-| `src/cursors/memory.ts`               | `MemoryCursorStore` — in-process Map, default for tests and ephemeral use.                                                                   |
-| `src/cursors/sqlite.ts`               | `SqliteCursorStore` — uses `better-sqlite3` (direct dep); creates one table per database.                                                    |
-| `src/cursors/redis.ts`                | `RedisCursorStore` — uses `ioredis` (optional peer); stores cursor JSON under `0gkit:cursor:<subId>`.                                        |
-| `src/__tests__/backoff.test.ts`       | Pure-function tests.                                                                                                                         |
-| `src/__tests__/block-tracker.test.ts` | Window growth, ancestor detection, head reorg.                                                                                               |
-| `src/__tests__/log-decoder.test.ts`   | Decode + topic computation against a known ABI.                                                                                              |
-| `src/__tests__/cursor-memory.test.ts` | Save / load / overwrite.                                                                                                                     |
-| `src/__tests__/cursor-sqlite.test.ts` | Same surface tests as memory, plus restart-survives-process semantics (close + reopen).                                                      |
-| `src/__tests__/cursor-redis.test.ts`  | Skipped unless `REDIS_URL` is set — proves the adapter shape against real redis when CI provides one.                                        |
-| `src/__tests__/indexer.test.ts`       | End-to-end with a viem mock client: subscribe, replay historical, emit live, multi-event multiplex, restart preserves cursor.                |
-| `src/__tests__/reorg.test.ts`         | Simulates a 3-block reorg via a fake transport; asserts `onReorg` called with the rolled-back events and `onEvent` re-emitted on new chain.  |
-| `src/__tests__/boundary.test.ts`      | `pnpm boundary:check` green + grep: no `from "@foundryprotocol/sdk"` and no `import("@foundryprotocol/sdk")` style literal specifiers.       |
+| File                                  | Responsibility                                                                                                                              |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`                        | Workspace metadata, deps, exports map (`.` + `./cursors/sqlite` + `./cursors/redis` sub-paths so consumers can tree-shake unused backends). |
+| `tsconfig.json`                       | Extends repo root; `outDir: ./dist`.                                                                                                        |
+| `tsup.config.ts`                      | Three entries: `index`, `cursors/sqlite`, `cursors/redis`. ESM, dts, target es2022, externals: viem + 0gkit + better-sqlite3 + ioredis.     |
+| `vitest.config.ts`                    | 80/80/80/70 coverage gate; excludes `src/index.ts` + `src/__tests__/**`.                                                                    |
+| `README.md`                           | Quickstart + API + cursor backends + reorg semantics.                                                                                       |
+| `LICENSE`                             | MIT.                                                                                                                                        |
+| `src/index.ts`                        | Re-exports: `Indexer`, types, `MemoryCursorStore`. (sqlite/redis stores are sub-path imports.)                                              |
+| `src/types.ts`                        | Public types: `IndexerOptions`, `SubscribeOptions`, `DecodedEvent`, `Subscription`, `CursorState`, `CursorStore`, `IndexerStatus`.          |
+| `src/indexer.ts`                      | The `Indexer` class — poll loop, subscription registry, reorg detection, lifecycle (`start` / `stop` / `status`).                           |
+| `src/backoff.ts`                      | Pure `expBackoffWithJitter(attempt, opts?)` — exponential delay + decorrelated jitter, used on every `getLogs`/`getBlock` failure.          |
+| `src/block-tracker.ts`                | Bounded-window block-hash chain (`BlockTracker.push`, `.findCommonAncestor`, `.headHash`, `.size`).                                         |
+| `src/log-decoder.ts`                  | Pure helpers: `decodeOne(abi, log) → DecodedEvent`, `topicForEvent(abi, name) → Hex`.                                                       |
+| `src/cursors/memory.ts`               | `MemoryCursorStore` — in-process Map, default for tests and ephemeral use.                                                                  |
+| `src/cursors/sqlite.ts`               | `SqliteCursorStore` — uses `better-sqlite3` (direct dep); creates one table per database.                                                   |
+| `src/cursors/redis.ts`                | `RedisCursorStore` — uses `ioredis` (optional peer); stores cursor JSON under `0gkit:cursor:<subId>`.                                       |
+| `src/__tests__/backoff.test.ts`       | Pure-function tests.                                                                                                                        |
+| `src/__tests__/block-tracker.test.ts` | Window growth, ancestor detection, head reorg.                                                                                              |
+| `src/__tests__/log-decoder.test.ts`   | Decode + topic computation against a known ABI.                                                                                             |
+| `src/__tests__/cursor-memory.test.ts` | Save / load / overwrite.                                                                                                                    |
+| `src/__tests__/cursor-sqlite.test.ts` | Same surface tests as memory, plus restart-survives-process semantics (close + reopen).                                                     |
+| `src/__tests__/cursor-redis.test.ts`  | Skipped unless `REDIS_URL` is set — proves the adapter shape against real redis when CI provides one.                                       |
+| `src/__tests__/indexer.test.ts`       | End-to-end with a viem mock client: subscribe, replay historical, emit live, multi-event multiplex, restart preserves cursor.               |
+| `src/__tests__/reorg.test.ts`         | Simulates a 3-block reorg via a fake transport; asserts `onReorg` called with the rolled-back events and `onEvent` re-emitted on new chain. |
+| `src/__tests__/boundary.test.ts`      | `pnpm boundary:check` green + grep: no `from "@foundryprotocol/sdk"` and no `import("@foundryprotocol/sdk")` style literal specifiers.      |
 
 ### Modify package: `packages/0gkit-react/`
 
-| File                                       | Responsibility                                                                                                                    |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `package.json`                             | Add dep `@foundryprotocol/0gkit-indexer: workspace:*`; bump version via changeset (minor — new public hooks).                     |
-| `src/IndexerProvider.tsx`                  | `ZeroGIndexerProvider` + `useIndexer()` — wraps a single `Indexer` instance in React context; lazy-starts on first subscription.  |
-| `src/useEvent.ts`                          | `useEvent({ contract, event, fromBlock? }) → { events, isLoading, error }`. Live subscription via the provider's Indexer.         |
-| `src/useLogs.ts`                           | `useLogs({ contract, event, fromBlock, toBlock? }) → { logs, isLoading, error }`. One-shot historical `getLogs`.                  |
-| `src/index.ts`                             | Add exports: `ZeroGIndexerProvider`, `useIndexer`, `useEvent`, `useLogs`, plus types.                                             |
-| `src/__tests__/useEvent.test.tsx`          | RTL test: render with provider, emit a fake event via mock indexer, assert hook updates.                                          |
-| `src/__tests__/useLogs.test.tsx`           | RTL test: returns logs from a stubbed `Indexer.queryLogs(...)`.                                                                   |
-| `src/__tests__/IndexerProvider.test.tsx`   | Provider lifecycle: starts indexer on first subscription, stops on unmount.                                                       |
+| File                                     | Responsibility                                                                                                                   |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`                           | Add dep `@foundryprotocol/0gkit-indexer: workspace:*`; bump version via changeset (minor — new public hooks).                    |
+| `src/IndexerProvider.tsx`                | `ZeroGIndexerProvider` + `useIndexer()` — wraps a single `Indexer` instance in React context; lazy-starts on first subscription. |
+| `src/useEvent.ts`                        | `useEvent({ contract, event, fromBlock? }) → { events, isLoading, error }`. Live subscription via the provider's Indexer.        |
+| `src/useLogs.ts`                         | `useLogs({ contract, event, fromBlock, toBlock? }) → { logs, isLoading, error }`. One-shot historical `getLogs`.                 |
+| `src/index.ts`                           | Add exports: `ZeroGIndexerProvider`, `useIndexer`, `useEvent`, `useLogs`, plus types.                                            |
+| `src/__tests__/useEvent.test.tsx`        | RTL test: render with provider, emit a fake event via mock indexer, assert hook updates.                                         |
+| `src/__tests__/useLogs.test.tsx`         | RTL test: returns logs from a stubbed `Indexer.queryLogs(...)`.                                                                  |
+| `src/__tests__/IndexerProvider.test.tsx` | Provider lifecycle: starts indexer on first subscription, stops on unmount.                                                      |
 
 ### Root-level changes
 
-| File                                                    | Responsibility                                                                                       |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `.github/workflows/ci.yml`                              | Add `0gkit-indexer` to the build / test / coverage matrix (mirrors existing entries).                |
-| `.changeset/sp6-0gkit-indexer.md`                       | `minor` bump for `@foundryprotocol/0gkit-indexer` (first publish) + `@foundryprotocol/0gkit-react`.  |
-| `README.md`                                             | Add `@foundryprotocol/0gkit-indexer` row to the package table; mention `useEvent`/`useLogs`.         |
-| `docs/DECISIONS.md`                                     | Append D19 (sqlite via better-sqlite3 direct dep; redis as optional peer) + D20 (polling, not WSS).  |
-| `docs/specs/2026-05-20-essentials-roadmap.md`           | Flip SP6 status row to ✅ (shipped) at end of plan.                                                  |
+| File                                          | Responsibility                                                                                      |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `.github/workflows/ci.yml`                    | Add `0gkit-indexer` to the build / test / coverage matrix (mirrors existing entries).               |
+| `.changeset/sp6-0gkit-indexer.md`             | `minor` bump for `@foundryprotocol/0gkit-indexer` (first publish) + `@foundryprotocol/0gkit-react`. |
+| `README.md`                                   | Add `@foundryprotocol/0gkit-indexer` row to the package table; mention `useEvent`/`useLogs`.        |
+| `docs/DECISIONS.md`                           | Append D19 (sqlite via better-sqlite3 direct dep; redis as optional peer) + D20 (polling, not WSS). |
+| `docs/specs/2026-05-20-essentials-roadmap.md` | Flip SP6 status row to ✅ (shipped) at end of plan.                                                 |
 
 ---
 
@@ -85,6 +85,7 @@ Each task is independently testable, ships with passing tests, and produces a gr
 ### Task 1: Package scaffold + boundary test
 
 **Files:**
+
 - Create: `packages/0gkit-indexer/package.json`
 - Create: `packages/0gkit-indexer/tsconfig.json`
 - Create: `packages/0gkit-indexer/tsup.config.ts`
@@ -160,7 +161,16 @@ Each task is independently testable, ships with passing tests, and produces a gr
     "typescript": "^5.6.3",
     "vitest": "^2.1.8"
   },
-  "keywords": ["0g", "0g-network", "indexer", "events", "reorg", "subscription", "viem", "toolkit"],
+  "keywords": [
+    "0g",
+    "0g-network",
+    "indexer",
+    "events",
+    "reorg",
+    "subscription",
+    "viem",
+    "toolkit"
+  ],
   "publishConfig": { "access": "public" }
 }
 ```
@@ -218,11 +228,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
       include: ["src/**/*.ts"],
-      exclude: [
-        "src/index.ts",
-        "src/__tests__/**",
-        "src/cursors/redis.ts",
-      ],
+      exclude: ["src/index.ts", "src/__tests__/**", "src/cursors/redis.ts"],
       thresholds: { lines: 80, functions: 80, statements: 80, branches: 70 },
     },
   },
@@ -283,7 +289,10 @@ describe("0gkit-indexer neutrality boundary", () => {
     let ok = true;
     let out = "";
     try {
-      out = execSync("pnpm boundary:check", { cwd: repoRoot, stdio: "pipe" }).toString();
+      out = execSync("pnpm boundary:check", {
+        cwd: repoRoot,
+        stdio: "pipe",
+      }).toString();
     } catch (e: any) {
       ok = false;
       out = (e.stdout?.toString() ?? "") + (e.stderr?.toString() ?? "");
@@ -312,12 +321,14 @@ Modify `.github/workflows/ci.yml` — wherever the existing packages are listed 
 - [ ] **Step 9: Install + boundary check + test**
 
 Run from repo root:
+
 ```bash
 pnpm install
 pnpm --filter @foundryprotocol/0gkit-indexer build
 pnpm --filter @foundryprotocol/0gkit-indexer test
 pnpm boundary:check
 ```
+
 Expected: all green. Both boundary tests pass (no offenders, dependency-cruiser exits 0).
 
 - [ ] **Step 10: Commit**
@@ -332,6 +343,7 @@ git commit -m "chore(indexer): scaffold @foundryprotocol/0gkit-indexer package +
 ### Task 2: Backoff with jitter (pure utility)
 
 **Files:**
+
 - Create: `packages/0gkit-indexer/src/backoff.ts`
 - Test: `packages/0gkit-indexer/src/__tests__/backoff.test.ts`
 
@@ -426,6 +438,7 @@ git commit -m "feat(indexer): add decorrelated exponential backoff with jitter"
 ### Task 3: Public types
 
 **Files:**
+
 - Create: `packages/0gkit-indexer/src/types.ts`
 
 No tests on this task — pure type declarations, validated by downstream tasks that import them.
@@ -545,6 +558,7 @@ git commit -m "feat(indexer): public types (CursorStore, SubscribeOptions, Decod
 ### Task 4: Block tracker (reorg window)
 
 **Files:**
+
 - Create: `packages/0gkit-indexer/src/block-tracker.ts`
 - Test: `packages/0gkit-indexer/src/__tests__/block-tracker.test.ts`
 
@@ -741,6 +755,7 @@ git commit -m "feat(indexer): bounded-window BlockTracker with reorg-ancestor lo
 ### Task 5: Log decoder
 
 **Files:**
+
 - Create: `packages/0gkit-indexer/src/log-decoder.ts`
 - Test: `packages/0gkit-indexer/src/__tests__/log-decoder.test.ts`
 
@@ -785,8 +800,7 @@ describe("log-decoder", () => {
         "0x3333333333333333333333333333333333333333333333333333333333333333" as const,
       ] as const,
       // encoded uint256(42)
-      data:
-        "0x000000000000000000000000000000000000000000000000000000000000002a" as const,
+      data: "0x000000000000000000000000000000000000000000000000000000000000002a" as const,
     };
     const decoded = decodeOne(abi, log);
     expect(decoded.eventName).toBe("ProviderRegistered");
@@ -876,6 +890,7 @@ git commit -m "feat(indexer): topic computation + log decoder over viem"
 ### Task 6: Memory cursor store
 
 **Files:**
+
 - Create: `packages/0gkit-indexer/src/cursors/memory.ts`
 - Test: `packages/0gkit-indexer/src/__tests__/cursor-memory.test.ts`
 - Modify: `packages/0gkit-indexer/src/index.ts` — export `MemoryCursorStore` and types.
@@ -893,13 +908,11 @@ const sample: CursorState = {
   recentBlocks: [
     {
       number: 99n,
-      hash:
-        "0x9999999999999999999999999999999999999999999999999999999999999999",
+      hash: "0x9999999999999999999999999999999999999999999999999999999999999999",
     },
     {
       number: 100n,
-      hash:
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      hash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     },
   ],
 };
@@ -1009,6 +1022,7 @@ git commit -m "feat(indexer): MemoryCursorStore + public exports"
 ### Task 7: SQLite cursor store
 
 **Files:**
+
 - Create: `packages/0gkit-indexer/src/cursors/sqlite.ts`
 - Test: `packages/0gkit-indexer/src/__tests__/cursor-sqlite.test.ts`
 
@@ -1028,8 +1042,7 @@ const sample: CursorState = {
   recentBlocks: [
     {
       number: 12345n,
-      hash:
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      hash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     },
   ],
 };
@@ -1132,9 +1145,7 @@ export class SqliteCursorStore implements CursorStore {
 
   async load(subscriptionId: string): Promise<CursorState | null> {
     const row = this.db
-      .prepare(
-        `SELECT state FROM "${this.tableName}" WHERE subscription_id = ?`
-      )
+      .prepare(`SELECT state FROM "${this.tableName}" WHERE subscription_id = ?`)
       .get(subscriptionId) as { state: string } | undefined;
     if (!row) return null;
     return deserialize(row.state);
@@ -1189,6 +1200,7 @@ git commit -m "feat(indexer): SqliteCursorStore (better-sqlite3, bigint-safe JSO
 ### Task 8: Redis cursor store (optional peer)
 
 **Files:**
+
 - Create: `packages/0gkit-indexer/src/cursors/redis.ts`
 - Test: `packages/0gkit-indexer/src/__tests__/cursor-redis.test.ts`
 
@@ -1207,8 +1219,7 @@ const sample: CursorState = {
   recentBlocks: [
     {
       number: 555n,
-      hash:
-        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      hash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     },
   ],
 };
@@ -1326,10 +1337,12 @@ function deserialize(raw: string): CursorState {
 - [ ] **Step 4: Verify build + tests**
 
 Run:
+
 ```bash
 pnpm --filter @foundryprotocol/0gkit-indexer typecheck
 pnpm --filter @foundryprotocol/0gkit-indexer test
 ```
+
 Expected: typecheck PASS; redis tests SKIPPED (no REDIS_URL) or PASS if one is set; all other suites green.
 
 - [ ] **Step 5: Commit**
@@ -1345,6 +1358,7 @@ git commit -m "feat(indexer): RedisCursorStore (optional peer, lazy ioredis impo
 ### Task 9: Indexer core — single subscription, no reorgs
 
 **Files:**
+
 - Create: `packages/0gkit-indexer/src/indexer.ts`
 - Test: `packages/0gkit-indexer/src/__tests__/indexer-basic.test.ts`
 
@@ -1399,8 +1413,7 @@ function makeFakeClient(
 
 describe("Indexer (basic, no reorgs)", () => {
   it("emits historical events on start, then live events on subsequent polls", async () => {
-    const address =
-      "0xcafecafecafecafecafecafecafecafecafecafe" as const;
+    const address = "0xcafecafecafecafecafecafecafecafecafecafe" as const;
     const blocks = new Map<bigint, { hash: Hex }>();
     for (let n = 1n; n <= 5n; n++) blocks.set(n, { hash: blockHash(Number(n)) });
 
@@ -1412,8 +1425,7 @@ describe("Indexer (basic, no reorgs)", () => {
       transactionIndex: 0,
       logIndex: idx,
       topics: [topic0!],
-      data: ("0x" +
-        value.toString(16).padStart(64, "0")) as Hex,
+      data: ("0x" + value.toString(16).padStart(64, "0")) as Hex,
     });
 
     const client = makeFakeClient(blocks, (from, to) => {
@@ -1450,8 +1462,7 @@ describe("Indexer (basic, no reorgs)", () => {
   });
 
   it("persists cursor: restart picks up after the last delivered block", async () => {
-    const address =
-      "0xdeaddeaddeaddeaddeaddeaddeaddeaddeaddead" as const;
+    const address = "0xdeaddeaddeaddeaddeaddeaddeaddeaddeaddead" as const;
     const blocks = new Map<bigint, { hash: Hex }>();
     for (let n = 1n; n <= 3n; n++) blocks.set(n, { hash: blockHash(Number(n)) });
 
@@ -1463,8 +1474,7 @@ describe("Indexer (basic, no reorgs)", () => {
       transactionIndex: 0,
       logIndex: 0,
       topics: [topic0!],
-      data: ("0x" +
-        Number(n).toString(16).padStart(64, "0")) as Hex,
+      data: ("0x" + Number(n).toString(16).padStart(64, "0")) as Hex,
     });
 
     const client = makeFakeClient(blocks, (from, to) => {
@@ -1572,10 +1582,7 @@ interface IndexerInternalOptions extends IndexerOptions {
 
 export class Indexer {
   private readonly opts: Required<
-    Pick<
-      IndexerOptions,
-      "pollIntervalMs" | "reorgDepth" | "confirmations"
-    >
+    Pick<IndexerOptions, "pollIntervalMs" | "reorgDepth" | "confirmations">
   > &
     IndexerOptions & { publicClient?: PublicClient };
   private readonly cursor: CursorStore;
@@ -1626,7 +1633,9 @@ export class Indexer {
     const id =
       req.subscriptionId ??
       createHash("sha1")
-        .update(`${req.contract.address}|${req.event}|${String(req.fromBlock ?? "latest")}`)
+        .update(
+          `${req.contract.address}|${req.event}|${String(req.fromBlock ?? "latest")}`
+        )
         .digest("hex")
         .slice(0, 16);
 
@@ -1823,6 +1832,7 @@ git commit -m "feat(indexer): Indexer core (poll, getLogs, cursor persistence)"
 ### Task 10: Reorg detection + rollback
 
 **Files:**
+
 - Modify: `packages/0gkit-indexer/src/indexer.ts` — wire BlockTracker comparison into the poll loop; emit `onReorg`; re-emit on the new chain.
 - Test: `packages/0gkit-indexer/src/__tests__/indexer-reorg.test.ts`
 
@@ -1840,15 +1850,12 @@ const [topic0] = encodeEventTopics({ abi, eventName: "Ping" });
 
 function h(label: string, n: number): Hex {
   const tag = label.charCodeAt(0).toString(16).padStart(2, "0");
-  return ("0x" +
-    tag +
-    n.toString(16).padStart(62, "0")) as Hex;
+  return ("0x" + tag + n.toString(16).padStart(62, "0")) as Hex;
 }
 
 describe("Indexer (reorg)", () => {
   it("emits onReorg with rolled-back events, then re-emits new-chain events", async () => {
-    const address =
-      "0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed" as const;
+    const address = "0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed" as const;
 
     // Phase 1 chain (blocks 1-5, label "A")
     type Phase = "A" | "B";
@@ -1911,8 +1918,7 @@ describe("Indexer (reorg)", () => {
       contract: { address, abi },
       event: "Ping",
       fromBlock: 1n,
-      onEvent: (e) =>
-        delivered.push({ phase, n: (e.args as { n: bigint }).n }),
+      onEvent: (e) => delivered.push({ phase, n: (e.args as { n: bigint }).n }),
       onReorg: (events) => {
         for (const e of events) rolledBack.push(e.blockNumber);
       },
@@ -1966,7 +1972,9 @@ for (const sub of this.subscriptions.values()) {
     const tip = remote[remote.length - 1];
     if (headBlock && tip && tip.hash !== headBlock.hash) {
       const ancestor = sub.tracker.findCommonAncestor(remote);
-      const rollbackFrom = ancestor ? ancestor.number + 1n : sub.tracker.snapshot()[0]!.number;
+      const rollbackFrom = ancestor
+        ? ancestor.number + 1n
+        : sub.tracker.snapshot()[0]!.number;
       const rollbackTo = sub.cursorState.lastBlock;
       // replay logs from the *old* chain only via remote.hash mismatch:
       // we don't have the old logs stored, so we issue getLogs against the
@@ -2073,6 +2081,7 @@ git commit -m "feat(indexer): reorg detection + rollback via BlockTracker"
 ### Task 11: Multi-subscription multiplexing
 
 **Files:**
+
 - Test: `packages/0gkit-indexer/src/__tests__/indexer-multi.test.ts`
 
 The existing Indexer already iterates `this.subscriptions` per poll, so multi-sub is structurally supported. This task is a regression-style test that **proves** it works for two different events on the same address and for the same event on two different addresses.
@@ -2086,20 +2095,15 @@ import { parseAbi, encodeEventTopics, type Hex } from "viem";
 import { Indexer } from "../indexer.js";
 import { MemoryCursorStore } from "../cursors/memory.js";
 
-const abi = parseAbi([
-  "event Ping(uint256 n)",
-  "event Pong(uint256 n)",
-]);
+const abi = parseAbi(["event Ping(uint256 n)", "event Pong(uint256 n)"]);
 const [pingTopic] = encodeEventTopics({ abi, eventName: "Ping" });
 const [pongTopic] = encodeEventTopics({ abi, eventName: "Pong" });
 
-const blockHash = (n: number): Hex =>
-  ("0x" + n.toString(16).padStart(64, "0")) as Hex;
+const blockHash = (n: number): Hex => ("0x" + n.toString(16).padStart(64, "0")) as Hex;
 
 describe("Indexer (multi-subscription)", () => {
   it("delivers events to distinct subscriptions on the same address", async () => {
-    const address =
-      "0xababababababababababababababababababab" as const;
+    const address = "0xababababababababababababababababababab" as const;
     let head = 3n;
     const blocks = new Map<bigint, Hex>([
       [1n, blockHash(1)],
@@ -2186,7 +2190,7 @@ describe("Indexer (multi-subscription)", () => {
       publicClient: client as never,
     });
     await indexer.subscribe({
-      contract: { address: "0xcd" + "00".repeat(19) as `0x${string}`, abi },
+      contract: { address: ("0xcd" + "00".repeat(19)) as `0x${string}`, abi },
       event: "Ping",
       fromBlock: 1n,
       onEvent: () => {},
@@ -2223,6 +2227,7 @@ git commit -m "test(indexer): multi-subscription multiplexing + status()"
 ### Task 12: React adapter — `IndexerProvider`, `useEvent`, `useLogs`
 
 **Files:**
+
 - Modify: `packages/0gkit-react/package.json` — add `@foundryprotocol/0gkit-indexer: workspace:*` dep.
 - Create: `packages/0gkit-react/src/IndexerProvider.tsx`
 - Create: `packages/0gkit-react/src/useEvent.ts`
@@ -2234,6 +2239,7 @@ git commit -m "test(indexer): multi-subscription multiplexing + status()"
 - [ ] **Step 1: Update `0gkit-react/package.json`**
 
 Add to `dependencies`:
+
 ```json
     "@foundryprotocol/0gkit-indexer": "workspace:*",
 ```
@@ -2268,7 +2274,7 @@ describe("useEvent", () => {
     const Probe: React.FC = () => {
       const { events } = useEvent({
         contract: {
-          address: "0xcafe" + "00".repeat(18) as `0x${string}`,
+          address: ("0xcafe" + "00".repeat(18)) as `0x${string}`,
           abi: [],
         },
         event: "Ping",
@@ -2336,14 +2342,13 @@ export function useIndexer(): Indexer {
 ```ts
 // packages/0gkit-react/src/useEvent.ts
 import { useEffect, useRef, useState } from "react";
-import type {
-  DecodedEvent,
-  SubscribeOptions,
-} from "@foundryprotocol/0gkit-indexer";
+import type { DecodedEvent, SubscribeOptions } from "@foundryprotocol/0gkit-indexer";
 import { useIndexer } from "./IndexerProvider.js";
 
-export interface UseEventOptions
-  extends Omit<SubscribeOptions, "onEvent" | "onReorg"> {}
+export interface UseEventOptions extends Omit<
+  SubscribeOptions,
+  "onEvent" | "onReorg"
+> {}
 
 export interface UseEventResult {
   events: DecodedEvent[];
@@ -2374,9 +2379,7 @@ export function useEvent(opts: UseEventOptions): UseEventResult {
           onReorg: (rolled) => {
             if (!mounted) return;
             const dropBlocks = new Set(rolled.map((r) => r.blockNumber));
-            setEvents((prev) =>
-              prev.filter((e) => !dropBlocks.has(e.blockNumber))
-            );
+            setEvents((prev) => prev.filter((e) => !dropBlocks.has(e.blockNumber)));
           },
         });
         if (mounted) setIsLoading(false);
@@ -2523,10 +2526,10 @@ describe("useLogs", () => {
     const fakeEvent = (n: bigint): DecodedEvent => ({
       eventName: "Ping",
       args: { n },
-      address: "0xcafe" + ("00".repeat(18)) as `0x${string}`,
+      address: ("0xcafe" + "00".repeat(18)) as `0x${string}`,
       blockNumber: n,
-      blockHash: "0x" + ("ab".repeat(32)) as `0x${string}`,
-      transactionHash: "0x" + ("cd".repeat(32)) as `0x${string}`,
+      blockHash: ("0x" + "ab".repeat(32)) as `0x${string}`,
+      transactionHash: ("0x" + "cd".repeat(32)) as `0x${string}`,
       transactionIndex: 0,
       logIndex: 0,
       topics: [],
@@ -2546,14 +2549,12 @@ describe("useLogs", () => {
 
     const Probe: React.FC = () => {
       const { logs, isLoading } = useLogs({
-        contract: { address: "0xcafe" + "00".repeat(18) as `0x${string}`, abi: [] },
+        contract: { address: ("0xcafe" + "00".repeat(18)) as `0x${string}`, abi: [] },
         event: "Ping",
         fromBlock: 1n,
       });
       return (
-        <div data-testid="state">
-          {isLoading ? "loading" : `done:${logs.length}`}
-        </div>
+        <div data-testid="state">{isLoading ? "loading" : `done:${logs.length}`}</div>
       );
     };
 
@@ -2574,10 +2575,12 @@ describe("useLogs", () => {
 - [ ] **Step 9: Run tests**
 
 Run:
+
 ```bash
 pnpm --filter @foundryprotocol/0gkit-react typecheck
 pnpm --filter @foundryprotocol/0gkit-react test
 ```
+
 Expected: all suites PASS (including the existing useUpload / useDownload / useInference / useAttestation suites).
 
 - [ ] **Step 10: Coverage gate**
@@ -2604,6 +2607,7 @@ git commit -m "feat(react): SP6 hooks — useEvent + useLogs + ZeroGIndexerProvi
 ### Task 13: README + changeset + decisions + roadmap + final CI gate
 
 **Files:**
+
 - Create: `packages/0gkit-indexer/README.md` (full version replacing the placeholder).
 - Create: `.changeset/sp6-0gkit-indexer.md`
 - Modify: `docs/DECISIONS.md`
@@ -2612,7 +2616,7 @@ git commit -m "feat(react): SP6 hooks — useEvent + useLogs + ZeroGIndexerProvi
 
 - [ ] **Step 1: Write `packages/0gkit-indexer/README.md`**
 
-```markdown
+````markdown
 # @foundryprotocol/0gkit-indexer
 
 Reorg-safe, persisted-cursor event subscriptions on the 0G chain. Built on `@foundryprotocol/0gkit-contracts` typed contracts and `viem`.
@@ -2624,6 +2628,7 @@ pnpm add @foundryprotocol/0gkit-indexer
 # optional persistence backends (sqlite ships built-in):
 pnpm add ioredis     # if you want the redis cursor
 ```
+````
 
 ## Quickstart
 
@@ -2646,7 +2651,11 @@ await indexer.subscribe({
   event: "ProviderRegistered",
   fromBlock: "latest",
   onEvent: (event) => console.log("registered:", event.args),
-  onReorg: (rolled) => console.warn("rolled back:", rolled.map((r) => r.blockNumber)),
+  onReorg: (rolled) =>
+    console.warn(
+      "rolled back:",
+      rolled.map((r) => r.blockNumber)
+    ),
 });
 
 await indexer.start();
@@ -2682,7 +2691,13 @@ function Messages() {
     fromBlock: "latest",
   });
   if (isLoading) return <p>loading…</p>;
-  return <ul>{events.map((e, i) => <li key={i}>{String(e.args.body)}</li>)}</ul>;
+  return (
+    <ul>
+      {events.map((e, i) => (
+        <li key={i}>{String(e.args.body)}</li>
+      ))}
+    </ul>
+  );
 }
 ```
 
@@ -2693,7 +2708,8 @@ function Messages() {
 ## License
 
 MIT
-```
+
+````
 
 - [ ] **Step 2: Write changeset**
 
@@ -2704,7 +2720,7 @@ MIT
 ---
 
 SP6 — `@foundryprotocol/0gkit-indexer`: reorg-safe event subscriptions on 0G with memory / sqlite / redis cursor backends, plus `useEvent` and `useLogs` hooks in `@foundryprotocol/0gkit-react` (gated on a `ZeroGIndexerProvider`).
-```
+````
 
 Save as `.changeset/sp6-0gkit-indexer.md`.
 
@@ -2713,7 +2729,6 @@ Save as `.changeset/sp6-0gkit-indexer.md`.
 Append at the end:
 
 ```markdown
-
 ### D19 — `0gkit-indexer` cursor backends: sqlite direct dep, redis optional peer
 
 `better-sqlite3` is a direct dependency: it ships with the package, ~2 MB install, synchronous (no event-loop hop per cursor write), and gives every user persistent cursors out of the box without an extra install step. `ioredis` is an `optionalPeerDependency`: redis is a multi-process / clustered deployment concern, and forcing every user to install it would balloon the install footprint for the common (single-process) case. Sub-path exports (`/cursors/sqlite`, `/cursors/redis`) let tree-shaking strip the unused backend from production bundles.
@@ -2736,6 +2751,7 @@ Find the package table and add a row for `@foundryprotocol/0gkit-indexer` mirror
 - [ ] **Step 6: Full repo gate**
 
 Run from repo root:
+
 ```bash
 pnpm format:check
 pnpm lint
@@ -2746,6 +2762,7 @@ pnpm test
 pnpm --filter @foundryprotocol/0gkit-indexer coverage
 pnpm --filter @foundryprotocol/0gkit-react coverage
 ```
+
 Expected: every command exits 0. Coverage on both target packages meets the 80/70 gate.
 
 - [ ] **Step 7: Commit + push + open PR**
@@ -2799,20 +2816,20 @@ gh pr merge --squash --delete-branch
 
 **Spec coverage:**
 
-| Spec requirement                                                                | Task(s)              |
-| ------------------------------------------------------------------------------- | -------------------- |
-| `new Indexer({ network, cursor })`                                              | T9 (core), T3 (types) |
-| `subscribe({ contract, event, fromBlock, onEvent, onReorg })`                   | T9 (subscribe)        |
-| Cursor: sqlite default, redis adapter, in-memory for tests                      | T6 memory, T7 sqlite, T8 redis |
-| Backoff with jitter on RPC errors                                               | T2 (backoff), T9 (callWithBackoff) |
-| Reorg-safe: tracks last N blocks; emits roll-back event on reorg                | T4 (BlockTracker), T10 (wiring + test) |
-| Cursor persistence (sqlite default, redis adapter, in-memory for tests)         | T6 / T7 / T8         |
-| Multi-event multiplexing on a single subscription                               | T11 (multi test)     |
-| React: `useEvent`, `useLogs`                                                    | T12                  |
-| Test: simulates 3-block reorg correctly rolls back and re-emits                 | T10 test             |
-| Cursor survives restart: stop, restart, no missed events                        | T9 second test       |
-| Coverage 85%                                                                    | T11 step 3 + T12 step 10 + T13 step 6 |
-| Depends on SP4 (typed contracts) + SP5 (testing fixtures)                       | T1 deps, T9 SubscribeOptions accepts TypedContract shape, T7/T8 dev-dep on 0gkit-testing |
+| Spec requirement                                                        | Task(s)                                                                                  |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `new Indexer({ network, cursor })`                                      | T9 (core), T3 (types)                                                                    |
+| `subscribe({ contract, event, fromBlock, onEvent, onReorg })`           | T9 (subscribe)                                                                           |
+| Cursor: sqlite default, redis adapter, in-memory for tests              | T6 memory, T7 sqlite, T8 redis                                                           |
+| Backoff with jitter on RPC errors                                       | T2 (backoff), T9 (callWithBackoff)                                                       |
+| Reorg-safe: tracks last N blocks; emits roll-back event on reorg        | T4 (BlockTracker), T10 (wiring + test)                                                   |
+| Cursor persistence (sqlite default, redis adapter, in-memory for tests) | T6 / T7 / T8                                                                             |
+| Multi-event multiplexing on a single subscription                       | T11 (multi test)                                                                         |
+| React: `useEvent`, `useLogs`                                            | T12                                                                                      |
+| Test: simulates 3-block reorg correctly rolls back and re-emits         | T10 test                                                                                 |
+| Cursor survives restart: stop, restart, no missed events                | T9 second test                                                                           |
+| Coverage 85%                                                            | T11 step 3 + T12 step 10 + T13 step 6                                                    |
+| Depends on SP4 (typed contracts) + SP5 (testing fixtures)               | T1 deps, T9 SubscribeOptions accepts TypedContract shape, T7/T8 dev-dep on 0gkit-testing |
 
 **Placeholder scan:** No "TBD"/"implement later"/"add appropriate error handling" left. The reorg block in T10 has a known v0 limitation (rolled-back events carry empty args) documented in the README + the implementation comment — that's a deliberate scope cut, not a placeholder.
 
