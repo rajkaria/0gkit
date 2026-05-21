@@ -13,7 +13,7 @@ completion** using
 ## Clone
 
 ```bash
-npx degit rajkaria/0G-ai-kit/templates/inference-app inference-app
+npx degit rajkaria/0gkit/templates/inference-app inference-app
 cd inference-app
 npm install
 ```
@@ -60,5 +60,5 @@ returns `{ output, receipt }`. A drop-in OpenAI shim is also available via
 
 ## Docs
 
-- 0gkit: <https://github.com/rajkaria/0G-ai-kit>
+- 0gkit: <https://github.com/rajkaria/0gkit>
 - 0G Compute: <https://docs.0g.ai>

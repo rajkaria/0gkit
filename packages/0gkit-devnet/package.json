@@ -3,14 +3,14 @@
   "version": "0.2.0",
   "description": "Local chain + storage + compute + DA stack for 0G app development (`0g dev`).",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0g-ai-kit/tree/main/packages/0gkit-devnet",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-devnet",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rajkaria/0g-ai-kit.git",
+    "url": "https://github.com/rajkaria/0gkit.git",
     "directory": "packages/0gkit-devnet"
   },
   "bugs": {
-    "url": "https://github.com/rajkaria/0g-ai-kit/issues"
+    "url": "https://github.com/rajkaria/0gkit/issues"
   },
   "type": "module",
   "main": "./dist/index.js",

@@ -1,0 +1,71 @@
+{
+  "name": "@foundryprotocol/0gkit-contracts",
+  "version": "0.0.0",
+  "description": "Typed contract clients for 0G. Five standard 0G contracts pre-bundled (ERC-20, ERC-721, Multicall3, provider registry, attestation verifier) plus `forge build` → typed TS codegen. Wagmi-style .read.method() / .write.method() / .events.Event(); no hand-written ABIs.",
+  "license": "MIT",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-contracts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajkaria/0gkit.git",
+    "directory": "packages/0gkit-contracts"
+  },
+  "bugs": {
+    "url": "https://github.com/rajkaria/0gkit/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./codegen": {
+      "types": "./dist/codegen.d.ts",
+      "import": "./dist/codegen.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@foundryprotocol/0gkit-core": "workspace:*",
+    "viem": "^2.21.0"
+  },
+  "peerDependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "dependency-cruiser": "^16.0.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "0g",
+    "0g-network",
+    "viem",
+    "contracts",
+    "abi",
+    "codegen",
+    "wagmi-style",
+    "toolkit"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

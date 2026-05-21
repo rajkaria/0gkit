@@ -51,7 +51,7 @@ npm create 0gkit-app@latest my-app \
 ## Pairs with `0g dev`
 
 `--network local` writes a `.env.example` that points at the local devnet
-ports started by [`0g dev`](https://github.com/rajkaria/0g-ai-kit/tree/main/packages/0gkit-cli):
+ports started by [`0g dev`](https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-cli):
 
 ```bash
 0g dev                # starts anvil + storage/compute/DA mocks

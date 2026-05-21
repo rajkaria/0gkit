@@ -23,8 +23,26 @@ import {
   readState,
   clearState,
 } from "@foundryprotocol/0gkit-devnet";
+import {
+  standardContractsMeta,
+  KNOWN_ADDRESSES,
+} from "@foundryprotocol/0gkit-contracts";
+import { generate as generateContract } from "@foundryprotocol/0gkit-contracts/codegen";
 import { buildProgram, type ProgramDeps } from "./program.js";
 import { loadFoundry } from "./foundry-loader.js";
+
+type NetworkKey = "aristotle" | "galileo" | "local";
+
+function resolveAddressForNetwork(
+  contractName: string,
+  network: NetworkKey
+): `0x${string}` | null {
+  if (contractName === "multicall3") return KNOWN_ADDRESSES.multicall3[network];
+  if (contractName === "registry") return KNOWN_ADDRESSES.registry[network];
+  if (contractName === "attestationVerifier")
+    return KNOWN_ADDRESSES.attestationVerifier[network];
+  return null;
+}
 
 async function readStdin(): Promise<Uint8Array> {
   const chunks: Buffer[] = [];
@@ -46,6 +64,26 @@ const deps: ProgramDeps = {
   attest: { parseEnvelope, verifyEnvelope, reportEnvelope },
   devnet: { startDevnet, stopDevnet, isRunning, readState, clearState },
   loadFoundry,
+  contracts: {
+    generate: (o) => generateContract(o),
+    listStandard: (network) =>
+      Object.values(standardContractsMeta).map((c) => ({
+        name: c.name,
+        address: resolveAddressForNetwork(c.name, network as NetworkKey),
+        description: c.description,
+      })),
+    getStandard: (name, network) => {
+      const meta = standardContractsMeta[name];
+      if (!meta) return null;
+      return {
+        name: meta.name,
+        address: resolveAddressForNetwork(name, network as NetworkKey),
+        description: meta.description,
+        methods: meta.methods,
+        events: meta.events,
+      };
+    },
+  },
   fs: {
     readFile: (p) => readFile(p).then((b) => new Uint8Array(b)),
     writeFile: (p, d) => writeFile(p, d),

@@ -48,14 +48,14 @@
     "create",
     "initializer"
   ],
-  "homepage": "https://github.com/rajkaria/0g-ai-kit/tree/main/packages/create-0g-app",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/create-0g-app",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rajkaria/0g-ai-kit.git",
+    "url": "https://github.com/rajkaria/0gkit.git",
     "directory": "packages/create-0g-app"
   },
   "bugs": {
-    "url": "https://github.com/rajkaria/0g-ai-kit/issues"
+    "url": "https://github.com/rajkaria/0gkit/issues"
   },
   "publishConfig": {
     "access": "public"

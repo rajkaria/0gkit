@@ -19,7 +19,7 @@ named runner that both updates reactive state and resolves/rejects.
 ## Clone
 
 ```bash
-npx degit rajkaria/0G-ai-kit/templates/react-app react-app
+npx degit rajkaria/0gkit/templates/react-app react-app
 cd react-app
 npm install
 ```
@@ -66,5 +66,5 @@ npm run build && npm start
 
 ## Docs
 
-- 0gkit: <https://github.com/rajkaria/0G-ai-kit>
+- 0gkit: <https://github.com/rajkaria/0gkit>
 - Next.js: <https://nextjs.org/docs>

@@ -16,7 +16,7 @@ downloads the blob back by root, and verifies the bytes match exactly.
 ## Clone
 
 ```bash
-npx degit rajkaria/0G-ai-kit/templates/storage-app storage-app
+npx degit rajkaria/0gkit/templates/storage-app storage-app
 cd storage-app
 npm install
 ```
@@ -61,5 +61,5 @@ Round-trip OK: downloaded bytes match the original.
 
 ## Docs
 
-- 0gkit: <https://github.com/rajkaria/0G-ai-kit>
+- 0gkit: <https://github.com/rajkaria/0gkit>
 - 0G Storage: <https://docs.0g.ai>

@@ -15,7 +15,7 @@ digest + signer, and shows that tampering flips the result to `ok: false`.
 ## Clone
 
 ```bash
-npx degit rajkaria/0G-ai-kit/templates/attestation-verify attestation-verify
+npx degit rajkaria/0gkit/templates/attestation-verify attestation-verify
 cd attestation-verify
 npm install
 ```
@@ -65,5 +65,5 @@ keccak digest, so they verify identically on-chain. See
 
 ## Docs
 
-- 0gkit: <https://github.com/rajkaria/0G-ai-kit>
+- 0gkit: <https://github.com/rajkaria/0gkit>
 - 0G docs: <https://docs.0g.ai>

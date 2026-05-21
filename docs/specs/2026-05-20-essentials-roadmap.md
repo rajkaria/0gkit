@@ -89,7 +89,7 @@ Outputs:
 
 - `npx create-0gkit-app@latest demo --template storage-app --network local --install` completes in ≤ 45s on a clean machine with a warm npm cache; the scaffolded `demo/` runs `pnpm start` successfully against the local stack from SP2.
 - `npm create 0gkit-app demo`, `pnpm create 0gkit-app demo`, `yarn create 0gkit-app demo` all work (use [`giget`](https://github.com/unjs/giget) for degit; avoid `create-` package quirks by following the [npm-init spec](https://docs.npmjs.com/cli/v10/commands/npm-init) — the binary is `create-0gkit-app` not `0gkit-app`).
-- Templates are fetched from the same monorepo `templates/<name>` via a [pinned git ref](https://github.com/rajkaria/0g-ai-kit/tree/v0.2.x/templates) so we don't serve broken templates from `main`.
+- Templates are fetched from the same monorepo `templates/<name>` via a [pinned git ref](https://github.com/rajkaria/0gkit/tree/v0.2.x/templates) so we don't serve broken templates from `main`.
 - Coverage 85% on `create-0gkit-app` package (it's small and critical).
 - An e2e smoke test in CI runs `create-0gkit-app storage-app` in a tmpdir and asserts `pnpm build` exits 0.
 
@@ -232,7 +232,9 @@ const isValid = await siwe.verify({ message, signature, expectedNonce: nonce });
 
 ---
 
-### SP4 — `@foundryprotocol/0gkit-contracts`
+### SP4 — `@foundryprotocol/0gkit-contracts` ✅ SHIPPED
+
+**Status:** shipped 2026-05-21. Implementation plan: `docs/plans/2026-05-21-sp4-0gkit-contracts.md`. Released on `main`.
 
 **Goal:** wagmi-style codegen for typed contract clients. Out of the box: ABIs for the 0G "standard" on-chain contracts (registry, attestation verifier, token contracts, multicall). Out of the box: a `0g contracts generate` command that consumes Foundry/Hardhat artifacts and emits a fully typed client.
 
@@ -652,7 +654,7 @@ A `0g cost` CLI subcommand reads OTel-format traces (or a local sqlite buffer) a
 
 - **CI/CD templates:** `.github/workflows/0gkit-ci.yml` (test + boundary + typecheck), `.github/workflows/0gkit-deploy-vercel.yml`, GitLab equivalents, `.circleci/config.yml`. `create-0gkit-app` offers `--ci github|gitlab|circle|none`.
 - **Vercel one-click deploy:** Every template has a `Deploy to Vercel` button in its README. The Vercel project is pre-configured with the right env-var prompts (NETWORK, PRIVATE_KEY or KMS_KEY_ID, OTEL_ENDPOINT).
-- **GitHub Discussions** turned on in `0G-ai-kit`; pinned categories: Show-and-tell, Help, RFCs.
+- **GitHub Discussions** turned on in `0gkit`; pinned categories: Show-and-tell, Help, RFCs.
 - **Issue + PR templates:** bug report, feature request, security issue, RFC. PR template enforces changeset.
 - **`CONTRIBUTING.md` refresh:** how to run `0g dev`, how to add a template, how to add an error code, how to ship a sub-project plan.
 - **Docs polish:** Every package page in `apps/docs` has a working in-browser example via the playground (Phase 1 of `apps/playground` is already wired). Every page is reviewed for "would a junior dev be unblocked here."
@@ -665,7 +667,7 @@ A `0g cost` CLI subcommand reads OTel-format traces (or a local sqlite buffer) a
 
 - A new builder going from `npm create 0gkit-app` to "deployed to Vercel with CI on every push" takes < 10 minutes.
 - The docs site has 100% public-export coverage (asserted by `docs:check`).
-- The `0G-ai-kit` Discussions has the founder team plus at least one community responder actively answering.
+- The `0gkit` Discussions has the founder team plus at least one community responder actively answering.
 - Lighthouse on `apps/docs` ≥ 95 across the board.
 
 **Value shipped:** From "great kit" to "obvious default." This is the phase where ecosystem behaviour starts to compound — Discord threads, blog posts, dotfile templates other people maintain, all linking back to 0gkit.

@@ -255,7 +255,7 @@ export async function fetchTemplate(opts: {
   dest: string;
 }): Promise<void> {
   await downloadTemplate(
-    `github:rajkaria/0G-ai-kit/templates/${opts.name}#${TEMPLATE_REF}`,
+    `github:rajkaria/0gkit/templates/${opts.name}#${TEMPLATE_REF}`,
     { dir: opts.dest, force: false, install: false }
   );
 }

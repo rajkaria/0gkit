@@ -25,7 +25,7 @@ no glue code.
 ## Clone
 
 ```bash
-npx degit rajkaria/0G-ai-kit/templates/mcp-agent mcp-agent
+npx degit rajkaria/0gkit/templates/mcp-agent mcp-agent
 cd mcp-agent
 npm install
 cp .env.example .env   # all vars optional; defaults to Galileo testnet
@@ -114,5 +114,5 @@ funds with the `og_chain_faucet` tool or <https://faucet.0g.ai>.
 
 ## Docs
 
-- 0gkit: <https://github.com/rajkaria/0G-ai-kit>
+- 0gkit: <https://github.com/rajkaria/0gkit>
 - Model Context Protocol: <https://modelcontextprotocol.io>

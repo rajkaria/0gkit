@@ -9,7 +9,7 @@ The latest published `@foundryprotocol/0gkit-*` minor line is supported.
 **Do not open a public issue for security vulnerabilities.**
 
 Use GitHub's private vulnerability reporting:
-<https://github.com/rajkaria/0G-ai-kit/security/advisories/new>
+<https://github.com/rajkaria/0gkit/security/advisories/new>
 
 Please include a description, reproduction steps, affected package(s) and
 version(s), and impact. We aim to acknowledge within 72 hours and to ship a

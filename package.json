@@ -3,10 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "description": "0gkit — the neutral, MIT, defacto builder toolkit for the 0G network. Storage, Compute, DA, Attestation, Chain, a 0g CLI, an MCP server, and React hooks.",
-  "homepage": "https://github.com/rajkaria/0g-ai-kit",
+  "homepage": "https://github.com/rajkaria/0gkit",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rajkaria/0g-ai-kit.git"
+    "url": "https://github.com/rajkaria/0gkit.git"
   },
   "license": "MIT",
   "packageManager": "pnpm@9.12.0",

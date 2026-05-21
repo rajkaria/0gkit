@@ -237,13 +237,13 @@ git commit -m "feat(core): add neutral Signer interface for 0gkit-wallet"
   "version": "0.1.0",
   "description": "Neutral wallet abstraction for 0G — Signer interface, key loaders (env/file/KMS), and SIWE helpers.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/0gkit-wallet",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-wallet",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rajkaria/0G-ai-kit.git",
+    "url": "https://github.com/rajkaria/0gkit.git",
     "directory": "packages/0gkit-wallet"
   },
-  "bugs": { "url": "https://github.com/rajkaria/0G-ai-kit/issues" },
+  "bugs": { "url": "https://github.com/rajkaria/0gkit/issues" },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -1495,13 +1495,13 @@ git commit -m "feat(wallet): SIWE — EIP-4361 nonce/buildMessage/verify"
   "version": "0.1.0",
   "description": "React adapter for @foundryprotocol/0gkit-wallet — ZeroGWalletProvider + hooks backed by wagmi v2.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0G-ai-kit/tree/main/packages/0gkit-wallet-react",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-wallet-react",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rajkaria/0G-ai-kit.git",
+    "url": "https://github.com/rajkaria/0gkit.git",
     "directory": "packages/0gkit-wallet-react"
   },
-  "bugs": { "url": "https://github.com/rajkaria/0G-ai-kit/issues" },
+  "bugs": { "url": "https://github.com/rajkaria/0gkit/issues" },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

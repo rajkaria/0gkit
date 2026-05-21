@@ -3,14 +3,14 @@
   "version": "0.2.0",
   "description": "Neutral React hooks for 0G — useUpload, useDownload, useInference, useAttestation over @foundryprotocol/0gkit-*.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0g-ai-kit/tree/main/packages/0gkit-react",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-react",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rajkaria/0g-ai-kit.git",
+    "url": "https://github.com/rajkaria/0gkit.git",
     "directory": "packages/0gkit-react"
   },
   "bugs": {
-    "url": "https://github.com/rajkaria/0g-ai-kit/issues"
+    "url": "https://github.com/rajkaria/0gkit/issues"
   },
   "type": "module",
   "main": "./dist/index.js",

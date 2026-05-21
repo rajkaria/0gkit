@@ -40,7 +40,7 @@ export function isValidTemplateName(s: string): s is TemplateName {
  */
 const TEMPLATE_REF = process.env.OGKIT_TEMPLATE_REF ?? "v0.2.x";
 
-const TEMPLATE_REPO = "rajkaria/0g-ai-kit";
+const TEMPLATE_REPO = "rajkaria/0gkit";
 
 export async function fetchTemplate(opts: {
   name: TemplateName;

@@ -112,5 +112,65 @@ The public front door is `npm create 0gkit-app@latest`. The originally planned
 publisher. To avoid duplicate scaffolder code, `create-0gkit-app` bundles the
 same source implementation at build time, has its own `create-0gkit-app` binary,
 and publishes as the only working npm-create package. Documentation, CI smoke
-tests, and template fetches use the lowercase GitHub repo slug
-`rajkaria/0g-ai-kit`.
+tests, and template fetches use the GitHub repo slug `rajkaria/0gkit`
+(see D13 for the rename history).
+
+---
+
+## D13 — GitHub repo renamed `0G-ai-kit` → `0gkit`
+
+**Date:** 2026-05-21 · **SP:** SP4 housekeeping
+
+The repository was renamed from `rajkaria/0G-ai-kit` to `rajkaria/0gkit` to
+match the npm publishing scope (`@foundryprotocol/0gkit-*`), the canonical
+initializer (`create-0gkit-app`), the public command (`npm create 0gkit-app`),
+and the brand. The previous name carried a misleading "ai" suffix even though
+the toolkit covers storage, compute, DA, attestation, chain, contracts, and
+indexing — not just inference. GitHub maintains an HTTP redirect from the old
+name; existing clones continue to work but should `git remote set-url origin
+https://github.com/rajkaria/0gkit.git`. All in-repo URL references
+(package.json `homepage`/`repository`/`bugs`, README CI badge, SECURITY.md,
+template degit commands, and the `TEMPLATE_REPO` constant in
+`create-0g-app/src/templates.ts`) were rewritten to the new slug in the same
+PR.
+
+---
+
+## D14 — Typed contracts use wagmi-style `.read.method()` / `.write.method()` API
+
+**Date:** 2026-05-21 · **SP:** SP4
+
+`viem.getContract` already exposes typed `.read.balanceOf(args)` and
+`.write.transfer(args)` accessors when given an `as const` ABI literal. We
+surface this directly rather than wrapping it in a custom `.call('name', args)`
+adapter. Reasons: (a) IntelliSense works out of the box on codegen'd contracts;
+(b) the API is industry-standard via wagmi so newcomers already know it;
+(c) zero adapter code to maintain. We layer one thin behaviour on top: every
+`write.*` call auto-awaits the receipt and returns the `0gkit-core.Receipt`
+shape, so users don't have to remember the viem two-step.
+
+---
+
+## D15 — Codegen consumes Foundry artifacts (not Hardhat) as v0
+
+**Date:** 2026-05-21 · **SP:** SP4
+
+`forge build` is the recommended toolchain for 0G contracts (the
+`contracts/` directory in `foundry/Foundryprotocol` ships a `foundry.toml`,
+not a `hardhat.config.ts`). Foundry's artifact format is simple JSON with
+`{ abi, contractName }` at the top level. Hardhat support adds variance
+(file paths differ, the artifact wraps `abi` inside an `output` object) — we'll
+add a Hardhat parser as a plugin in a follow-up, not v0. Users on Hardhat
+today can extract the abi with `jq` before invoking `0g contracts generate`.
+
+---
+
+## D16 — Codegen emits TS via template strings, not `ts-morph`
+
+**Date:** 2026-05-21 · **SP:** SP4
+
+`ts-morph` is ~6 MB and ships its own TypeScript compiler — adding that for
+the ~80 lines we actually need (`const out = \`...\` + JSON.stringify(abi)`)
+is a poor trade. Template strings are also byte-deterministic
+(snapshot-testable) and editable. If we ever need AST-level rewriting (rare),
+we'll add `ts-morph` then.

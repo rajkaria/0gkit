@@ -3,14 +3,14 @@
   "version": "0.2.0",
   "description": "The neutral 0G MCP server — every 0G primitive (storage, compute, da, chain, attestation) as an MCP tool for Claude / Cursor / Cline / any agent runtime. Foundry is a separate opt-in plugin.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0g-ai-kit/tree/main/packages/0gkit-mcp",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-mcp",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rajkaria/0g-ai-kit.git",
+    "url": "https://github.com/rajkaria/0gkit.git",
     "directory": "packages/0gkit-mcp"
   },
   "bugs": {
-    "url": "https://github.com/rajkaria/0g-ai-kit/issues"
+    "url": "https://github.com/rajkaria/0gkit/issues"
   },
   "type": "module",
   "main": "./dist/index.js",
