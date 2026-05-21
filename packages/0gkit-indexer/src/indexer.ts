@@ -13,6 +13,7 @@ import { expBackoffWithJitter } from "./backoff.js";
 import type {
   CursorState,
   CursorStore,
+  DecodedEvent,
   IndexerOptions,
   IndexerStatus,
   SubscribeOptions,
@@ -180,6 +181,62 @@ export class Indexer {
       const safeHead = head - conf + 1n;
 
       for (const sub of this.subscriptions.values()) {
+        // ---- Reorg detection ----
+        if (sub.tracker.size > 0) {
+          const trackerSnapshot = sub.tracker.snapshot();
+          const remote: Array<{ number: bigint; hash: Hex }> = [];
+          for (const b of trackerSnapshot) {
+            const live = await this.client.getBlock({ blockNumber: b.number });
+            remote.push({ number: b.number, hash: live.hash as Hex });
+          }
+          const headBlock = sub.tracker.head();
+          const tip = remote[remote.length - 1];
+          if (headBlock && tip && tip.hash !== headBlock.hash) {
+            const ancestor = sub.tracker.findCommonAncestor(remote);
+            const rollbackFrom = ancestor
+              ? ancestor.number + 1n
+              : trackerSnapshot[0]!.number;
+            const rollbackTo = sub.cursorState.lastBlock;
+            const oldByNumber = new Map<bigint, Hex>();
+            for (const b of trackerSnapshot) oldByNumber.set(b.number, b.hash);
+
+            const rolledBack: DecodedEvent[] = [];
+            for (let n = rollbackFrom; n <= rollbackTo; n++) {
+              const oldHash = oldByNumber.get(n);
+              if (!oldHash) continue;
+              rolledBack.push({
+                eventName: sub.event,
+                args: {},
+                address: sub.address,
+                blockNumber: n,
+                blockHash: oldHash,
+                transactionHash:
+                  "0x0000000000000000000000000000000000000000000000000000000000000000" as Hex,
+                transactionIndex: 0,
+                logIndex: 0,
+                topics: [sub.topic0],
+                data: "0x" as Hex,
+              });
+            }
+            if (rolledBack.length > 0 && sub.onReorg) await sub.onReorg(rolledBack);
+
+            if (ancestor) {
+              sub.tracker.truncateAfter(ancestor);
+              sub.cursorState = {
+                lastBlock: ancestor.number,
+                recentBlocks: sub.tracker.snapshot(),
+              };
+            } else {
+              sub.tracker.hydrate([]);
+              sub.cursorState = {
+                lastBlock: sub.fromBlock - 1n,
+                recentBlocks: [],
+              };
+            }
+            await this.cursor.save(sub.id, sub.cursorState);
+          }
+        }
+        // ---- (existing) live emit ----
         if (sub.cursorState.lastBlock >= safeHead) continue;
         const fromBlock = sub.cursorState.lastBlock + 1n;
         const toBlock = safeHead;
