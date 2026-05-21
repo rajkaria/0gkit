@@ -40,6 +40,7 @@
     "@foundryprotocol/0gkit-attestation": "workspace:*",
     "@foundryprotocol/0gkit-compute": "workspace:*",
     "@foundryprotocol/0gkit-core": "workspace:*",
+    "@foundryprotocol/0gkit-indexer": "workspace:*",
     "@foundryprotocol/0gkit-storage": "workspace:*"
   },
   "peerDependencies": {
