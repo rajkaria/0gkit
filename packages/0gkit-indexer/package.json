@@ -1,13 +1,13 @@
 {
-  "name": "@foundryprotocol/0gkit-react",
-  "version": "0.2.0",
-  "description": "Neutral React hooks for 0G — useUpload, useDownload, useInference, useAttestation over @foundryprotocol/0gkit-*.",
+  "name": "@foundryprotocol/0gkit-indexer",
+  "version": "0.0.0",
+  "description": "Reorg-safe, persisted-cursor event subscriptions on 0G. Memory / SQLite / Redis cursor backends. Built on @foundryprotocol/0gkit-contracts typed contracts.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-react",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-indexer",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",
-    "directory": "packages/0gkit-react"
+    "directory": "packages/0gkit-indexer"
   },
   "bugs": {
     "url": "https://github.com/rajkaria/0gkit/issues"
@@ -20,6 +20,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./cursors/sqlite": {
+      "types": "./dist/cursors/sqlite.d.ts",
+      "import": "./dist/cursors/sqlite.js"
+    },
+    "./cursors/redis": {
+      "types": "./dist/cursors/redis.d.ts",
+      "import": "./dist/cursors/redis.js"
     }
   },
   "files": [
@@ -37,26 +45,27 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@foundryprotocol/0gkit-attestation": "workspace:*",
-    "@foundryprotocol/0gkit-compute": "workspace:*",
     "@foundryprotocol/0gkit-core": "workspace:*",
-    "@foundryprotocol/0gkit-indexer": "workspace:*",
-    "@foundryprotocol/0gkit-storage": "workspace:*"
+    "@foundryprotocol/0gkit-contracts": "workspace:*",
+    "better-sqlite3": "^11.5.0",
+    "viem": "^2.21.0"
   },
   "peerDependencies": {
-    "react": ">=18"
+    "ioredis": "^5.4.1",
+    "viem": "^2.21.0"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/react": "^16.1.0",
+    "@foundryprotocol/0gkit-testing": "workspace:*",
+    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.2",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
     "@vitest/coverage-v8": "^2.1.8",
     "dependency-cruiser": "^16.0.0",
-    "jsdom": "^25.0.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "ioredis": "^5.4.1",
     "rimraf": "^6.0.1",
     "tsup": "^8.3.5",
     "typescript": "^5.6.3",
@@ -64,8 +73,12 @@
   },
   "keywords": [
     "0g",
-    "react",
-    "hooks",
+    "0g-network",
+    "indexer",
+    "events",
+    "reorg",
+    "subscription",
+    "viem",
     "toolkit"
   ],
   "publishConfig": {
