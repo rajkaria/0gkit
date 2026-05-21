@@ -24,3 +24,9 @@ export {
 } from "./client.js";
 export { canonicalJsonStringify, digestJson } from "./canonical.js";
 export { type Signer, type SignTypedDataArgs, type SignableTx } from "./signer.js";
+export {
+  formatEstimate,
+  formatNative,
+  type Estimate,
+  type DryRunResult,
+} from "./estimate.js";
