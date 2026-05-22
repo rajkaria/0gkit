@@ -1,8 +1,32 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { trace } from "@opentelemetry/api";
+import {
+  BasicTracerProvider,
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import type { InferenceResult } from "@foundryprotocol/0gkit-compute";
 import { buildApp } from "../app.js";
 
-function makeDeps(opts: { logFn?: (m: string) => void } = {}) {
+const TRACER_NAME = "tee-attested-api";
+
+let exporter: InMemorySpanExporter;
+let provider: BasicTracerProvider;
+
+beforeEach(() => {
+  exporter = new InMemorySpanExporter();
+  provider = new BasicTracerProvider({
+    spanProcessors: [new SimpleSpanProcessor(exporter)],
+  });
+  trace.setGlobalTracerProvider(provider);
+});
+
+afterEach(async () => {
+  await provider.shutdown();
+  trace.disable();
+});
+
+function makeDeps() {
   const inference = vi.fn(
     async (_args: { messages: { role: string; content: string }[] }) =>
       ({
@@ -16,7 +40,8 @@ function makeDeps(opts: { logFn?: (m: string) => void } = {}) {
     getAttestation: vi
       .fn()
       .mockResolvedValue({ v: 1, signer: "0x0", signature: "0xbeef" }),
-    log: opts.logFn ?? vi.fn(),
+    // No explicit `tracer` — the middleware falls back to the global tracer
+    // we set up in beforeEach, so we exercise that code path by default.
   };
 }
 
@@ -64,13 +89,43 @@ describe("buildApp", () => {
     expect(res.status).toBe(400);
   });
 
-  it("emits an access-log line per request", async () => {
-    const log = vi.fn();
-    const app = buildApp(makeDeps({ logFn: log }));
+  it("emits an OTel span per request with http.* attributes", async () => {
+    const app = buildApp(makeDeps());
     await app.request("/health");
-    expect(log).toHaveBeenCalled();
-    const line = log.mock.calls[0]?.[0] as string;
-    expect(line).toMatch(/GET \/health 200/);
+    const spans = exporter.getFinishedSpans();
+    expect(spans).toHaveLength(1);
+    expect(spans[0]!.name).toBe("GET /health");
+    expect(spans[0]!.attributes["http.method"]).toBe("GET");
+    expect(spans[0]!.attributes["http.route"]).toBe("/health");
+    expect(spans[0]!.attributes["http.status_code"]).toBe(200);
+    expect(typeof spans[0]!.attributes["http.duration_ms"]).toBe("number");
+  });
+
+  it("records the response status_code on /chat (200)", async () => {
+    const app = buildApp(makeDeps());
+    await app.request("/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "hi" }),
+    });
+    const span = exporter.getFinishedSpans()[0]!;
+    expect(span.attributes["http.status_code"]).toBe(200);
+    expect(span.attributes["http.route"]).toBe("/chat");
+    expect(span.attributes["http.method"]).toBe("POST");
+  });
+
+  it("supports an explicit tracer dep override (for offline tests)", async () => {
+    const localExporter = new InMemorySpanExporter();
+    const localProvider = new BasicTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(localExporter)],
+    });
+    const app = buildApp({
+      ...makeDeps(),
+      tracer: localProvider.getTracer(TRACER_NAME),
+    });
+    await app.request("/health");
+    expect(localExporter.getFinishedSpans()).toHaveLength(1);
+    await localProvider.shutdown();
   });
 
   it("falls back to X-0G-Attestation-Error when the provider throws", async () => {

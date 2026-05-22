@@ -5,7 +5,8 @@ A minimal Hono API where **every response** carries a TEE attestation in the
 to prove the response came from genuine enclave hardware.
 
 Stack: `hono@^4` · `@foundryprotocol/0gkit-compute` ·
-`@foundryprotocol/0gkit-attestation` · `@foundryprotocol/0gkit-wallet`.
+`@foundryprotocol/0gkit-attestation` · `@foundryprotocol/0gkit-wallet` ·
+`@foundryprotocol/0gkit-observability`.
 
 ## Endpoints
 
@@ -38,6 +39,40 @@ curl -i -X POST http://localhost:8787/chat \
   -d '{"prompt":"hello"}'
 ```
 
+## Observability (OTel out of the box)
+
+Every request emits an OTel span (`{METHOD} {PATH}` with `http.method`,
+`http.route`, `http.status_code`, `http.duration_ms` attributes). Every 0G
+primitive call inside the request — for example `Compute.inference()` in
+`/chat` — also emits a `0gkit.*` span via
+[`instrument0g()`](https://0gkit.dev/packages/0gkit-observability).
+
+Out of the box the runtime is silent (no `console.log` access lines — pull a
+real exporter for production). To ship spans, set
+`OTEL_EXPORTER_OTLP_ENDPOINT` (and optionally `OTEL_EXPORTER_OTLP_HEADERS`):
+
+```bash
+# Honeycomb
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.honeycomb.io/v1/traces"
+export OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=$HONEYCOMB_API_KEY"
+
+# Vercel OTel
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.vercel.com/v1/otel/v1/traces"
+export OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer $VERCEL_TOKEN"
+
+# Datadog (via a local agent on :4318)
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318/v1/traces"
+```
+
+`OTEL_EXPORTER_OTLP_HEADERS` is a comma-separated `key=value,key=value` list,
+parsed in `src/index.ts`. If you already configure an OTel SDK yourself in
+some other way, swap `instrument0g({ exporter: { kind: 'otlp', ... } })` for
+`instrument0g({ mode: 'attach' })` and we'll skip SDK setup but still patch
+the primitives.
+
+See [`@foundryprotocol/0gkit-observability` docs](https://0gkit.dev/packages/0gkit-observability)
+for the full span-attribute reference.
+
 ## Verifying the header on the client side
 
 ```ts
@@ -53,14 +88,15 @@ if (!result.ok) throw new Error("attestation failed");
 
 - **`src/middleware.ts`** — two Hono middlewares: `withAttestation` (attaches
   `X-0G-Attestation` to every response, with a graceful `X-0G-Attestation-Error`
-  fallback if the provider throws) and `withAccessLog` (one log line per
-  request, format: `METHOD PATH STATUS DURms`).
+  fallback if the provider throws) and `withAccessLog` (wraps every request
+  in an OTel span and records `http.*` attributes — no more `console.log`).
 - **`src/app.ts`** — `buildApp(deps)` wires the middlewares onto a Hono app
   and registers `/health` and `/chat`. Pure with respect to `deps` so it
-  tests offline.
-- **`src/index.ts`** — production entry. Wires the real `Compute` client and
-  the attestation provider. **Today the attestation source is a fixture** —
-  see "Wiring real attestation" below.
+  tests offline. Tests pass an in-memory exporter via the optional `tracer`
+  dep to assert spans without a real OTel SDK.
+- **`src/index.ts`** — production entry. Calls `instrument0g({...})` first,
+  wires the real `Compute` client, and starts Hono. **Today the attestation
+  source is a fixture** — see "Wiring real attestation" below.
 
 ## Wiring real attestation
 
@@ -82,25 +118,9 @@ setInterval(async () => {
 }, 60_000);
 ```
 
-The shape of `cachedAttestation` must match
-`SignedEnvelope` from `@foundryprotocol/0gkit-attestation` for the client's
-`verifyEnvelope` call to round-trip.
-
-## SP11 (`@foundryprotocol/0gkit-observability`) hand-off
-
-Today the access log uses `console.log`. When SP11 ships, the swap is a
-single line in `src/index.ts`:
-
-```ts
-// today
-log: (m) => console.log(m),
-
-// SP11
-log: structuredLogger({ service: "tee-attested-api" }),
-```
-
-…and the attestation header gets a sibling `traceparent` header for
-distributed tracing.
+The shape of `cachedAttestation` must match `SignedEnvelope` from
+`@foundryprotocol/0gkit-attestation` for the client's `verifyEnvelope` call
+to round-trip.
 
 ## Run the tests
 
@@ -108,5 +128,6 @@ distributed tracing.
 pnpm test
 ```
 
-Six tests cover all four endpoints + edge cases (missing prompt, invalid
-JSON, provider failure) at ≥ 80% lines.
+Eight tests cover all four endpoints + edge cases (missing prompt, invalid
+JSON, provider failure) and assert OTel spans via an in-memory exporter — at
+≥ 80% lines / 70% branches.

@@ -1,3 +1,4 @@
+import type { Tracer } from "@opentelemetry/api";
 import { Hono } from "hono";
 import type { ChatMessage, InferenceResult } from "@foundryprotocol/0gkit-compute";
 import {
@@ -15,13 +16,18 @@ export interface AppDeps extends AttestationProvider {
      */
     inference(args: { messages: ChatMessage[] }): Promise<InferenceResult>;
   };
-  log: (m: string) => void;
+  /**
+   * Optional OTel tracer override. Production passes nothing — the global
+   * tracer set up by `instrument0g({...})` is picked up automatically. Tests
+   * pass an in-memory exporter's tracer for offline assertion.
+   */
+  tracer?: Tracer;
 }
 
 export function buildApp(deps: AppDeps): Hono {
   const app = new Hono();
 
-  app.use("*", withAccessLog(deps.log));
+  app.use("*", withAccessLog({ tracer: deps.tracer }));
   app.use("*", withAttestation(deps));
 
   app.get("/health", (c) => c.json({ ok: true }));
