@@ -278,3 +278,60 @@ undefined. This keeps callers' type narrowing simple (`if (res.dryRun) {...}`)
 and means dry-run code paths share the same Receipt-handling logic as live ones.
 The DA `DEFAULT_DA_RATE_WEI_PER_BYTE = 1e6 wei/byte` is a placeholder until 0G
 publishes a programmatic DA pricing feed.
+
+---
+
+## D24 — Templates live under `templates/<name>/` with one folder per archetype
+
+**Date:** 2026-05-22 · **SP:** SP8
+
+Five SP8 archetypes (`chat`, `storage-app` refresh, `ai-agent`,
+`tee-attested-api`, `nft-with-storage`) added alongside the four Phase-1
+templates. `create-0gkit-app` resolves them via `giget` from
+`rajkaria/0gkit/templates/<name>#<TEMPLATE_REF>`. Default ref bumped to
+`v0.3.x` for the SP8 release.
+
+Templates are **not** in `pnpm-workspace.yaml` (they vendored stale 0gkit
+deps that wouldn't reinstall against current registry state, and they are
+explicitly meant to be installed as standalone projects by `create-0gkit-app`
+consumers — every CI invocation reuses the same `npm install --no-package-lock`
+path the user will hit). Per-template vitest runs are driven by the
+template's own `package.json` after a local install.
+
+---
+
+## D25 — Each template's testable surface lives in a separate `<flow>.ts`, not the entry
+
+**Date:** 2026-05-22 · **SP:** SP8
+
+`templates/storage-app/src/storage-flow.ts`,
+`templates/chat/lib/message.ts`,
+`templates/ai-agent/src/agent.ts`,
+`templates/tee-attested-api/src/app.ts`,
+`templates/nft-with-storage/src/mint-flow.ts`.
+
+The `src/index.ts` (or `app/page.tsx`) is the *thin entry* that wires real
+dependencies. The flow file accepts a `deps` bag so tests can inject inline
+fakes that match the published `0gkit-*` API surface — bypassing the
+`0gkit-testing` mocks whose shape currently lags the real Storage/Compute
+classes (the mocks predate SP7 dry-run and SP6 InferenceResult). Entry files
+are excluded from coverage thresholds because they're configuration glue.
+
+---
+
+## D26 — SP10/SP11 hand-off paths documented inline in `ai-agent` and `tee-attested-api`
+
+**Date:** 2026-05-22 · **SP:** SP8
+
+`ai-agent` runs the agent loop in-process today; the README documents where
+`@foundryprotocol/0gkit-jobs` (SP10) will swap in once it ships (per-step
+`compute.inference` becomes `jobs.enqueue("step", ...)`). `tee-attested-api`
+uses `console.log` for access logging today and a fixture attestation source
+(wrapping `0gkit-testing/fixtures.fixtureAttestation`); the README documents
+the `@foundryprotocol/0gkit-observability` (SP11) swap (one-line replacement
+for the `log` dep) and where to plug a real provider attestation feed.
+
+**Why:** Honesty rule. Roadmap §SP8 listed SP10/SP11 as dependencies; we
+don't ship templates that import packages that don't exist, but we also
+don't ship templates that pretend the future doesn't exist. Inline TODOs
++ a deps-injection seam make the migration mechanical when SP10/SP11 land.

@@ -1,65 +1,82 @@
-# storage-app
+# storage-app — upload + retrieve with dedup and dry-run
 
-A minimal Node + TypeScript starter that **round-trips a file through
-[0G Storage](https://0g.ai)** using
-[`@foundryprotocol/0gkit-storage`](https://www.npmjs.com/package/@foundryprotocol/0gkit-storage).
+The fastest path from a file on disk to a content-addressed blob on **0G Storage**.
 
-It uploads a local file, prints the Merkle root and funding-tx receipt,
-downloads the blob back by root, and verifies the bytes match exactly.
+Built on `@foundryprotocol/0gkit-storage@0.3.0`. Demos:
 
-## Prerequisites
+- **SP3 wallet** (`fromEnv` signer)
+- **SP7 estimate + dry-run** (predict the cost + Merkle root before broadcasting)
+- **Dedup** (skip the funding tx if the root already exists upstream)
 
-- Node.js **>= 20.10**
-- A funded private key on the chosen 0G network. For the `galileo` testnet,
-  get free funds at <https://faucet.0g.ai>.
+## What it does
 
-## Clone
+1. **Dry-run preflight** — `storage.upload(bytes, { dryRun: true })` returns the predicted Merkle root *and* the gas/fee estimate, **without** broadcasting.
+2. **Dedup check** — if `storage.exists(predictedRoot)` is true, the funding tx is skipped entirely.
+3. **Live upload** — sends the funding tx, returns receipt + Merkle root.
+4. **Round-trip verify** — downloads by root and asserts byte-for-byte equality.
 
-```bash
-npx degit rajkaria/0gkit/templates/storage-app storage-app
-cd storage-app
-npm install
-```
-
-## Setup
+## Quickstart
 
 ```bash
 cp .env.example .env
+# Fill in PRIVATE_KEY (galileo testnet faucet: https://faucet.0g.ai)
+
+pnpm install
+pnpm dev
 ```
 
-Then edit `.env`:
+Sample output (first run):
 
-| Var             | Purpose                                                         |
-| --------------- | --------------------------------------------------------------- |
-| `PRIVATE_KEY`   | Funded key that pays the upload tx (64-char hex, `0x` optional) |
-| `ZEROG_NETWORK` | `galileo` (testnet, default) or `aristotle` (mainnet)           |
+```
+Read 1342 bytes from /…/src/index.ts
 
-## Run
+Dry-run estimate:
+  type: storage
+  gas:  80000
+  fee:  1 gwei
+  predicted root: 0xabc…123
+
+Uploading…
+  Merkle root : 0xabc…123
+  tx hash     : 0xdef…456
+  latency     : 1421ms
+Downloading back…
+  Got 1342 bytes
+Round-trip OK.
+```
+
+On a re-run (same file, same root):
+
+```
+Read 1342 bytes from /…/src/index.ts
+
+Dry-run estimate:
+  type: storage
+  gas:  80000
+  fee:  1 gwei
+  predicted root: 0xabc…123
+
+Dedup: 0xabc…123 already on 0G Storage — skipping broadcast.
+```
+
+## Walk through the code
+
+- **`src/index.ts`** — thin entry. Loads a signer from `PRIVATE_KEY`, wires the live `Storage` client into `runStorageFlow`.
+- **`src/storage-flow.ts`** — the testable surface. Pure with respect to `deps`. This is what the tests exercise.
+- **`src/estimate.ts`** — standalone cost estimator: `pnpm estimate path/to/file` prints the predicted gas + fee without doing anything else.
+
+The dry-run uses [`Storage.upload(bytes, { dryRun: true })`](https://0gkit.dev/packages/storage#dryrun) and the live upload omits the flag. Both calls return the same `result.root` shape, so the dedup check is a simple `storage.exists(predictedRoot)`.
+
+## Test it offline
 
 ```bash
-npm start
+pnpm test
 ```
 
-## Expected output
+The tests use an in-process fake `Storage` (sha256 keys, in-memory blob store) — no network, no signer needed. All branches (new upload, dedup hit, byte mismatch) are covered at ≥ 80% lines / ≥ 70% branches.
 
-```
-Read 1843 bytes from /…/storage-app/src/index.ts
-Uploading to 0G Storage (galileo)…
-  Merkle root : 0x9a3b…
-  tx hash     : 0x71c2…
-  latency     : 4213ms
-Downloading 0x9a3b… back…
-  Got 1843 bytes
-Round-trip OK: downloaded bytes match the original.
-```
+## Where to go next
 
-## How it works
-
-`new Storage({ network, privateKey })` → `.upload(bytes)` returns
-`{ root, tx }`; `.download(root)` returns the bytes back. See
-[`src/index.ts`](./src/index.ts).
-
-## Docs
-
-- 0gkit: <https://github.com/rajkaria/0gkit>
-- 0G Storage: <https://docs.0g.ai>
+- Swap `fromEnv` for a hardware-backed signer via [`fromKMS`](https://0gkit.dev/packages/wallet#fromkms).
+- Wire the flow into your own data pipeline — `runStorageFlow` accepts any `bytes: Uint8Array` and `label: string`.
+- When [`@foundryprotocol/0gkit-jobs`](https://0gkit.dev/packages/jobs) (SP10) ships, long uploads will be moved off the main loop into a durable queue.

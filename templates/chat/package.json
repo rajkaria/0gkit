@@ -1,0 +1,39 @@
+{
+  "name": "chat",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Real-time chat — messages on 0G Storage, indexed live via SP6 events.",
+  "scripts": {
+    "predev": "echo 'Tip: run `0g dev` in a separate terminal for a local 0G stack.'",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "dependencies": {
+    "@foundryprotocol/0gkit-core": "^0.3.0",
+    "@foundryprotocol/0gkit-storage": "^0.3.0",
+    "@foundryprotocol/0gkit-indexer": "^0.3.0",
+    "@foundryprotocol/0gkit-react": "^0.3.0",
+    "@foundryprotocol/0gkit-wallet": "^0.3.0",
+    "@foundryprotocol/0gkit-contracts": "^0.3.0",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.8"
+  }
+}

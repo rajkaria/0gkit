@@ -4,16 +4,22 @@ title: Templates
 
 # Templates
 
-0gkit ships five starter projects so you can go from zero to a running 0G app
-in one command. Each is a minimal, correct, copy-and-go example focused on one
-surface.
+0gkit ships **nine** starter projects so you can go from zero to a running 0G
+app in one command. Each is a minimal, correct, copy-and-go example focused
+on one surface.
 
-Grab any of them with [`degit`](https://github.com/Rich-Harris/degit) (no git
-history, just the files):
+Scaffold any of them with `create-0gkit-app`:
 
 ```bash
-npx degit rajkaria/0g-ai-kit/templates/<name> my-app
-cd my-app && npm install
+npm create 0gkit-app@latest my-app -- --template <name>
+cd my-app && pnpm install && pnpm dev
+```
+
+…or with `degit` if you want just the files (no git history):
+
+```bash
+npx degit rajkaria/0gkit/templates/<name> my-app
+cd my-app && pnpm install
 ```
 
 > The CLI also scaffolds a minimal read-only project with no template needed:
@@ -21,21 +27,83 @@ cd my-app && npm install
 > `README.md`, `.gitignore`). Use that for a bare start; use a template below
 > for a focused, surface-specific example.
 
-## The starters
+---
+
+## The five canonical archetypes (SP8)
+
+### `chat`
+
+Real-time chat where messages live on **0G Storage** and the on-chain
+`MessagePosted` event log is the source of truth for the message list. Uses
+the SP6 reorg-safe `useEvent` hook so rolled-back messages disappear
+automatically.
+
+```bash
+npm create 0gkit-app@latest my-chat -- --template chat
+```
+
+Surfaces demoed: wallet + storage + indexer + react + typed contracts.
+Best when: building anything where users post → the chain remembers.
 
 ### `storage-app`
 
-A Node script that uploads bytes to 0G Storage and reads them back, with a
-`computeRoot` content-address step that needs no keys. Uses
+Upload + retrieve a file with **SP7 dry-run preflight** (predict cost + Merkle
+root before broadcasting), **dedup** (skip the funding tx if the root already
+exists), and round-trip verify. Uses
 [`@foundryprotocol/0gkit-storage`](/packages/storage) +
 [`@foundryprotocol/0gkit-core`](/packages/core).
 
 ```bash
-npx degit rajkaria/0g-ai-kit/templates/storage-app my-storage-app
+npm create 0gkit-app@latest my-store -- --template storage-app
 ```
 
-Best when: persisting datasets/artifacts to 0G, or learning the
-upload/download/exists loop.
+Surfaces demoed: wallet + storage + SP7 estimator.
+Best when: persisting datasets/artifacts to 0G.
+
+### `ai-agent`
+
+Multi-step **LangChain-style ReAct agent** on 0G Compute, where every
+inference step's TEE attestation is verified before its decision is acted
+on. In-process loop today; documented hand-off path for SP10
+(`0gkit-jobs`).
+
+```bash
+npm create 0gkit-app@latest my-agent -- --template ai-agent
+```
+
+Surfaces demoed: wallet + compute + attestation.
+Best when: chained model reasoning with auditable enclave provenance.
+
+### `tee-attested-api`
+
+A **Hono** HTTP API where every response carries an `X-0G-Attestation`
+header. Clients can verify cryptographically that the response originated
+inside genuine enclave hardware. Plain `console.log` access logging today;
+documented hand-off for SP11 (`0gkit-observability`).
+
+```bash
+npm create 0gkit-app@latest my-api -- --template tee-attested-api
+```
+
+Surfaces demoed: wallet + attestation + compute.
+Best when: shipping a public API whose payloads need provenance.
+
+### `nft-with-storage`
+
+A Foundry-deployed ERC-721 where both the metadata JSON **and** the media
+file live on 0G Storage. `tokenURI(id)` returns `0g-storage://<merkleRoot>`.
+Uses SP4 typed-contract codegen.
+
+```bash
+npm create 0gkit-app@latest my-nft -- --template nft-with-storage
+```
+
+Surfaces demoed: wallet + storage + SP4 typed contracts.
+Best when: minting collectibles with on-chain provenance + off-chain payloads.
+
+---
+
+## The four Phase-1 starters
 
 ### `inference-app`
 
@@ -44,7 +112,7 @@ prints the on-chain fee receipt, including the OpenAI drop-in shim. Uses
 [`@foundryprotocol/0gkit-compute`](/packages/compute).
 
 ```bash
-npx degit rajkaria/0g-ai-kit/templates/inference-app my-inference-app
+npm create 0gkit-app@latest my-infer -- --template inference-app
 ```
 
 Best when: running paid LLM inference on 0G, or migrating OpenAI code.
@@ -53,11 +121,10 @@ Best when: running paid LLM inference on 0G, or migrating OpenAI code.
 
 A pure, no-network, no-keys example that signs and verifies a TEE attestation
 envelope and prints a report. Uses
-[`@foundryprotocol/0gkit-attestation`](/packages/attestation) +
-[`@foundryprotocol/0gkit-da`](/packages/da) for the digest anchor.
+[`@foundryprotocol/0gkit-attestation`](/packages/attestation).
 
 ```bash
-npx degit rajkaria/0g-ai-kit/templates/attestation-verify my-attest-app
+npm create 0gkit-app@latest my-attest -- --template attestation-verify
 ```
 
 Best when: producing or checking signed eval-result attestations.
@@ -69,7 +136,7 @@ the client config blocks from the [MCP guide](/mcp) and an embedding example
 with [`@foundryprotocol/0gkit-mcp`](/packages/mcp).
 
 ```bash
-npx degit rajkaria/0g-ai-kit/templates/mcp-agent my-agent
+npm create 0gkit-app@latest my-mcp -- --template mcp-agent
 ```
 
 Best when: giving an LLM agent direct, glue-free 0G access.
@@ -82,7 +149,7 @@ attestation verify plus a server route for the Node-only upload/inference
 path.
 
 ```bash
-npx degit rajkaria/0g-ai-kit/templates/react-app my-react-app
+npm create 0gkit-app@latest my-ui -- --template react-app
 ```
 
 Best when: building a 0G-powered React UI.

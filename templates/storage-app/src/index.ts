@@ -1,60 +1,46 @@
 /**
- * storage-app — round-trip a file through 0G Storage.
+ * storage-app — upload a file to 0G Storage with progress, dedup, and dry-run.
  *
- * 1. Read a local file into memory.
- * 2. Upload it to 0G Storage (prints the Merkle root + funding tx receipt).
- * 3. Download it back by root.
- * 4. Verify the downloaded bytes are byte-for-byte identical.
+ * Thin entry: wires real Storage + Signer into `runStorageFlow`. The flow
+ * itself lives in `./storage-flow.ts` so it can be unit-tested with an
+ * in-process fake (see src/__tests__/storage-flow.test.ts).
  */
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Storage } from "@foundryprotocol/0gkit-storage";
-import { ZeroGError } from "@foundryprotocol/0gkit-core";
-
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) {
-    console.error(`Missing ${name}. Copy .env.example to .env and fill it in.`);
-    process.exit(1);
-  }
-  return v;
-}
+import { fromEnv } from "@foundryprotocol/0gkit-wallet";
+import { ZeroGError, formatEstimate } from "@foundryprotocol/0gkit-core";
+import { runStorageFlow } from "./storage-flow.js";
 
 async function main(): Promise<void> {
-  const privateKey = requireEnv("PRIVATE_KEY");
+  const signer = await fromEnv();
   const network = (process.env.ZEROG_NETWORK ?? "galileo") as "galileo" | "aristotle";
+  const storage = new Storage({ network, signer });
 
-  // Use this very source file as the sample payload to upload.
   const samplePath = fileURLToPath(new URL("./index.ts", import.meta.url));
-  const original = new Uint8Array(await readFile(samplePath));
-  console.log(`Read ${original.length} bytes from ${samplePath}`);
+  const bytes = new Uint8Array(await readFile(samplePath));
 
-  const storage = new Storage({ network, privateKey });
+  const result = await runStorageFlow(
+    { bytes, label: samplePath },
+    {
+      storage,
+      log: (m) => console.log(m),
+      formatEstimate,
+    }
+  );
 
-  console.log(`Uploading to 0G Storage (${network})…`);
-  const { root, tx } = await storage.upload(original);
-  console.log(`  Merkle root : ${root}`);
-  console.log(`  tx hash     : ${tx.txHash}`);
-  console.log(`  latency     : ${tx.latencyMs}ms`);
-
-  console.log(`Downloading ${root} back…`);
-  const fetched = await storage.download(root);
-  console.log(`  Got ${fetched.length} bytes`);
-
-  const identical =
-    fetched.length === original.length && fetched.every((b, i) => b === original[i]);
-
-  if (!identical) {
-    console.error("Round-trip FAILED: downloaded bytes differ from original.");
+  if (!result.ok) {
+    console.error(`FAILED: ${result.reason}`);
     process.exit(1);
   }
-  console.log("Round-trip OK: downloaded bytes match the original.");
 }
 
 main().catch((err: unknown) => {
   if (err instanceof ZeroGError) {
     console.error(`\n${err.name}: ${err.message}`);
-    if (err.hint) console.error(`Hint: ${err.hint}`);
+    if ("hint" in err && typeof err.hint === "string") {
+      console.error(`Hint: ${err.hint}`);
+    }
   } else {
     console.error(err);
   }
