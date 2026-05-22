@@ -39,6 +39,7 @@ import { registerFoundry } from "./commands/foundry.js";
 import { registerContracts } from "./commands/contracts.js";
 import { registerEstimate } from "./commands/estimate.js";
 import { registerJobs, type JobsBackendFactory } from "./commands/jobs.js";
+import { registerCost } from "./commands/cost.js";
 
 export const VERSION = "0.1.0";
 
@@ -105,6 +106,19 @@ export interface ProgramDeps {
     }) => Promise<Estimate>;
   };
   jobsBackendFactory: JobsBackendFactory;
+  /**
+   * SP11 — pure estimate factories used by `0g cost forecast` (aggregates
+   * estimates across ops without dialling RPC). These are intentionally
+   * separate from `makeStorage`/`makeCompute`/`makeDA`: the cost command
+   * only needs the offline `Estimate` math, not a full primitive instance.
+   */
+  storageEstimate: (bytes: number) => Promise<Estimate>;
+  computeEstimate: (args: {
+    prompt: string;
+    model?: string;
+    maxOutputTokens?: number;
+  }) => Promise<Estimate>;
+  daEstimate: (bytes: number) => Promise<Estimate>;
   fs: FsLike;
   readStdin: () => Promise<Uint8Array>;
   /** Injected so `0g doctor` reachability probes are testable (no real net). */
@@ -186,6 +200,7 @@ export function buildProgram(deps: ProgramDeps): Command {
   registerContracts(program, deps);
   registerEstimate(program, deps);
   registerJobs(program, deps);
+  registerCost(program, deps);
   registerFoundry(program, deps);
 
   return program;

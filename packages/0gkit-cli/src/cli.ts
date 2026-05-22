@@ -8,9 +8,9 @@ import {
   attachExplorerUrl,
   explorerUrl,
 } from "@foundryprotocol/0gkit-chain";
-import { Storage } from "@foundryprotocol/0gkit-storage";
-import { Compute } from "@foundryprotocol/0gkit-compute";
-import { DA } from "@foundryprotocol/0gkit-da";
+import { Storage, makeStorageEstimate } from "@foundryprotocol/0gkit-storage";
+import { Compute, makeComputeEstimate } from "@foundryprotocol/0gkit-compute";
+import { DA, estimateBytes as daEstimateBytes } from "@foundryprotocol/0gkit-da";
 import {
   parseEnvelope,
   verifyEnvelope,
@@ -148,6 +148,16 @@ const deps: ProgramDeps = {
     if (kind === "memory") return new MemoryBackend() as unknown as JobBackendLike;
     return new SqliteBackend({ path }) as unknown as JobBackendLike;
   }) satisfies JobsBackendFactory,
+  // SP11: pure estimate helpers wired to the published estimate functions —
+  // offline, no RPC. Used by `0g cost forecast`.
+  storageEstimate: async (bytes) => makeStorageEstimate(bytes),
+  computeEstimate: async ({ prompt, model, maxOutputTokens }) =>
+    makeComputeEstimate({
+      messages: [{ role: "user", content: prompt }],
+      model,
+      maxOutputTokens,
+    }),
+  daEstimate: async (bytes) => daEstimateBytes(bytes),
   readStdin,
   fetch: globalThis.fetch,
   cwd: () => process.cwd(),

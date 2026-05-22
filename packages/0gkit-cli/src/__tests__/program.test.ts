@@ -55,6 +55,7 @@ describe("buildProgram", () => {
         "attest",
         "chain",
         "contracts",
+        "cost",
         "da",
         "dev",
         "doctor",
