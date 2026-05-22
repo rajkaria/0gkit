@@ -13,6 +13,8 @@ export type Network = "local" | "galileo";
 
 export type PackageManager = "pnpm" | "npm" | "yarn" | "bun";
 
+export type CiOption = "github" | "gitlab" | "circle" | "none";
+
 export interface CreateOptions {
   /** Final project name (folder created here unless absolute). */
   name: string;
@@ -21,6 +23,8 @@ export interface CreateOptions {
   packageManager: PackageManager;
   install: boolean;
   git: boolean;
+  /** CI provider whose workflow files get copied in post-template-fetch. */
+  ci: CiOption;
   /** Absolute destination path where the project files will be written. */
   dest: string;
   /** True if the interactive picker was used (i.e. not all flags supplied). */

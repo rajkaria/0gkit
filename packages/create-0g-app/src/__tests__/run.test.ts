@@ -262,6 +262,7 @@ describe("run() — interactive path", () => {
       packageManager: "npm",
       install: false,
       git: false,
+      ci: "none",
       dest: "",
       example: true,
     };

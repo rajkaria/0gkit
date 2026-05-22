@@ -8,10 +8,23 @@ import { writeEnvExample } from "./env.js";
 import { initGitRepo, type InitGitResult } from "./git.js";
 import { detectPackageManager, installCommand } from "./pm.js";
 import { interactivePrompts, validateProjectName } from "./prompts.js";
-import { TEMPLATES, fetchTemplate, isValidTemplateName } from "./templates.js";
-import type { CreateOptions, Network, PackageManager, TemplateName } from "./types.js";
+import {
+  CI_OPTIONS,
+  TEMPLATES,
+  fetchCi,
+  fetchTemplate,
+  isValidCiOption,
+  isValidTemplateName,
+} from "./templates.js";
+import type {
+  CiOption,
+  CreateOptions,
+  Network,
+  PackageManager,
+  TemplateName,
+} from "./types.js";
 
-export type { CreateOptions, Network, PackageManager, TemplateName };
+export type { CiOption, CreateOptions, Network, PackageManager, TemplateName };
 
 /**
  * Dependency-injection seam. Tests inject fakes here so the orchestrator can
@@ -25,6 +38,7 @@ export interface RunDeps {
   log?: (m: string) => void;
   err?: (m: string) => void;
   fetchTemplate?: (opts: { name: TemplateName; dest: string }) => Promise<void>;
+  fetchCi?: (opts: { choice: CiOption; dest: string }) => Promise<void>;
   runInstall?: (opts: {
     packageManager: PackageManager;
     dest: string;
@@ -35,6 +49,8 @@ export interface RunDeps {
 
 const defaultFetchTemplate = (opts: { name: TemplateName; dest: string }) =>
   fetchTemplate(opts);
+
+const defaultFetchCi = (opts: { choice: CiOption; dest: string }) => fetchCi(opts);
 
 const defaultRunInstall = async (opts: {
   packageManager: PackageManager;
@@ -77,6 +93,7 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
   const programName = deps.programName ?? "create-0g-app";
   const programVersion = deps.programVersion ?? readPackageVersion();
   const fetchTpl = deps.fetchTemplate ?? defaultFetchTemplate;
+  const fetchCiFn = deps.fetchCi ?? defaultFetchCi;
   const runInstall = deps.runInstall ?? defaultRunInstall;
   const initGit = deps.initGit ?? defaultInitGit;
   const prompts = deps.prompts ?? interactivePrompts;
@@ -92,6 +109,10 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
     )
     .option("-n, --network <name>", "Network: local | galileo", "local")
     .option("--package-manager <pm>", "Package manager: pnpm | npm | yarn | bun")
+    .option(
+      "--ci <provider>",
+      `CI workflow files (${CI_OPTIONS.map((c) => c.value).join("|")})`
+    )
     .option("--no-install", "Skip dependency install")
     .option("--no-git", "Skip git init");
 
@@ -111,6 +132,7 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
     template?: string;
     network?: string;
     packageManager?: string;
+    ci?: string;
     install: boolean;
     git: boolean;
   }>();
@@ -139,6 +161,13 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
     return 1;
   }
 
+  if (opts.ci && !isValidCiOption(opts.ci)) {
+    err(
+      `Unknown CI provider: ${opts.ci}. Valid: ${CI_OPTIONS.map((c) => c.value).join(", ")}`
+    );
+    return 1;
+  }
+
   // Non-interactive path: name + template both provided on the command line.
   // Anything else falls into the interactive prompt flow.
   let final: CreateOptions | null;
@@ -156,6 +185,7 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
         (opts.packageManager as PackageManager | undefined) ?? detectPackageManager(),
       install: opts.install !== false,
       git: opts.git !== false,
+      ci: (opts.ci as CiOption | undefined) ?? "github",
       dest: "",
       example: false,
     };
@@ -172,6 +202,7 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
       template: opts.template as TemplateName | undefined,
       network: opts.network as Network | undefined,
       packageManager: opts.packageManager as PackageManager | undefined,
+      ci: opts.ci as CiOption | undefined,
       install: opts.install,
       git: opts.git,
     });
@@ -195,6 +226,16 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
   } catch (e) {
     err(`Template fetch failed: ${(e as Error).message}`);
     return 1;
+  }
+
+  // 1.5. fetch CI workflow files (skipped when ci=="none")
+  if (final.ci !== "none") {
+    log(`→ Adding ${final.ci} CI workflow`);
+    try {
+      await fetchCiFn({ choice: final.ci, dest });
+    } catch (e) {
+      err(`(warn) CI scaffold failed: ${(e as Error).message}`);
+    }
   }
 
   // 2. write .env.example

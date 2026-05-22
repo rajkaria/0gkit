@@ -1,7 +1,13 @@
 import * as p from "@clack/prompts";
-import { TEMPLATES } from "./templates.js";
+import { CI_OPTIONS, TEMPLATES } from "./templates.js";
 import { detectPackageManager } from "./pm.js";
-import type { CreateOptions, Network, PackageManager, TemplateName } from "./types.js";
+import type {
+  CiOption,
+  CreateOptions,
+  Network,
+  PackageManager,
+  TemplateName,
+} from "./types.js";
 
 export interface ProjectNameCheck {
   ok: boolean;
@@ -99,6 +105,22 @@ export async function interactivePrompts(
     return null;
   }
 
+  let ci: CiOption | symbol;
+  if (seed.ci) {
+    ci = seed.ci;
+  } else {
+    const picked = await p.select({
+      message: "CI provider?",
+      options: CI_OPTIONS.map((c) => ({ value: c.value, label: c.label, hint: c.hint })),
+      initialValue: "github" as CiOption,
+    });
+    ci = picked as CiOption | symbol;
+  }
+  if (p.isCancel(ci)) {
+    p.cancel("Cancelled.");
+    return null;
+  }
+
   let install: boolean | symbol;
   if (typeof seed.install === "boolean") {
     install = seed.install;
@@ -135,6 +157,7 @@ export async function interactivePrompts(
       (seed.packageManager as PackageManager | undefined) ?? detectPackageManager(),
     install: install as boolean,
     git: git as boolean,
+    ci: ci as CiOption,
     dest: "", // filled in by run()
     example: true,
   };
