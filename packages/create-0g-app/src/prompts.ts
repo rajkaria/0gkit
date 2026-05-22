@@ -111,7 +111,11 @@ export async function interactivePrompts(
   } else {
     const picked = await p.select({
       message: "CI provider?",
-      options: CI_OPTIONS.map((c) => ({ value: c.value, label: c.label, hint: c.hint })),
+      options: CI_OPTIONS.map((c) => ({
+        value: c.value,
+        label: c.label,
+        hint: c.hint,
+      })),
       initialValue: "github" as CiOption,
     });
     ci = picked as CiOption | symbol;

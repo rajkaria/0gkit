@@ -40,12 +40,12 @@ These survive every sub-project. They are non-negotiable.
 
 ## 2. Phase Overview
 
-| Phase                                     | Sub-projects                                                                                                            | Duration target | Developer-visible milestone                                                                                                                                                                                         |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Phase 1 — The Front Door**              | SP1 `create-0gkit-app` v1, SP2 `0g dev` local stack                                                                     | ~2 weeks        | `npm create 0gkit-app my-app && cd my-app && pnpm dev` opens a working app against a local 0G stack in under 60 seconds. **No faucet, no .env archaeology, no testnet.**                                            |
-| **Phase 2 — Production-Grade Foundation** | SP3 `0gkit-wallet`, SP4 `0gkit-contracts`, SP5 `0gkit-testing`                                                          | ~3 weeks        | The same scaffolded app uses wagmi-style wallet connect, typed contract clients, and ships with a vitest suite that passes against the local stack. No more raw `privateKey` strings; no more hand-written ABIs.    |
-| **Phase 3 — Second-Day Developer Wins**   | ✅ SP6 `0gkit-indexer`, ✅ SP7 cost estimator + dry-run, ✅ SP8 expanded template library                               | ~3 weeks        | The five canonical archetypes (`chat`, `storage-app`, `ai-agent`, `tee-attested-api`, `nft-with-storage`) all ship; `0g estimate` and `.dryRun()` save users from surprise bills; event subscriptions are one hook. |
-| **Phase 4 — Ecosystem Moat**              | ✅ SP9 error taxonomy, ✅ SP10 `0gkit-jobs`, ✅ SP11 `0gkit-observability`, SP12 community + CI templates + docs polish | ~3 weeks        | Every `ZeroGError` links to a docs page that fixes it; long-running compute jobs are durable; production apps emit OTel spans; CI/CD workflows are one copy-paste away.                                             |
+| Phase                                     | Sub-projects                                                                                                               | Duration target | Developer-visible milestone                                                                                                                                                                                         |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phase 1 — The Front Door**              | SP1 `create-0gkit-app` v1, SP2 `0g dev` local stack                                                                        | ~2 weeks        | `npm create 0gkit-app my-app && cd my-app && pnpm dev` opens a working app against a local 0G stack in under 60 seconds. **No faucet, no .env archaeology, no testnet.**                                            |
+| **Phase 2 — Production-Grade Foundation** | SP3 `0gkit-wallet`, SP4 `0gkit-contracts`, SP5 `0gkit-testing`                                                             | ~3 weeks        | The same scaffolded app uses wagmi-style wallet connect, typed contract clients, and ships with a vitest suite that passes against the local stack. No more raw `privateKey` strings; no more hand-written ABIs.    |
+| **Phase 3 — Second-Day Developer Wins**   | ✅ SP6 `0gkit-indexer`, ✅ SP7 cost estimator + dry-run, ✅ SP8 expanded template library                                  | ~3 weeks        | The five canonical archetypes (`chat`, `storage-app`, `ai-agent`, `tee-attested-api`, `nft-with-storage`) all ship; `0g estimate` and `.dryRun()` save users from surprise bills; event subscriptions are one hook. |
+| **Phase 4 — Ecosystem Moat**              | ✅ SP9 error taxonomy, ✅ SP10 `0gkit-jobs`, ✅ SP11 `0gkit-observability`, ✅ SP12 community + CI templates + docs polish | ~3 weeks        | Every `ZeroGError` links to a docs page that fixes it; long-running compute jobs are durable; production apps emit OTel spans; CI/CD workflows are one copy-paste away. **Phase 4 complete — v1.0.0 cut.**          |
 
 **Total target:** ~11 weeks of focused work to graduate from "primitives shipped" to "default starting point for 0G."
 
@@ -652,7 +652,7 @@ A `0g cost` CLI subcommand reads OTel-format traces (or a local sqlite buffer) a
 
 ---
 
-### SP12 — Community + CI/CD templates + docs polish
+### SP12 — Community + CI/CD templates + docs polish ✅ Shipped 2026-05-23
 
 **Goal:** Close the gaps that turn "a great toolkit" into "the obvious default."
 
@@ -686,7 +686,7 @@ A `0g cost` CLI subcommand reads OTel-format traces (or a local sqlite buffer) a
 
 - After each sub-project ships, cut a minor release (`0.X.0`) of every affected package via changesets. **Patch (`0.X.Y`) is for bugfixes only;** anything additive is a minor.
 - Phase boundaries are good moments for a coordinated `@foundryprotocol/0gkit-*` "version-set" announcement (e.g., a release notes post).
-- We stay on `0.x` semver throughout this roadmap; cut `1.0.0` at the end of Phase 4 once SP12 has landed and the docs site says "ready for production" without lying.
+- We stay on `0.x` semver throughout this roadmap; cut `1.0.0` at the end of Phase 4 once SP12 has landed and the docs site says "ready for production" without lying. **Reached 2026-05-23 — Phase 4 complete; v1.0.0 cut alongside the SP12 merge.**
 
 ### Decision log
 

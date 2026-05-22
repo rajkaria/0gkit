@@ -88,10 +88,7 @@ export async function fetchTemplate(opts: {
  *
  * No-op when `choice === "none"`.
  */
-export async function fetchCi(opts: {
-  choice: CiOption;
-  dest: string;
-}): Promise<void> {
+export async function fetchCi(opts: { choice: CiOption; dest: string }): Promise<void> {
   if (opts.choice === "none") return;
   await downloadTemplate(
     `github:${TEMPLATE_REPO}/templates/_ci/${opts.choice}#${TEMPLATE_REF}`,

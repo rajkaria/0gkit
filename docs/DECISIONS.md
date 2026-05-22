@@ -528,3 +528,71 @@ weigh a toolkit decision on observability bundle cost.
 holds. Once someone slips in a static dep that drags 50 KB of transitive
 JSON-Schema validation in, gzip jumps and the test fails red — exactly the
 moment we'd want to know.
+
+---
+
+## D35 — CI/CD workflows are scaffolded files, not opinionated defaults
+
+**Date:** 2026-05-22 · **SP:** SP12
+
+`create-0gkit-app --ci github` copies `templates/_ci/github/0gkit-ci.yml`
+verbatim into the new project. The file is intentionally minimal — five
+steps (checkout, pnpm setup, node setup, install, typecheck+test) — so
+users own it from day one. We don't ship a "0gkit-ci" GitHub Action that
+hides build behind opaque inputs because that creates a black box users
+distrust the moment something breaks.
+
+GitLab + CircleCI variants follow the same shape with their native syntax.
+The `none` choice scaffolds nothing and is the explicit opt-out.
+
+**Why:** Bundling a managed CI action would force every contributor onto a
+release cadence for their CI changes — fine for end users today, painful at
+the first incident. A copy-paste-able YAML keeps the toolkit's surface
+small and the user's autonomy total.
+
+**How to apply:** Future CI templates (Bitbucket, Jenkins) follow the same
+"minimal copy" model. No `uses: @foundryprotocol/0gkit/ci-action@v1` —
+ever.
+
+---
+
+## D36 — In-site search via Pagefind, not Algolia DocSearch
+
+**Date:** 2026-05-22 · **SP:** SP12
+
+Pagefind builds the index at static-export time, ships the search runtime
+as a ~5 KB JS widget, works fully offline / on preview deploys, and has no
+external service to provision or monthly cost. Algolia DocSearch would be
+the obvious alternative for fuzzy multilingual search, but we don't need
+that — we need "find the error code page" and "find the package API page,"
+and Pagefind nails both.
+
+**Why:** Every external dep on a docs surface is a runtime liability —
+DocSearch outages have visibly broken docs sites we've consumed. Pagefind
+runs in the user's browser against a static asset; if the docs deploy is
+up, search is up.
+
+**How to apply:** If a multilingual story ever ships, revisit. Until then,
+all new docs pages just need to be plain MDX — Pagefind indexes them
+automatically.
+
+---
+
+## D37 — Lighthouse CI gate: 0.95 across performance/a11y/best-practices/SEO
+
+**Date:** 2026-05-22 · **SP:** SP12
+
+`@lhci/cli` runs against the production-built docs site on every PR. Gate
+is `["error", { "minScore": 0.95 }]` across the four Lighthouse categories.
+0.95 is the floor that catches real regressions (un-optimised images,
+missing alt text, CLS spikes) without becoming a tax that blocks
+legitimate changes.
+
+**Why:** A 0.99 floor is brittle (Lighthouse runs vary ±2 points
+session-to-session); a 0.90 floor is noise (most regressions hide in the
+0.90-0.95 band). 0.95 is where Lighthouse's own categories cross from
+"good" into "great" — the right place to draw a line that means something.
+
+**How to apply:** When the score drops, the right move is fix the root
+cause, not lower the gate. The score isn't a brag — it's the floor below
+which builders' trust drops.
