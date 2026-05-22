@@ -1,0 +1,81 @@
+{
+  "name": "@foundryprotocol/0gkit-observability",
+  "version": "0.1.0",
+  "description": "OpenTelemetry instrumentation for 0gkit primitives. One call wires every Storage / Compute / DA / Attestation operation as an OTel span with 0gkit.* semantic attributes.",
+  "license": "MIT",
+  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-observability",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajkaria/0gkit.git",
+    "directory": "packages/0gkit-observability"
+  },
+  "bugs": {
+    "url": "https://github.com/rajkaria/0gkit/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@foundryprotocol/0gkit-core": "workspace:*",
+    "@opentelemetry/api": "^1.9.0"
+  },
+  "peerDependencies": {
+    "@opentelemetry/sdk-node": "^0.55.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.55.0"
+  },
+  "peerDependenciesMeta": {
+    "@opentelemetry/sdk-node": {
+      "optional": true
+    },
+    "@opentelemetry/exporter-trace-otlp-http": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@opentelemetry/sdk-node": "^0.55.0",
+    "@opentelemetry/sdk-trace-base": "^1.30.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.55.0",
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "dependency-cruiser": "^16.0.0",
+    "esbuild": "^0.24.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "0g",
+    "0g-network",
+    "observability",
+    "opentelemetry",
+    "otel",
+    "tracing",
+    "instrumentation",
+    "toolkit"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
