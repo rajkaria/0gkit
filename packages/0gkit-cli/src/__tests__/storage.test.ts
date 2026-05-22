@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { Storage } from "@foundryprotocol/0gkit-storage";
 import { buildProgram, type ProgramDeps } from "../program.js";
 
 function deps(over: Partial<ProgramDeps> = {}) {
@@ -111,5 +112,103 @@ describe("0g storage", () => {
     expect(out.ok).toBe(false);
     expect(out.error.hint).toContain("galileo");
     process.exitCode = 0;
+  });
+});
+
+describe("0g storage put --dry-run", () => {
+  // A throw-on-invocation SDK: any non-dry-run code path that tries to
+  // use the indexer to upload should blow up loudly.
+  const fakeSdk = {
+    MemData: class {
+      constructor(public readonly data: number[]) {}
+      async merkleTree() {
+        const root = { rootHash: () => "0xdeadbeef" };
+        return [root, null] as const;
+      }
+    },
+    Indexer: class {
+      constructor(public readonly url: string) {}
+      async upload(): Promise<readonly [unknown, Error | null]> {
+        throw new Error("--dry-run must not call indexer.upload");
+      }
+      async downloadToBlob(): Promise<readonly [Blob | null, Error | null]> {
+        throw new Error("not used");
+      }
+      async peekHeader(): Promise<readonly [unknown, Error | null]> {
+        throw new Error("not used");
+      }
+    },
+  };
+
+  function dryRunDeps() {
+    const lines: string[] = [];
+    const makeStorage = (cfg: ConstructorParameters<typeof Storage>[0]) =>
+      new Storage({ ...cfg, loadSdk: async () => fakeSdk });
+    const base = {
+      createClient: vi.fn(),
+      getNetwork: vi.fn(() => ({ name: "galileo", explorer: "https://e" })),
+      faucet: vi.fn(),
+      balance: vi.fn(),
+      waitForReceipt: vi.fn(),
+      attachExplorerUrl: vi.fn((r) => r),
+      explorerUrl: vi.fn(),
+      makeStorage: vi.fn(makeStorage),
+      makeCompute: vi.fn(),
+      makeDA: vi.fn(),
+      attest: {
+        parseEnvelope: vi.fn(),
+        verifyEnvelope: vi.fn(),
+        reportEnvelope: vi.fn(),
+      },
+      loadFoundry: vi.fn(async () => null),
+      fs: {
+        readFile: vi.fn(async () => new Uint8Array([1, 2, 3, 4, 5])),
+        writeFile: vi.fn(),
+        mkdir: vi.fn(),
+        readdir: vi.fn(async () => []),
+        exists: vi.fn(async () => false),
+      },
+      readStdin: vi.fn(async () => new Uint8Array()),
+      cwd: () => "/w",
+      // No ZEROG_PRIVATE_KEY: this is the test that --dry-run bypasses the
+      // signer-key check.
+      env: {},
+      isTTY: false,
+      noColor: true,
+      write: (s: string) => lines.push(s),
+    } as unknown as ProgramDeps;
+    return { d: base, lines };
+  }
+
+  it("does not broadcast and returns a structured DryRunResult (--json)", async () => {
+    const { d, lines } = dryRunDeps();
+    const p = buildProgram(d);
+    p.exitOverride();
+    await p.parseAsync(["storage", "put", "./demo.bin", "--dry-run", "--json"], {
+      from: "user",
+    });
+    const out = JSON.parse(lines.at(-1)!);
+    expect(out.ok).toBe(true);
+    expect(out.dryRun).toBe(true);
+    expect(out.estimate.kind).toBe("storage");
+    // gas/fee come out as strings via bigintsToStrings
+    expect(typeof out.estimate.gas).toBe("string");
+    expect(typeof out.estimate.fee).toBe("string");
+    // No broadcast — the dry-run result.tx has no txHash.
+    expect(out.result.tx.txHash ?? null).toBeNull();
+    expect(out.result.root).toMatch(/^0x[0-9a-f]+$/);
+  });
+
+  it("prints [dry-run] human lines by default", async () => {
+    const { d, lines } = dryRunDeps();
+    const p = buildProgram(d);
+    p.exitOverride();
+    await p.parseAsync(["storage", "put", "./demo.bin", "--dry-run"], {
+      from: "user",
+    });
+    const out = lines.join("\n");
+    expect(out).toContain("[dry-run] would upload ./demo.bin");
+    expect(out).toContain("kind        storage");
+    expect(out).toMatch(/root 0x[0-9a-f]+/);
   });
 });

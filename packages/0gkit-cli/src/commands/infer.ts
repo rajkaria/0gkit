@@ -1,6 +1,7 @@
 import type { Command } from "commander";
-import { ConfigError } from "@foundryprotocol/0gkit-core";
+import { ConfigError, formatEstimate } from "@foundryprotocol/0gkit-core";
 import { runCommand, type ProgramDeps } from "../program.js";
+import { bigintsToStrings } from "./_helpers.js";
 
 function inferNetwork(network: string): "aristotle" | "galileo" | undefined {
   return network === "aristotle" || network === "galileo" ? network : undefined;
@@ -14,6 +15,7 @@ export function registerInfer(program: Command, deps: ProgramDeps): void {
     .option("--provider <address>", "0G inference provider (or env ZEROG_PROVIDER)")
     .option("--model <name>", "model id (provider default if omitted)")
     .option("--temperature <n>", "sampling temperature", parseFloat)
+    .option("--dry-run", "estimate cost without broadcasting", false)
     .action(async function (this: Command) {
       await runCommand(deps, this, async (ctx) => {
         const opts = this.opts() as {
@@ -21,7 +23,40 @@ export function registerInfer(program: Command, deps: ProgramDeps): void {
           provider?: string;
           model?: string;
           temperature?: number;
+          dryRun?: boolean;
         };
+        if (opts.dryRun) {
+          const content =
+            opts.message ?? new TextDecoder().decode(await deps.readStdin()).trim();
+          if (!content) {
+            throw new ConfigError(
+              `No prompt provided.`,
+              `Pass -m "your prompt" or pipe text on stdin.`
+            );
+          }
+          const provider =
+            opts.provider ??
+            deps.env.ZEROG_PROVIDER ??
+            "0x0000000000000000000000000000000000000000";
+          const compute = deps.makeCompute({
+            network: inferNetwork(ctx.network),
+            brokerRpc: ctx.rpcUrl,
+            brokerKey: "0x" + "00".repeat(32),
+            provider,
+            model: opts.model,
+          });
+          const dr = await compute.inference(
+            { messages: [{ role: "user", content }], model: opts.model },
+            { dryRun: true }
+          );
+          return {
+            human: [
+              `[dry-run] would call provider ${provider}`,
+              ...formatEstimate(dr.estimate).split("\n"),
+            ],
+            json: bigintsToStrings(dr) as Record<string, unknown>,
+          };
+        }
         const brokerKey = deps.env.ZEROG_BROKER_KEY ?? ctx.privateKey;
         if (!brokerKey) {
           throw new ConfigError(

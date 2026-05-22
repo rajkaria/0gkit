@@ -1,7 +1,8 @@
 import { resolve } from "node:path";
 import type { Command } from "commander";
-import { ConfigError } from "@foundryprotocol/0gkit-core";
+import { ConfigError, formatEstimate } from "@foundryprotocol/0gkit-core";
 import { runCommand, type ProgramDeps } from "../program.js";
+import { bigintsToStrings } from "./_helpers.js";
 
 function storageNetwork(ctx: { network: string }): "aristotle" | "galileo" {
   if (ctx.network !== "aristotle" && ctx.network !== "galileo") {
@@ -21,13 +22,15 @@ export function registerStorage(program: Command, deps: ProgramDeps): void {
   storage
     .command("put <file>")
     .description("upload a file's bytes; prints root + tx")
+    .option("--dry-run", "estimate cost without broadcasting", false)
     .action(async function (this: Command, file: string) {
       await runCommand(deps, this, async (ctx) => {
+        const opts = this.opts() as { dryRun?: boolean };
         const network = storageNetwork(ctx);
-        if (!ctx.privateKey) {
+        if (!ctx.privateKey && !opts.dryRun) {
           throw new ConfigError(
             `0g storage put requires a signer key (funds the upload tx).`,
-            `Set ZEROG_PRIVATE_KEY or pass --private-key.`
+            `Set ZEROG_PRIVATE_KEY or pass --private-key. Or use --dry-run.`
           );
         }
         const data = await deps.fs.readFile(file);
@@ -36,6 +39,17 @@ export function registerStorage(program: Command, deps: ProgramDeps): void {
           rpcUrl: ctx.rpcUrl,
           privateKey: ctx.privateKey,
         });
+        if (opts.dryRun) {
+          const dr = await s.upload(data, { dryRun: true });
+          return {
+            human: [
+              `[dry-run] would upload ${file} (${data.length} bytes)`,
+              ...formatEstimate(dr.estimate).split("\n"),
+              `  root ${dr.result.root}`,
+            ],
+            json: bigintsToStrings(dr) as Record<string, unknown>,
+          };
+        }
         const r = await s.upload(data);
         const tx = deps.attachExplorerUrl(r.tx, deps.getNetwork(ctx.network));
         return {

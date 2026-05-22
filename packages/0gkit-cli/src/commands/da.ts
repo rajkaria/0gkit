@@ -1,5 +1,7 @@
 import type { Command } from "commander";
+import { formatEstimate } from "@foundryprotocol/0gkit-core";
 import { runCommand, type ProgramDeps } from "../program.js";
+import { bigintsToStrings } from "./_helpers.js";
 
 async function readPayload(deps: ProgramDeps, fileOrDash: string): Promise<Uint8Array> {
   if (fileOrDash === "-") return deps.readStdin();
@@ -15,10 +17,23 @@ export function registerDa(program: Command, deps: ProgramDeps): void {
 
   da.command("publish <file>")
     .description("publish a blob ('-' = stdin); local-digest mode off-net")
+    .option("--dry-run", "estimate cost without broadcasting", false)
     .action(async function (this: Command, file: string) {
       await runCommand(deps, this, async (ctx) => {
+        const opts = this.opts() as { dryRun?: boolean };
         const data = await readPayload(deps, file);
         const client = deps.makeDA({ network: daNetwork(ctx.network) });
+        if (opts.dryRun) {
+          const dr = await client.publish(data, { dryRun: true });
+          return {
+            human: [
+              `[dry-run] would publish ${file === "-" ? "stdin" : file} (${data.length} bytes)`,
+              ...formatEstimate(dr.estimate).split("\n"),
+              `  digest ${dr.result.digest}`,
+            ],
+            json: bigintsToStrings(dr) as Record<string, unknown>,
+          };
+        }
         const r = await client.publish(data);
         return {
           human: [

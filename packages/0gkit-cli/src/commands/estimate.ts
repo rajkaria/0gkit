@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { formatEstimate, ConfigError } from "@foundryprotocol/0gkit-core";
 import { runCommand, type ProgramDeps } from "../program.js";
+import { bigintsToStrings } from "./_helpers.js";
 
 function storageNetwork(ctx: { network: string }): "aristotle" | "galileo" {
   if (ctx.network !== "aristotle" && ctx.network !== "galileo") {
@@ -14,24 +15,6 @@ function storageNetwork(ctx: { network: string }): "aristotle" | "galileo" {
 
 function inferNetwork(network: string): "aristotle" | "galileo" | undefined {
   return network === "aristotle" || network === "galileo" ? network : undefined;
-}
-
-/**
- * Recursively convert bigints to strings so JSON.stringify in the output
- * renderer doesn't throw. The Estimate envelope carries gas/fee/breakdown
- * with bigint fields by design.
- */
-function bigintsToStrings(v: unknown): unknown {
-  if (typeof v === "bigint") return v.toString();
-  if (Array.isArray(v)) return v.map(bigintsToStrings);
-  if (v && typeof v === "object") {
-    const o: Record<string, unknown> = {};
-    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
-      o[k] = bigintsToStrings(val);
-    }
-    return o;
-  }
-  return v;
 }
 
 export function registerEstimate(program: Command, deps: ProgramDeps): void {
