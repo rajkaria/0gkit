@@ -11,42 +11,34 @@ describe("setupSdk", () => {
     await expect(setupSdk({ exporter: { kind: "noop" } })).resolves.toBeUndefined();
   });
 
-  it(
-    "starts a NodeSDK for the console exporter kind",
-    async () => {
-      // Real call into @opentelemetry/sdk-node (installed as a devDep). The
-      // SDK swallows the second start() if the global provider is already
-      // registered, so this is safe to run repeatedly. Bumped timeout: the
-      // SDK's transitive dynamic-import surface is heavy on cold turbo runs.
-      await expect(
-        setupSdk({
-          exporter: { kind: "console" },
-          serviceName: "sdk-test-console",
-        })
-      ).resolves.toBeUndefined();
-    },
-    30_000
-  );
+  it("starts a NodeSDK for the console exporter kind", async () => {
+    // Real call into @opentelemetry/sdk-node (installed as a devDep). The
+    // SDK swallows the second start() if the global provider is already
+    // registered, so this is safe to run repeatedly. Bumped timeout: the
+    // SDK's transitive dynamic-import surface is heavy on cold turbo runs.
+    await expect(
+      setupSdk({
+        exporter: { kind: "console" },
+        serviceName: "sdk-test-console",
+      })
+    ).resolves.toBeUndefined();
+  }, 30_000);
 
-  it(
-    "starts a NodeSDK for the OTLP exporter kind (offline)",
-    async () => {
-      // Exporter is created lazily; no network call happens at start() time,
-      // it only flushes on shutdown / interval. With NO real spans emitted
-      // in this test, the URL is never dialled.
-      await expect(
-        setupSdk({
-          exporter: {
-            kind: "otlp",
-            endpoint: "http://127.0.0.1:1/v1/traces",
-            headers: { "x-test": "1" },
-          },
-          serviceName: "sdk-test-otlp",
-        })
-      ).resolves.toBeUndefined();
-    },
-    30_000
-  );
+  it("starts a NodeSDK for the OTLP exporter kind (offline)", async () => {
+    // Exporter is created lazily; no network call happens at start() time,
+    // it only flushes on shutdown / interval. With NO real spans emitted
+    // in this test, the URL is never dialled.
+    await expect(
+      setupSdk({
+        exporter: {
+          kind: "otlp",
+          endpoint: "http://127.0.0.1:1/v1/traces",
+          headers: { "x-test": "1" },
+        },
+        serviceName: "sdk-test-otlp",
+      })
+    ).resolves.toBeUndefined();
+  }, 30_000);
 
   it("OBSERVABILITY_EXPORTER_FAILED is a recognised error code", () => {
     const e = new ZeroGError("OBSERVABILITY_EXPORTER_FAILED", "test", "test hint");
