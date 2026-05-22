@@ -378,3 +378,78 @@ bug.
 **Why:** The whole point of SP9's `helpUrl` story falls apart if the URL points
 at a 404. CI is the only place the invariant can be guaranteed; humans forget,
 linters get bypassed.
+
+---
+
+## D29 — `0gkit-jobs` backends mirror the SP6 indexer pattern
+
+**Date:** 2026-05-22 · **SP:** SP10
+
+Three backends — `memory` (in-process, dev/test), `sqlite` (single-node prod,
+`better-sqlite3` direct dep), `redis` (multi-node prod, `ioredis` optional
+peer loaded via computed-specifier `["ioredis"].join("/")` to keep the dep
+graph strict). Sub-path exports (`./backends/memory`, `./backends/sqlite`,
+`./backends/redis`) let tree-shaking strip unused backends. This is the same
+shape as the indexer's cursor backends (D19) — one pattern, two packages.
+
+A single `JobBackend` interface + a `describe.each`-parameterised conformance
+test suite means every backend exercises the same eight scenarios (enqueue
+ordering, claim FIFO, complete, fail-with-retry, fail-without-retry, cancel,
+status-of-unknown, terminal-state cancel no-op) plus the JOBS_JOB_NOT_FOUND
+error path. Adding a fourth backend (postgres, dynamodb, …) is a single new
+factory in the test file.
+
+**Why:** Two packages with the same shape is the right kind of duplication —
+discoverable, predictable, and reviewable. Diverging the pattern would force
+every reader to learn it twice; converging it (a shared abstract base) would
+buy nothing while creating a cross-package change-coupling cost.
+
+---
+
+## D30 — Webhook signature is HMAC-SHA256, hex, `sha256=` prefix tolerated
+
+**Date:** 2026-05-22 · **SP:** SP10
+
+The `X-0gkit-Signature` header carries `sha256=<64-hex>` (GitHub webhook
+convention). `verifyWebhook` accepts both the prefixed and bare hex forms for
+ergonomics. Verification uses `timingSafeEqual` to defeat timing attacks; the
+returned boolean never throws on garbage input (avoids leaking parser
+behaviour). The signed payload is the **exact** request body bytes, NOT a
+re-serialised JSON, so consumers must read raw bytes (`express.text({ type:
+"*/*" })` / `next.js req.text()`) before verifying.
+
+The webhook fire is best-effort: retries default to 2 (3 attempts total) with
+linear backoff. Webhook failures do **not** affect job state — the job is
+already `done` or `failed` by the time the runner attempts delivery.
+
+**Why:** GitHub's pattern is the most-recognised webhook shape in 2026. Bare
+hex tolerance is for receivers behind proxies that strip the prefix. Timing
+attacks on signature comparison are real and free to defend against.
+
+---
+
+## D31 — At-least-once delivery; handlers MUST be idempotent
+
+**Date:** 2026-05-22 · **SP:** SP10
+
+A worker that crashes between `handler` completion and `backend.complete()`
+returning will retry on next claim. Therefore handlers must be idempotent on
+their inputs (use `jobId` as the idempotency key for any external side
+effect). The webhook fires after `complete()` so duplicate webhook delivery
+is also possible — the receiver should dedupe on `(jobId, newState)`.
+
+The other delivery semantics on the table were rejected:
+
+- **Exactly-once:** impossible without a distributed transaction across the
+  backend AND every external side-effect endpoint. We're not building that.
+- **At-most-once:** trivially achievable (don't retry on `fail()`) but
+  surrenders the whole point of a job runner — surviving transient
+  upstream failures.
+
+The trade is paid by the handler author, not the platform. Documented in
+the durable-jobs concept page so users meet the constraint before they
+write side-effects.
+
+**Why:** Every durable job runner that's honest about its delivery semantics
+lands here (Sidekiq, BullMQ, Temporal in some modes, AWS SQS). The honesty
+matters: silent at-most-once is the failure mode that wakes engineers up.

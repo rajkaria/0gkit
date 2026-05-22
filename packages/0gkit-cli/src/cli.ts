@@ -30,8 +30,11 @@ import {
 } from "@foundryprotocol/0gkit-contracts";
 import { generate as generateContract } from "@foundryprotocol/0gkit-contracts/codegen";
 import { ConfigError } from "@foundryprotocol/0gkit-core";
+import { MemoryBackend } from "@foundryprotocol/0gkit-jobs/backends/memory";
+import { SqliteBackend } from "@foundryprotocol/0gkit-jobs/backends/sqlite";
 import { buildProgram, type ProgramDeps } from "./program.js";
 import { loadFoundry } from "./foundry-loader.js";
+import type { JobsBackendFactory, JobBackendLike } from "./commands/jobs.js";
 
 type NetworkKey = "aristotle" | "galileo" | "local";
 
@@ -141,6 +144,10 @@ const deps: ProgramDeps = {
         () => false
       ),
   },
+  jobsBackendFactory: ((kind, path) => {
+    if (kind === "memory") return new MemoryBackend() as unknown as JobBackendLike;
+    return new SqliteBackend({ path }) as unknown as JobBackendLike;
+  }) satisfies JobsBackendFactory,
   readStdin,
   fetch: globalThis.fetch,
   cwd: () => process.cwd(),

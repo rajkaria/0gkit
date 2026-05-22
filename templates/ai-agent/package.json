@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Multi-step LangChain-style agent on 0G Compute with TEE attestation per step.",
+  "description": "Multi-step LangChain-style agent on 0G Compute with TEE attestation per step, orchestrated via @foundryprotocol/0gkit-jobs.",
   "scripts": {
     "dev": "tsx src/index.ts",
     "start": "tsx src/index.ts",
@@ -18,7 +18,9 @@
     "@foundryprotocol/0gkit-core": "^0.3.0",
     "@foundryprotocol/0gkit-compute": "^0.3.0",
     "@foundryprotocol/0gkit-attestation": "^0.3.0",
-    "@foundryprotocol/0gkit-wallet": "^0.3.0"
+    "@foundryprotocol/0gkit-jobs": "^0.1.0",
+    "@foundryprotocol/0gkit-wallet": "^0.3.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@foundryprotocol/0gkit-testing": "^0.3.0",

@@ -1,0 +1,93 @@
+---
+title: "Durable jobs"
+---
+
+# Durable jobs
+
+`@foundryprotocol/0gkit-jobs` exists because the synchronous HTTP request/
+response cycle is the wrong shape for most interesting 0G workflows. Inference
+that takes 90 seconds, a five-step agent loop, a 50-MB upload with a Merkle
+root commit — all of these outlive a single request.
+
+A durable job runner gives you four things HTTP doesn't:
+
+1. **Persistence across crashes.** The work survives the node going away.
+2. **Bounded retry with backoff.** Transient failures don't escalate to the
+   user.
+3. **Out-of-band notification.** Webhooks deliver state changes back to your
+   app on its own timeline.
+4. **Cancellation.** A graceful `stop()` aborts in-flight work cleanly.
+
+## Delivery model
+
+`0gkit-jobs` is **at-least-once**. A worker that crashes between handler
+completion and `backend.complete()` returning will retry on the next claim.
+This is the only honest delivery semantic on a runtime that can be evicted at
+any time (Fluid Compute, Kubernetes, anywhere).
+
+**Handlers must be idempotent on their input.** Use `jobId` as the idempotency
+key for any external side effect — a charge, a database write, an on-chain
+transaction. Re-running with the same `jobId` MUST be safe.
+
+Webhook receivers should dedupe on `(jobId, newState)`. The runner fires the
+webhook _after_ `complete()` returns, so duplicate webhook delivery is also
+possible during a retry window.
+
+## Lifecycle
+
+```
+                ┌── retry (attempts < maxAttempts) ──┐
+                │                                    ▼
+  enqueue ──► queued ──► running ──► done
+                │           │
+                │           ├──► failed (attempts exhausted, or thrown after stop)
+                │           │
+                └──► cancelled (cancel() called)
+```
+
+Transitions are owned by the backend. The runner only reads `state` and asks
+the backend to move it via `claim`, `complete`, `fail`, `cancel`.
+
+## Backoff
+
+The default backoff is decorrelated exponential with jitter, capped at 60s:
+
+```
+upper = min(500ms · 2^attempt, 60_000ms)
+lower = upper / 2
+delay = lower + random([0, upper - lower])
+```
+
+The cap prevents a misconfigured `maxAttempts: 20` from sleeping for hours;
+the jitter avoids thundering-herd retries when many jobs fail simultaneously
+on a shared upstream outage. Pass `backoffMs: (attempt) => …` to
+`jobs.define` to override.
+
+## Graceful shutdown
+
+A worker holds two important pieces of state when the runtime asks it to die:
+the running handler, and the in-progress backend transaction. `runner.stop()`
+takes two flavours:
+
+- **`stop({ drain: true })`** (default): stop accepting new jobs, let
+  in-flight handlers finish, then close the backend. This is the right call
+  on Vercel Fluid Compute's `beforeExit` hook — the platform gives you a
+  grace period, use it.
+- **`stop({ drain: false })`**: abort the in-flight handlers via the
+  `AbortSignal` in their ctx. Handlers that wire up the signal (recommended
+  for any handler longer than ~10s) reject cleanly; the backend records
+  them as failed with the abort error. Use this when the runtime won't give
+  you a grace period.
+
+## When NOT to use a job runner
+
+- **Sub-second work.** Just inline it; the persistence overhead and a poll
+  loop will dominate the latency.
+- **Workloads that must finish in a single request.** A job is by definition
+  out-of-band — the response only carries the `id`.
+- **Strict at-most-once delivery.** Different problem, different toolkit.
+
+## See also
+
+- [`@foundryprotocol/0gkit-jobs`](/packages/jobs)
+- [`JOBS_*` error codes](/errors)

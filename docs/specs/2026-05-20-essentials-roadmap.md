@@ -40,12 +40,12 @@ These survive every sub-project. They are non-negotiable.
 
 ## 2. Phase Overview
 
-| Phase                                     | Sub-projects                                                                                                      | Duration target | Developer-visible milestone                                                                                                                                                                                         |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Phase 1 — The Front Door**              | SP1 `create-0gkit-app` v1, SP2 `0g dev` local stack                                                               | ~2 weeks        | `npm create 0gkit-app my-app && cd my-app && pnpm dev` opens a working app against a local 0G stack in under 60 seconds. **No faucet, no .env archaeology, no testnet.**                                            |
-| **Phase 2 — Production-Grade Foundation** | SP3 `0gkit-wallet`, SP4 `0gkit-contracts`, SP5 `0gkit-testing`                                                    | ~3 weeks        | The same scaffolded app uses wagmi-style wallet connect, typed contract clients, and ships with a vitest suite that passes against the local stack. No more raw `privateKey` strings; no more hand-written ABIs.    |
-| **Phase 3 — Second-Day Developer Wins**   | ✅ SP6 `0gkit-indexer`, ✅ SP7 cost estimator + dry-run, ✅ SP8 expanded template library                         | ~3 weeks        | The five canonical archetypes (`chat`, `storage-app`, `ai-agent`, `tee-attested-api`, `nft-with-storage`) all ship; `0g estimate` and `.dryRun()` save users from surprise bills; event subscriptions are one hook. |
-| **Phase 4 — Ecosystem Moat**              | ✅ SP9 error taxonomy, SP10 `0gkit-jobs`, SP11 `0gkit-observability`, SP12 community + CI templates + docs polish | ~3 weeks        | Every `ZeroGError` links to a docs page that fixes it; long-running compute jobs are durable; production apps emit OTel spans; CI/CD workflows are one copy-paste away.                                             |
+| Phase                                     | Sub-projects                                                                                                         | Duration target | Developer-visible milestone                                                                                                                                                                                         |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phase 1 — The Front Door**              | SP1 `create-0gkit-app` v1, SP2 `0g dev` local stack                                                                  | ~2 weeks        | `npm create 0gkit-app my-app && cd my-app && pnpm dev` opens a working app against a local 0G stack in under 60 seconds. **No faucet, no .env archaeology, no testnet.**                                            |
+| **Phase 2 — Production-Grade Foundation** | SP3 `0gkit-wallet`, SP4 `0gkit-contracts`, SP5 `0gkit-testing`                                                       | ~3 weeks        | The same scaffolded app uses wagmi-style wallet connect, typed contract clients, and ships with a vitest suite that passes against the local stack. No more raw `privateKey` strings; no more hand-written ABIs.    |
+| **Phase 3 — Second-Day Developer Wins**   | ✅ SP6 `0gkit-indexer`, ✅ SP7 cost estimator + dry-run, ✅ SP8 expanded template library                            | ~3 weeks        | The five canonical archetypes (`chat`, `storage-app`, `ai-agent`, `tee-attested-api`, `nft-with-storage`) all ship; `0g estimate` and `.dryRun()` save users from surprise bills; event subscriptions are one hook. |
+| **Phase 4 — Ecosystem Moat**              | ✅ SP9 error taxonomy, ✅ SP10 `0gkit-jobs`, SP11 `0gkit-observability`, SP12 community + CI templates + docs polish | ~3 weeks        | Every `ZeroGError` links to a docs page that fixes it; long-running compute jobs are durable; production apps emit OTel spans; CI/CD workflows are one copy-paste away.                                             |
 
 **Total target:** ~11 weeks of focused work to graduate from "primitives shipped" to "default starting point for 0G."
 
@@ -544,7 +544,7 @@ try {
 
 ---
 
-### SP10 — `@foundryprotocol/0gkit-jobs`
+### SP10 — `@foundryprotocol/0gkit-jobs` ✅ shipped 2026-05-22
 
 **Goal:** Durable async job runner for long-running 0G Compute calls (and anything else that doesn't fit in a single request lifecycle).
 

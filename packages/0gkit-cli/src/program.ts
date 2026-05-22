@@ -38,6 +38,7 @@ import { registerInfer } from "./commands/infer.js";
 import { registerFoundry } from "./commands/foundry.js";
 import { registerContracts } from "./commands/contracts.js";
 import { registerEstimate } from "./commands/estimate.js";
+import { registerJobs, type JobsBackendFactory } from "./commands/jobs.js";
 
 export const VERSION = "0.1.0";
 
@@ -103,6 +104,7 @@ export interface ProgramDeps {
       rpcUrl?: string;
     }) => Promise<Estimate>;
   };
+  jobsBackendFactory: JobsBackendFactory;
   fs: FsLike;
   readStdin: () => Promise<Uint8Array>;
   /** Injected so `0g doctor` reachability probes are testable (no real net). */
@@ -183,6 +185,7 @@ export function buildProgram(deps: ProgramDeps): Command {
   registerInfer(program, deps);
   registerContracts(program, deps);
   registerEstimate(program, deps);
+  registerJobs(program, deps);
   registerFoundry(program, deps);
 
   return program;

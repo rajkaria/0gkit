@@ -61,6 +61,7 @@ describe("buildProgram", () => {
         "estimate",
         "infer",
         "init",
+        "jobs",
         "storage",
       ].sort()
     );
