@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-devnet",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local chain + storage + compute + DA stack for 0G app development (`0g dev`).",
   "license": "MIT",
   "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-devnet",

@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-indexer",
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "Reorg-safe, persisted-cursor event subscriptions on 0G. Memory / SQLite / Redis cursor backends. Built on @foundryprotocol/0gkit-contracts typed contracts.",
   "license": "MIT",
   "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-indexer",

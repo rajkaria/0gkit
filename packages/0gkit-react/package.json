@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-react",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Neutral React hooks for 0G — useUpload, useDownload, useInference, useAttestation over @foundryprotocol/0gkit-*.",
   "license": "MIT",
   "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-react",
