@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Per-package symbol ignore lists for `pnpm docs:check --exports`. Add a symbol name here when an export is a supporting type/utility that doesn't warrant its own docs page or page.mdx mention.",
+  "skipPackages": [],
+  "ignore": {}
+}

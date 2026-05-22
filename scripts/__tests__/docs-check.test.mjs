@@ -9,6 +9,8 @@ import {
   findReferencedCodes,
   findDocumentedCodes,
   diffCodes,
+  findPublicExports,
+  assertExportsDocumented,
 } from "../docs-check.mjs";
 
 function scratch() {
@@ -27,10 +29,10 @@ describe("findReferencedCodes", () => {
       `throw new ZeroGError(\n  "CHAIN_RPC_UNREACHABLE",\n  "msg",\n  "hint"\n);`
     );
     const found = findReferencedCodes([dir]);
-    assert.deepEqual(
-      [...found].sort(),
-      ["CHAIN_RPC_UNREACHABLE", "STORAGE_QUOTA_EXCEEDED"]
-    );
+    assert.deepEqual([...found].sort(), [
+      "CHAIN_RPC_UNREACHABLE",
+      "STORAGE_QUOTA_EXCEEDED",
+    ]);
   });
 
   it("extracts codes from subclass constructors with explicit code arg", () => {
@@ -60,10 +62,7 @@ describe("findDocumentedCodes", () => {
     mkdirSync(join(dir, "STORAGE_QUOTA_EXCEEDED"));
     writeFileSync(join(dir, "STORAGE_QUOTA_EXCEEDED", "page.mdx"), "# title");
     mkdirSync(join(dir, "NO_PAGE"));
-    assert.deepEqual(
-      [...findDocumentedCodes(dir)].sort(),
-      ["STORAGE_QUOTA_EXCEEDED"]
-    );
+    assert.deepEqual([...findDocumentedCodes(dir)].sort(), ["STORAGE_QUOTA_EXCEEDED"]);
   });
 
   it("ignores [code] dynamic route directory and page.mdx at root", () => {
@@ -109,5 +108,108 @@ describe("diffCodes", () => {
       enumDefined: new Set(["A"]),
     });
     assert.equal(result.ok, true);
+  });
+});
+
+describe("findPublicExports", () => {
+  it("walks a .d.ts and lists declared top-level exports", () => {
+    const dir = scratch();
+    writeFileSync(
+      join(dir, "index.d.ts"),
+      [
+        "export declare class Storage { upload(): void }",
+        "export declare function makeStorage(): Storage;",
+        "export type StorageOpts = { foo: string };",
+        "export interface StorageEvents { onUpload: () => void }",
+        "export const VERSION: string;",
+      ].join("\n")
+    );
+    const found = findPublicExports(join(dir, "index.d.ts"));
+    assert.ok(found.has("Storage"));
+    assert.ok(found.has("makeStorage"));
+    assert.ok(found.has("StorageOpts"));
+    assert.ok(found.has("StorageEvents"));
+    assert.ok(found.has("VERSION"));
+  });
+
+  it("picks up `export { X, Y as Z }` re-export forms", () => {
+    const dir = scratch();
+    writeFileSync(
+      join(dir, "index.d.ts"),
+      `export { Helper, Other as Renamed } from "./helper.js";`
+    );
+    const found = findPublicExports(join(dir, "index.d.ts"));
+    assert.ok(found.has("Helper"));
+    assert.ok(found.has("Renamed"));
+    assert.ok(!found.has("Other"));
+  });
+
+  it("returns an empty set when the .d.ts file does not exist", () => {
+    assert.equal(findPublicExports("/no/such/file.d.ts").size, 0);
+  });
+});
+
+describe("assertExportsDocumented", () => {
+  it("passes when every export is mentioned in page.mdx", () => {
+    const dir = scratch();
+    writeFileSync(join(dir, "page.mdx"), "## API\n\n- Storage\n- makeStorage");
+    const res = assertExportsDocumented({
+      pkg: "0gkit-storage",
+      docsDir: dir,
+      exports: new Set(["Storage", "makeStorage"]),
+      ignore: new Set(),
+    });
+    assert.equal(res.ok, true);
+  });
+
+  it("flags missing exports", () => {
+    const dir = scratch();
+    writeFileSync(join(dir, "page.mdx"), "## API\n\n- Storage");
+    const res = assertExportsDocumented({
+      pkg: "0gkit-storage",
+      docsDir: dir,
+      exports: new Set(["Storage", "makeStorage"]),
+      ignore: new Set(),
+    });
+    assert.equal(res.ok, false);
+    assert.deepEqual(res.missing, ["makeStorage"]);
+  });
+
+  it("treats a dedicated <Symbol>.mdx file as documentation", () => {
+    const dir = scratch();
+    writeFileSync(join(dir, "page.mdx"), "## API");
+    writeFileSync(join(dir, "makeStorage.mdx"), "# makeStorage");
+    const res = assertExportsDocumented({
+      pkg: "0gkit-storage",
+      docsDir: dir,
+      exports: new Set(["makeStorage"]),
+      ignore: new Set(),
+    });
+    assert.equal(res.ok, true);
+  });
+
+  it("respects the ignore set for known utility re-exports", () => {
+    const dir = scratch();
+    writeFileSync(join(dir, "page.mdx"), "## API\n\n- Storage");
+    const res = assertExportsDocumented({
+      pkg: "0gkit-storage",
+      docsDir: dir,
+      exports: new Set(["Storage", "InternalType"]),
+      ignore: new Set(["InternalType"]),
+    });
+    assert.equal(res.ok, true);
+  });
+
+  it("returns ok=false with all missing exports listed", () => {
+    const dir = scratch();
+    writeFileSync(join(dir, "page.mdx"), "");
+    const res = assertExportsDocumented({
+      pkg: "0gkit-x",
+      docsDir: dir,
+      exports: new Set(["A", "B", "C"]),
+      ignore: new Set(),
+    });
+    assert.equal(res.ok, false);
+    assert.deepEqual(res.missing.sort(), ["A", "B", "C"]);
   });
 });
