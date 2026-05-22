@@ -55,6 +55,7 @@ export async function startDaMock(opts: { port: number }): Promise<DaMockHandle>
   await new Promise<void>((r) => server.listen(opts.port, "127.0.0.1", r));
   const addr = server.address();
   if (!addr || typeof addr === "string") {
+    // internal invariant — not user-facing
     throw new Error("server.address() returned unexpected value");
   }
   const port = addr.port;

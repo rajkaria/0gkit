@@ -1,4 +1,5 @@
 import { decodeEventLog, encodeEventTopics, type Abi, type Hex } from "viem";
+import { ZeroGError } from "@foundryprotocol/0gkit-core";
 import type { DecodedEvent } from "./types.js";
 
 interface RawLog {
@@ -18,7 +19,11 @@ export function topicForEvent(abi: Abi, eventName: string): Hex {
     (item) => item.type === "event" && (item as { name?: string }).name === eventName
   );
   if (!has) {
-    throw new Error(`Indexer: no event named "${eventName}" in ABI.`);
+    throw new ZeroGError(
+      "INDEXER_EVENT_DECODE_FAILED",
+      `Indexer: no event named "${eventName}" in ABI.`,
+      `Add an "event ${eventName}(...)" entry to the ABI you passed to subscribe(), or use one of the event names that are actually declared in the contract's ABI.`
+    );
   }
   const [topic0] = encodeEventTopics({ abi, eventName });
   return topic0 as Hex;

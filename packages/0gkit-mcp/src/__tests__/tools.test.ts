@@ -131,7 +131,7 @@ describe("neutral handlers — error mapping", () => {
     const res = await h.og_storage_put({ data: "x" });
     expect(res.isError).toBe(true);
     const body = parseResult(res);
-    expect(body.code).toBe("CONFIG");
+    expect(body.code).toBe("CONFIG_INVALID_ARGUMENT");
     expect(body.hint).toMatch(/ZEROG_PRIVATE_KEY/);
   });
   it("og_storage_put rejects unsupported network 'local'", async () => {

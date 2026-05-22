@@ -1,4 +1,4 @@
-import type { Estimate } from "@foundryprotocol/0gkit-core";
+import { type Estimate, ZeroGError } from "@foundryprotocol/0gkit-core";
 
 /**
  * Segment size used by 0G storage's Merkle-tree chunking. 256 KiB matches the
@@ -31,7 +31,11 @@ export interface StorageEstimate extends Estimate {
 
 export function estimateBytes(sizeBytes: number): StorageEstimateBreakdown {
   if (sizeBytes < 0) {
-    throw new Error("sizeBytes must be ≥ 0");
+    throw new ZeroGError(
+      "STORAGE_INVALID_BYTES",
+      "sizeBytes must be ≥ 0",
+      "Pass a non-negative integer for sizeBytes (the number of bytes you intend to upload)."
+    );
   }
   const segments = sizeBytes === 0 ? 0 : Math.ceil(sizeBytes / SEGMENT_SIZE_BYTES);
   return { sizeBytes, segments };

@@ -9,6 +9,7 @@ export interface RenderedError {
   code: string;
   message: string;
   hint: string;
+  helpUrl: string;
 }
 
 export interface OutputConfig {
@@ -46,13 +47,19 @@ export function createOutput(cfg: OutputConfig): Output {
         cfg.write(
           JSON.stringify({
             ok: false,
-            error: { code: error.code, message: error.message, hint: error.hint },
+            error: {
+              code: error.code,
+              message: error.message,
+              hint: error.hint,
+              helpUrl: error.helpUrl,
+            },
           })
         );
         return;
       }
       cfg.write(red(`✗ ${error.message}`));
       cfg.write(dim(`  → ${error.hint}`));
+      cfg.write(dim(`  Help: ${error.helpUrl}`));
     },
     note(line) {
       if (!cfg.json) cfg.write(line);

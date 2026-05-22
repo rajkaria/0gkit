@@ -73,7 +73,7 @@ describe("0g storage", () => {
     await p.parseAsync(["storage", "put", "./f.bin", "--json"], { from: "user" });
     const out = JSON.parse(lines.at(-1)!);
     expect(out.ok).toBe(false);
-    expect(out.error.code).toBe("CONFIG");
+    expect(out.error.code).toBe("CONFIG_INVALID_ARGUMENT");
     expect(out.error.hint).toContain("ZEROG_PRIVATE_KEY");
     expect(process.exitCode).toBe(1);
     process.exitCode = 0;

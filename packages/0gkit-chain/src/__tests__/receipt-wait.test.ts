@@ -50,7 +50,7 @@ describe("waitForReceipt", () => {
       },
     } as any;
     await expect(waitForReceipt(client, "0xabc")).rejects.toMatchObject({
-      code: "CHAIN",
+      code: "CHAIN_TX_REVERTED",
     });
   });
 });

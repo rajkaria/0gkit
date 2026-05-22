@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { ZeroGError } from "@foundryprotocol/0gkit-core";
+import { ZeroGError, helpUrlFor } from "@foundryprotocol/0gkit-core";
 import type { createClient, getNetwork } from "@foundryprotocol/0gkit-core";
 import type {
   faucet,
@@ -138,13 +138,20 @@ export async function runCommand(
     out.success(await body(context));
   } catch (err) {
     if (err instanceof ZeroGError) {
-      out.failure({ code: err.code, message: err.message, hint: err.hint });
+      out.failure({
+        code: err.code,
+        message: err.message,
+        hint: err.hint,
+        helpUrl: err.helpUrl,
+      });
     } else {
       const e = err as { code?: string; message?: string; hint?: string };
+      const fallbackCode = "CONFIG_INVALID_ARGUMENT";
       out.failure({
-        code: e.code ?? "CONFIG",
+        code: e.code ?? fallbackCode,
         message: e.message ?? String(err),
         hint: e.hint ?? "Unexpected error — re-run with --json for the raw shape.",
+        helpUrl: helpUrlFor((e.code as never) ?? fallbackCode),
       });
     }
     process.exitCode = 1;

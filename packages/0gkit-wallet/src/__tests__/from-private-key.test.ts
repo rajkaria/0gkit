@@ -59,7 +59,9 @@ describe("fromPrivateKey", () => {
 
   it("sendTransaction throws ConfigError", async () => {
     const s = await fromPrivateKey(PK);
-    await expect(s.sendTransaction({})).rejects.toMatchObject({ code: "CONFIG" });
+    await expect(s.sendTransaction({})).rejects.toMatchObject({
+      code: "CONFIG_INVALID_ARGUMENT",
+    });
   });
 
   it("rejects garbage", async () => {

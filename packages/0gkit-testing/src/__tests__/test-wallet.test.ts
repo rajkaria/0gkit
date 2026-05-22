@@ -42,9 +42,18 @@ describe("testWallet", () => {
     );
   });
 
-  it("throws a clear error when sendTransaction is called (not implemented in v0)", async () => {
+  it("throws CONFIG_INVALID_ARGUMENT when sendTransaction is called (not implemented in v0)", async () => {
     const w = testWallet({ index: 0 });
-    await expect(w.sendTransaction({})).rejects.toThrow(/not implemented/);
+    try {
+      await w.sendTransaction({});
+      expect.fail("should have thrown");
+    } catch (e) {
+      expect((e as { code?: string }).code).toBe("CONFIG_INVALID_ARGUMENT");
+      expect((e as { helpUrl?: string }).helpUrl).toBe(
+        "https://0gkit.dev/errors/CONFIG_INVALID_ARGUMENT"
+      );
+      expect(e).toBeInstanceOf(Error);
+    }
   });
 
   it("signs typed data deterministically", async () => {

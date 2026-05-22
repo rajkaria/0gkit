@@ -34,18 +34,23 @@ describe("fromEnv", () => {
       fromEnv({
         env: { KMS_KEY_ID: "arn:aws:kms:us-east-1:000:key/abc", PRIVATE_KEY: PK },
       })
-    ).rejects.toMatchObject({ code: "CONFIG", message: expect.stringMatching(/KMS/i) });
+    ).rejects.toMatchObject({
+      code: "CONFIG_INVALID_ARGUMENT",
+      message: expect.stringMatching(/KMS/i),
+    });
   });
 
   it("throws when nothing is set", async () => {
-    await expect(fromEnv({ env: {} })).rejects.toMatchObject({ code: "CONFIG" });
+    await expect(fromEnv({ env: {} })).rejects.toMatchObject({
+      code: "CONFIG_INVALID_ARGUMENT",
+    });
   });
 
   it("throws CONFIG when KEY_FILE is set but KEY_PASSWORD is missing", async () => {
     await expect(
       fromEnv({ env: { KEY_FILE: "/some/path.json" } })
     ).rejects.toMatchObject({
-      code: "CONFIG",
+      code: "CONFIG_INVALID_ARGUMENT",
       message: expect.stringMatching(/KEY_PASSWORD/i),
     });
   });

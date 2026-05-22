@@ -42,7 +42,7 @@ describe("faucet", () => {
     await expect(
       faucet(galileoNoApi, "0x1111111111111111111111111111111111111111")
     ).rejects.toMatchObject({
-      code: "CONFIG",
+      code: "CONFIG_INVALID_ARGUMENT",
       hint: expect.stringContaining("https://faucet.example"),
     });
   });
@@ -54,7 +54,7 @@ describe("faucet", () => {
     );
     await expect(
       faucet(galileoProgrammatic, "0x1111111111111111111111111111111111111111")
-    ).rejects.toMatchObject({ code: "NETWORK" });
+    ).rejects.toMatchObject({ code: "CHAIN_RPC_UNREACHABLE" });
   });
 
   it("throws NetworkError when fetch itself rejects (e.g. DNS failure)", async () => {
@@ -62,7 +62,7 @@ describe("faucet", () => {
     await expect(
       faucet(galileoProgrammatic, "0x1111111111111111111111111111111111111111")
     ).rejects.toMatchObject({
-      code: "NETWORK",
+      code: "CHAIN_RPC_UNREACHABLE",
       message: expect.stringContaining("Faucet request failed"),
     });
   });

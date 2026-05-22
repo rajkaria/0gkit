@@ -92,7 +92,7 @@ describe("0g chain", () => {
     await p.parseAsync(["chain", "faucet", ADDR, "--json"], { from: "user" });
     const out = JSON.parse(lines.at(-1)!);
     expect(out.ok).toBe(false);
-    expect(out.error.code).toBe("CONFIG");
+    expect(out.error.code).toBe("CONFIG_INVALID_ARGUMENT");
     expect(out.error.hint).toContain("faucet.0g.ai");
     expect(process.exitCode).toBe(1);
     process.exitCode = 0;

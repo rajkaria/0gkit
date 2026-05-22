@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { formatEstimate, ConfigError } from "@foundryprotocol/0gkit-core";
+import { formatEstimate, ConfigError, ZeroGError } from "@foundryprotocol/0gkit-core";
 import { runCommand, type ProgramDeps } from "../program.js";
 import { bigintsToStrings } from "./_helpers.js";
 
@@ -131,13 +131,18 @@ export function registerEstimate(program: Command, deps: ProgramDeps): void {
         try {
           const v = JSON.parse(opts.args);
           if (!Array.isArray(v)) {
-            throw new Error("--args must be a JSON array");
+            throw new ZeroGError(
+              "CONFIG_INVALID_ARGUMENT",
+              "--args must be a JSON array",
+              `Pass --args as a JSON array of method arguments. Example: --args '["0xabc...", "1000"]'.`
+            );
           }
           parsedArgs = v;
         } catch (err) {
           throw new ConfigError(
             `--args is not a JSON array: ${(err as Error).message}`,
-            `Example: --args '["0xabc...", "1000"]'`
+            `Example: --args '["0xabc...", "1000"]'`,
+            "CONFIG_INVALID_ARGUMENT"
           );
         }
         if (!opts.address.startsWith("0x") || opts.address.length !== 42) {

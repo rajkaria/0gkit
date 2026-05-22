@@ -8,6 +8,7 @@ import {
 import { hashMessage, hashTypedData, keccak256, recoverAddress, type Hex } from "viem";
 import {
   ConfigError,
+  ZeroGError,
   type Signer,
   type SignTypedDataArgs,
   type SignableTx,
@@ -28,12 +29,19 @@ export async function fromKMS(opts: FromKMSOptions): Promise<Signer> {
   let publicKeyDer: Uint8Array;
   try {
     const r = await client.send(new GetPublicKeyCommand({ KeyId: opts.keyId }));
-    if (!r.PublicKey) throw new Error("KMS GetPublicKey returned no PublicKey");
+    if (!r.PublicKey) {
+      throw new ZeroGError(
+        "WALLET_KMS_PUBKEY_FAILED",
+        "KMS GetPublicKey returned no PublicKey",
+        "Verify the KMS key id and that the KMS service is reachable."
+      );
+    }
     publicKeyDer = r.PublicKey;
   } catch (err) {
     throw new ConfigError(
       `KMS GetPublicKey(${opts.keyId}) failed: ${err instanceof Error ? err.message : String(err)}.`,
-      "Verify the KMS key id, the IAM principal can kms:GetPublicKey, and the key spec is ECC_SECG_P256K1."
+      "Verify the KMS key id, the IAM principal can kms:GetPublicKey, and the key spec is ECC_SECG_P256K1.",
+      "WALLET_KMS_PUBKEY_FAILED"
     );
   }
 
@@ -50,12 +58,19 @@ export async function fromKMS(opts: FromKMSOptions): Promise<Signer> {
           SigningAlgorithm: SigningAlgorithmSpec.ECDSA_SHA_256,
         })
       );
-      if (!r.Signature) throw new Error("KMS Sign returned no Signature");
+      if (!r.Signature) {
+        throw new ZeroGError(
+          "WALLET_KMS_SIGN_FAILED",
+          "KMS Sign returned no Signature",
+          "Confirm the IAM principal has kms:Sign and the KMS service is reachable."
+        );
+      }
       der = r.Signature;
     } catch (err) {
       throw new ConfigError(
         `KMS Sign failed: ${err instanceof Error ? err.message : String(err)}.`,
-        "Confirm the IAM principal has kms:Sign and the key is enabled."
+        "Confirm the IAM principal has kms:Sign and the key is enabled.",
+        "WALLET_KMS_SIGN_FAILED"
       );
     }
     const { r, s } = decodeDerEcdsa(der);
@@ -118,13 +133,31 @@ function addressFromSpki(spki: Uint8Array): `0x${string}` {
 }
 
 function decodeDerEcdsa(der: Uint8Array): { r: bigint; s: bigint } {
-  if (der[0] !== 0x30) throw new Error("Bad DER signature");
+  if (der[0] !== 0x30) {
+    throw new ZeroGError(
+      "WALLET_BAD_DER_SIGNATURE",
+      "Bad DER signature: missing SEQUENCE tag",
+      "The signature returned by KMS is not a valid ASN.1 DER ECDSA signature. This usually means the KMS key spec is not ECC_SECG_P256K1; recreate the key with the correct spec."
+    );
+  }
   let i = 2;
-  if (der[i] !== 0x02) throw new Error("Bad DER signature (r)");
+  if (der[i] !== 0x02) {
+    throw new ZeroGError(
+      "WALLET_BAD_DER_SIGNATURE",
+      "Bad DER signature (r): missing INTEGER tag",
+      "The signature returned by KMS is not a valid ASN.1 DER ECDSA signature. This usually means the KMS key spec is not ECC_SECG_P256K1; recreate the key with the correct spec."
+    );
+  }
   const rLen = der[i + 1];
   const r = bytesToBigInt(der.slice(i + 2, i + 2 + rLen));
   i += 2 + rLen;
-  if (der[i] !== 0x02) throw new Error("Bad DER signature (s)");
+  if (der[i] !== 0x02) {
+    throw new ZeroGError(
+      "WALLET_BAD_DER_SIGNATURE",
+      "Bad DER signature (s): missing INTEGER tag",
+      "The signature returned by KMS is not a valid ASN.1 DER ECDSA signature. This usually means the KMS key spec is not ECC_SECG_P256K1; recreate the key with the correct spec."
+    );
+  }
   const sLen = der[i + 1];
   const s = bytesToBigInt(der.slice(i + 2, i + 2 + sLen));
   return { r, s };

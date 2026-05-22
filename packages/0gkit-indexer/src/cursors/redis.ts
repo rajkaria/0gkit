@@ -1,5 +1,6 @@
 // packages/0gkit-indexer/src/cursors/redis.ts
 import type { Redis as RedisClient, RedisOptions } from "ioredis";
+import { ZeroGError } from "@foundryprotocol/0gkit-core";
 import type { CursorState, CursorStore } from "../types.js";
 
 export interface RedisCursorStoreOptions {
@@ -32,8 +33,10 @@ export class RedisCursorStore implements CursorStore {
         (m) => new m.default(opts.url!, opts.redisOptions ?? {})
       );
     } else {
-      throw new Error(
-        "RedisCursorStore: pass { client } or { url } to construct the store."
+      throw new ZeroGError(
+        "INDEXER_CURSOR_BACKEND_UNREACHABLE",
+        "RedisCursorStore: pass { client } or { url } to construct the store.",
+        "Construct with either { url: 'redis://...' } to let RedisCursorStore lazy-import ioredis itself, or { client } if you've already constructed an ioredis Redis instance elsewhere."
       );
     }
   }

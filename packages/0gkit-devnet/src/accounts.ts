@@ -1,4 +1,5 @@
 import { mnemonicToAccount } from "viem/accounts";
+import { ZeroGError } from "@foundryprotocol/0gkit-core";
 
 export const DEFAULT_DEV_MNEMONIC =
   "test test test test test test test test test test test junk";
@@ -26,7 +27,11 @@ export function deriveAccounts(
     const account = mnemonicToAccount(mnemonic, { addressIndex: i });
     const hdKey = account.getHdKey();
     if (!hdKey.privateKey) {
-      throw new Error(`Failed to derive private key for index ${i}`);
+      throw new ZeroGError(
+        "WALLET_NO_PRIVATE_KEY",
+        `Failed to derive private key for index ${i}`,
+        "The HD wallet for this mnemonic returned no private key for the requested index. Verify the mnemonic is a valid BIP-39 phrase and the index is reachable on the m/44'/60'/0'/0/i path."
+      );
     }
     out.push({
       index: i,

@@ -8,6 +8,7 @@
 // `declare module "vitest"` block looks like a full module *definition* to
 // downstream tsc, shadowing vitest's real `describe` / `it` / `expect`.
 import type { Assertion as _VitestAssertion } from "vitest";
+import type { ErrorCode } from "@foundryprotocol/0gkit-core";
 import "./to-be-confirmed-on-0g.js";
 import "./to-have-root-matching.js";
 import "./to-be-valid-attestation.js";
@@ -26,8 +27,8 @@ interface ZeroGMatchers<R = unknown> {
    * recovers. Pass `expectedSigner` to bind the assertion to a known signer.
    */
   toBeValidAttestation(expectedSigner?: string): Promise<R>;
-  /** Asserts the received error is a `ZeroGError` with the given code. */
-  toBeZeroGError(code: "CONFIG" | "NETWORK" | "CHAIN" | "ATTESTATION"): R;
+  /** Asserts the received error is a `ZeroGError` with the given canonical code. */
+  toBeZeroGError(code: ErrorCode): R;
 }
 
 declare module "vitest" {

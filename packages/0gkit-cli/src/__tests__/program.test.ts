@@ -96,7 +96,7 @@ describe("buildProgram", () => {
     const deps = fakeDeps();
     deps.createClient = vi.fn(() => {
       throw Object.assign(new Error("rpc dead"), {
-        code: "NETWORK",
+        code: "CHAIN_RPC_UNREACHABLE",
         hint: "run 0g doctor",
       });
     });
@@ -109,7 +109,12 @@ describe("buildProgram", () => {
     const payload = JSON.parse((deps as any)._lines.at(-1));
     expect(payload).toEqual({
       ok: false,
-      error: { code: "NETWORK", message: "rpc dead", hint: "run 0g doctor" },
+      error: {
+        code: "CHAIN_RPC_UNREACHABLE",
+        message: "rpc dead",
+        hint: "run 0g doctor",
+        helpUrl: "https://0gkit.dev/errors/CHAIN_RPC_UNREACHABLE",
+      },
     });
     expect(process.exitCode).toBe(1);
     process.exitCode = 0;

@@ -104,19 +104,19 @@ describe("toBeValidAttestation", () => {
 describe("toBeZeroGError", () => {
   it("passes for a matching ZeroGError code", () => {
     const err = new ConfigError("oops", "fix it");
-    const r = toBeZeroGError(err, "CONFIG");
+    const r = toBeZeroGError(err, "CONFIG_INVALID_ARGUMENT");
     expect(r.pass).toBe(true);
   });
 
   it("fails on a wrong code", () => {
     const err = new ConfigError("oops", "fix it");
-    const r = toBeZeroGError(err, "CHAIN");
+    const r = toBeZeroGError(err, "CHAIN_TX_REVERTED");
     expect(r.pass).toBe(false);
-    expect(r.message()).toMatch(/CHAIN.*CONFIG|CONFIG.*CHAIN/);
+    expect(r.message()).toMatch(/CHAIN_TX_REVERTED|CONFIG_INVALID_ARGUMENT/);
   });
 
   it("fails for a non-ZeroGError", () => {
-    const r = toBeZeroGError(new Error("vanilla"), "CONFIG");
+    const r = toBeZeroGError(new Error("vanilla"), "CONFIG_INVALID_ARGUMENT");
     expect(r.pass).toBe(false);
     expect(r.message()).toMatch(/ZeroGError/);
   });
@@ -134,6 +134,6 @@ describe("matchers self-register on import", () => {
     expect(fixtureReceipt()).toBeConfirmedOn0G();
   });
   it("expect.toBeZeroGError is callable", () => {
-    expect(new ConfigError("x", "y")).toBeZeroGError("CONFIG");
+    expect(new ConfigError("x", "y")).toBeZeroGError("CONFIG_INVALID_ARGUMENT");
   });
 });

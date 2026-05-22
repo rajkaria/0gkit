@@ -1,5 +1,5 @@
 import { mnemonicToAccount } from "viem/accounts";
-import type { Signer } from "@foundryprotocol/0gkit-core";
+import { ZeroGError, type Signer } from "@foundryprotocol/0gkit-core";
 
 /**
  * The standard "anvil dev" mnemonic, used by 0gkit-devnet for its pre-funded
@@ -31,7 +31,11 @@ export function testWallet(opts: TestWalletOptions = {}): Signer {
   const account = mnemonicToAccount(mnemonic, { addressIndex: index });
   const hdKey = account.getHdKey();
   if (!hdKey.privateKey) {
-    throw new Error(`testWallet: failed to derive private key at index ${index}`);
+    throw new ZeroGError(
+      "WALLET_NO_PRIVATE_KEY",
+      `testWallet: failed to derive private key at index ${index}`,
+      "viem's mnemonicToAccount returned no private key for this index. Verify the mnemonic is a valid BIP-39 phrase and the index is reachable on the m/44'/60'/0'/0/i derivation path."
+    );
   }
   const privateKey = ("0x" +
     Array.from(hdKey.privateKey)
@@ -49,8 +53,10 @@ export function testWallet(opts: TestWalletOptions = {}): Signer {
       return account.signTypedData(args as never);
     },
     async sendTransaction(_tx) {
-      throw new Error(
-        "testWallet.sendTransaction is not implemented — use mockStorageClient / mockComputeClient / mockDAClient for primitives, or wire the signer to setupLocalDevnet's wallet client for end-to-end tests."
+      throw new ZeroGError(
+        "CONFIG_INVALID_ARGUMENT",
+        "testWallet.sendTransaction is not implemented",
+        "Use mockStorageClient / mockComputeClient / mockDAClient for primitive-level tests, or wire the signer to setupLocalDevnet's wallet client for end-to-end tests."
       );
     },
   };

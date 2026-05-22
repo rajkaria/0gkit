@@ -90,7 +90,7 @@ describe("Storage", () => {
       cfg({ loadSdk: async () => fakeSdk({ uploadErr: new Error("indexer down") }) })
     );
     await expect(s.upload(new Uint8Array([1]))).rejects.toMatchObject({
-      code: "NETWORK",
+      code: "CHAIN_RPC_UNREACHABLE",
     });
   });
 
@@ -113,7 +113,7 @@ describe("Storage", () => {
   it("throws ConfigError when no privateKey is given for upload", async () => {
     const s = new Storage({ network: "galileo", loadSdk: async () => fakeSdk({}) });
     await expect(s.upload(new Uint8Array([1]))).rejects.toMatchObject({
-      code: "CONFIG",
+      code: "CONFIG_INVALID_ARGUMENT",
     });
   });
 
@@ -126,7 +126,7 @@ describe("Storage", () => {
       })
     );
     await expect(s.upload(new Uint8Array([1]))).rejects.toMatchObject({
-      code: "CONFIG",
+      code: "CONFIG_INVALID_ARGUMENT",
     });
   });
 
@@ -137,7 +137,9 @@ describe("Storage", () => {
 
   it("download wraps an empty blob in NetworkError", async () => {
     const s = new Storage(cfg({ loadSdk: async () => fakeSdk({ blob: null }) }));
-    await expect(s.download("0xroot")).rejects.toMatchObject({ code: "NETWORK" });
+    await expect(s.download("0xroot")).rejects.toMatchObject({
+      code: "CHAIN_RPC_UNREACHABLE",
+    });
   });
 
   it("upload throws NetworkError on an unrecognized result shape", async () => {
@@ -148,7 +150,7 @@ describe("Storage", () => {
       })
     );
     await expect(s.upload(new Uint8Array([1]))).rejects.toMatchObject({
-      code: "NETWORK",
+      code: "CHAIN_RPC_UNREACHABLE",
     });
   });
 
@@ -204,7 +206,7 @@ describe("Storage", () => {
       loadSdk: async () => fakeSdk({}),
     });
     await expect(s.upload(new Uint8Array([1]))).rejects.toMatchObject({
-      code: "CONFIG",
+      code: "CONFIG_INVALID_ARGUMENT",
     });
   });
 });

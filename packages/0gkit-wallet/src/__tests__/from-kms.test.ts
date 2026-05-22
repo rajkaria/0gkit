@@ -92,7 +92,7 @@ describe("fromKMS (mocked)", () => {
     kmsMock.reset();
     kmsMock.on(GetPublicKeyCommand).rejects(new Error("AccessDeniedException"));
     await expect(fromKMS({ keyId: "arn:bad" })).rejects.toMatchObject({
-      code: "CONFIG",
+      code: "WALLET_KMS_PUBKEY_FAILED",
     });
   });
 
@@ -103,7 +103,7 @@ describe("fromKMS (mocked)", () => {
     await expect(
       fromKMS({ keyId: "arn:aws:kms:us-east-1:000:key/bad-len" })
     ).rejects.toMatchObject({
-      code: "CONFIG",
+      code: "CONFIG_INVALID_ARGUMENT",
     });
   });
 
@@ -117,13 +117,15 @@ describe("fromKMS (mocked)", () => {
     await expect(
       fromKMS({ keyId: "arn:aws:kms:us-east-1:000:key/compressed" })
     ).rejects.toMatchObject({
-      code: "CONFIG",
+      code: "CONFIG_INVALID_ARGUMENT",
     });
   });
 
   it("sendTransaction throws ConfigError", async () => {
     const s = await fromKMS({ keyId: "arn:aws:kms:us-east-1:000:key/abc" });
-    await expect(s.sendTransaction({})).rejects.toMatchObject({ code: "CONFIG" });
+    await expect(s.sendTransaction({})).rejects.toMatchObject({
+      code: "CONFIG_INVALID_ARGUMENT",
+    });
   });
 
   it("signMessage accepts a Uint8Array input", async () => {

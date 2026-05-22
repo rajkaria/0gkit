@@ -1,4 +1,4 @@
-import type { Receipt } from "@foundryprotocol/0gkit-core";
+import { ZeroGError, type Receipt } from "@foundryprotocol/0gkit-core";
 import { fixtureReceipt } from "../fixtures/receipt.js";
 
 export interface MockStorageOptions {
@@ -45,7 +45,11 @@ export function mockStorageClient(opts: MockStorageOptions = {}): MockStorageCli
     async download(root) {
       const got = store.get(root);
       if (!got) {
-        throw new Error(`mockStorageClient: root ${root} not found`);
+        throw new ZeroGError(
+          "STORAGE_ROOT_NOT_FOUND",
+          `mockStorageClient: root ${root} not found`,
+          "The mock storage client's in-memory map has no blob keyed by this root. Either upload() the data first in this test, or pre-seed the store via __store() before calling download()."
+        );
       }
       return new Uint8Array(got);
     },

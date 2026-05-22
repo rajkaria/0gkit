@@ -94,7 +94,7 @@ describe("0g contracts info", () => {
     });
     const out = JSON.parse(lines.at(-1)!);
     expect(out.ok).toBe(false);
-    expect(out.error.code).toBe("CONFIG");
+    expect(out.error.code).toBe("CONFIG_INVALID_ARGUMENT");
     expect(process.exitCode).toBe(1);
     process.exitCode = 0;
   });

@@ -36,7 +36,7 @@ describe("resolveContext", () => {
     try {
       resolveContext({ network: "mainnet" }, {});
     } catch (e) {
-      expect((e as { code: string }).code).toBe("CONFIG");
+      expect((e as { code: string }).code).toBe("CONFIG_INVALID_ARGUMENT");
       expect((e as { hint: string }).hint).toContain("aristotle");
     }
   });

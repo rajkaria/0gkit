@@ -19,6 +19,6 @@ describe("balance", () => {
     } as any;
     await expect(
       balance(fakeClient, "0x1111111111111111111111111111111111111111")
-    ).rejects.toMatchObject({ code: "NETWORK" });
+    ).rejects.toMatchObject({ code: "CHAIN_RPC_UNREACHABLE" });
   });
 });

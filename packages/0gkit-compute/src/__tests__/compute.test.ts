@@ -79,7 +79,9 @@ describe("Compute", () => {
       source: "kms" as const,
     };
     const c = new Compute({ signer: kmsSigner, provider: "0xprov" });
-    await expect(c.listProviders()).rejects.toMatchObject({ code: "CONFIG" });
+    await expect(c.listProviders()).rejects.toMatchObject({
+      code: "CONFIG_INVALID_ARGUMENT",
+    });
   });
 
   it("listProviders returns the broker service list", async () => {
@@ -130,12 +132,14 @@ describe("Compute", () => {
     });
     await expect(
       c.inference({ messages: [{ role: "user", content: "x" }] })
-    ).rejects.toMatchObject({ code: "NETWORK" });
+    ).rejects.toMatchObject({ code: "CHAIN_RPC_UNREACHABLE" });
   });
 
   it("throws ConfigError when neither signer nor brokerKey is provided", async () => {
     const c = new Compute({ provider: "0xprov" });
-    await expect(c.listProviders()).rejects.toMatchObject({ code: "CONFIG" });
+    await expect(c.listProviders()).rejects.toMatchObject({
+      code: "CONFIG_INVALID_ARGUMENT",
+    });
   });
 
   it("openai() exposes a chat.completions.create shim", async () => {
@@ -188,7 +192,7 @@ describe("Compute", () => {
     });
     await expect(
       c.inference({ messages: [{ role: "user", content: "x" }] })
-    ).rejects.toMatchObject({ code: "NETWORK" });
+    ).rejects.toMatchObject({ code: "CHAIN_RPC_UNREACHABLE" });
   });
 
   it("throws ConfigError when both SDK packages are missing", async () => {
@@ -200,7 +204,9 @@ describe("Compute", () => {
       loadEthers: async () =>
         ({ Wallet: class {}, JsonRpcProvider: class {} }) as never,
     });
-    await expect(c.listProviders()).rejects.toMatchObject({ code: "CONFIG" });
+    await expect(c.listProviders()).rejects.toMatchObject({
+      code: "CONFIG_INVALID_ARGUMENT",
+    });
   });
 
   it("wraps getServiceMetadata rejection in NetworkError", async () => {
@@ -215,7 +221,7 @@ describe("Compute", () => {
     });
     await expect(
       c.inference({ messages: [{ role: "user", content: "x" }] })
-    ).rejects.toMatchObject({ code: "NETWORK" });
+    ).rejects.toMatchObject({ code: "CHAIN_RPC_UNREACHABLE" });
   });
 
   it("wraps getRequestHeaders rejection in NetworkError", async () => {
@@ -230,7 +236,7 @@ describe("Compute", () => {
     });
     await expect(
       c.inference({ messages: [{ role: "user", content: "x" }] })
-    ).rejects.toMatchObject({ code: "NETWORK" });
+    ).rejects.toMatchObject({ code: "CHAIN_RPC_UNREACHABLE" });
   });
 
   it("throws ConfigError when the SDK lacks createZGComputeNetworkBroker", async () => {
@@ -240,7 +246,9 @@ describe("Compute", () => {
       loadEthers: async () =>
         ({ Wallet: class {}, JsonRpcProvider: class {} }) as never,
     });
-    await expect(c.listProviders()).rejects.toMatchObject({ code: "CONFIG" });
+    await expect(c.listProviders()).rejects.toMatchObject({
+      code: "CONFIG_INVALID_ARGUMENT",
+    });
   });
 
   it("throws ConfigError when ethers cannot be loaded", async () => {
@@ -251,7 +259,9 @@ describe("Compute", () => {
         throw new Error("Cannot find module 'ethers'");
       },
     });
-    await expect(c.listProviders()).rejects.toMatchObject({ code: "CONFIG" });
+    await expect(c.listProviders()).rejects.toMatchObject({
+      code: "CONFIG_INVALID_ARGUMENT",
+    });
   });
 
   it("inference still returns when processResponse throws (best-effort fee)", async () => {

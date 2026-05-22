@@ -1,4 +1,4 @@
-import type { Estimate } from "@foundryprotocol/0gkit-core";
+import { type Estimate, ZeroGError } from "@foundryprotocol/0gkit-core";
 
 /**
  * Placeholder rate for 0G DA pricing. Real on-chain pricing is not yet
@@ -26,7 +26,11 @@ export function estimateBytes(
   mode: "live" | "local" = "live"
 ): DAEstimate {
   if (sizeBytes < 0) {
-    throw new Error("sizeBytes must be ≥ 0");
+    throw new ZeroGError(
+      "DA_INVALID_PAYLOAD",
+      "sizeBytes must be ≥ 0",
+      "Pass a non-negative integer for sizeBytes (the encoded payload length in bytes)."
+    );
   }
   const fee = mode === "local" ? 0n : BigInt(sizeBytes) * ratePerByte;
   return {

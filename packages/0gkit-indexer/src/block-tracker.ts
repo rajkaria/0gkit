@@ -1,4 +1,5 @@
 import type { Hex } from "viem";
+import { ZeroGError } from "@foundryprotocol/0gkit-core";
 
 export interface TrackedBlock {
   number: bigint;
@@ -25,7 +26,13 @@ export class BlockTracker {
   private blocks: TrackedBlock[] = [];
 
   constructor(opts: BlockTrackerOptions) {
-    if (opts.depth < 1) throw new Error("BlockTracker depth must be >= 1");
+    if (opts.depth < 1) {
+      throw new ZeroGError(
+        "CONFIG_INVALID_ARGUMENT",
+        "BlockTracker depth must be >= 1",
+        "Pass an integer >= 1 for depth (the number of recent block hashes to retain for reorg detection)."
+      );
+    }
     this.depth = opts.depth;
   }
 

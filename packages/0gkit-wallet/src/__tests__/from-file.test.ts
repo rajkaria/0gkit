@@ -28,13 +28,13 @@ describe("fromFile", () => {
   it("rejects with a helpful ConfigError on bad password", async () => {
     const { path } = await makeKeystore(PK, "right");
     await expect(fromFile(path, { password: "wrong" })).rejects.toMatchObject({
-      code: "CONFIG",
+      code: "CONFIG_INVALID_ARGUMENT",
     });
   });
 
   it("rejects with ConfigError on missing file", async () => {
     await expect(fromFile("/no/such/file", { password: "x" })).rejects.toMatchObject({
-      code: "CONFIG",
+      code: "CONFIG_INVALID_ARGUMENT",
     });
   });
 });

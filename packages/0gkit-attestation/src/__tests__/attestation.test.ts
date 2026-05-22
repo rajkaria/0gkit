@@ -114,7 +114,7 @@ describe("sign / recover / verify", () => {
 
   it("signEnvelope throws AttestationError on a malformed private key", async () => {
     await expect(signEnvelope(makeEnv(), "0x1234")).rejects.toMatchObject({
-      code: "ATTESTATION",
+      code: "ATTESTATION_BAD_SIGNATURE",
     });
   });
 });

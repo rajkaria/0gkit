@@ -183,7 +183,7 @@ describe("0g estimate compute", () => {
     const out = lastJson(lines);
     expect(out.ok).toBe(false);
     const err = out.error as Record<string, string>;
-    expect(err.code).toBe("CONFIG");
+    expect(err.code).toBe("CONFIG_INVALID_ARGUMENT");
     expect(err.message).toContain("--prompt");
     process.exitCode = 0;
   });
@@ -233,7 +233,7 @@ describe("0g estimate da", () => {
     const out = lastJson(lines);
     expect(out.ok).toBe(false);
     const err = out.error as Record<string, string>;
-    expect(err.code).toBe("CONFIG");
+    expect(err.code).toBe("CONFIG_INVALID_ARGUMENT");
     process.exitCode = 0;
   });
 
@@ -247,7 +247,7 @@ describe("0g estimate da", () => {
     const out = lastJson(lines);
     expect(out.ok).toBe(false);
     const err = out.error as Record<string, string>;
-    expect(err.code).toBe("CONFIG");
+    expect(err.code).toBe("CONFIG_INVALID_ARGUMENT");
     process.exitCode = 0;
   });
 });
@@ -334,7 +334,7 @@ describe("0g estimate contracts", () => {
     const out = lastJson(lines);
     expect(out.ok).toBe(false);
     const err = out.error as Record<string, string>;
-    expect(err.code).toBe("CONFIG");
+    expect(err.code).toBe("CONFIG_INVALID_ARGUMENT");
     expect(err.message).toContain("--address");
     process.exitCode = 0;
   });
@@ -363,7 +363,7 @@ describe("0g estimate contracts", () => {
     const out = lastJson(lines);
     expect(out.ok).toBe(false);
     const err = out.error as Record<string, string>;
-    expect(err.code).toBe("CONFIG");
+    expect(err.code).toBe("CONFIG_INVALID_ARGUMENT");
     process.exitCode = 0;
   });
 

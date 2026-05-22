@@ -91,7 +91,9 @@ describe("DA.publish", () => {
       encoderUrl: "https://enc.example",
       fetch: vi.fn().mockResolvedValue(new Response("nope", { status: 500 })),
     });
-    await expect(da.publish({ x: 1 })).rejects.toMatchObject({ code: "NETWORK" });
+    await expect(da.publish({ x: 1 })).rejects.toMatchObject({
+      code: "CHAIN_RPC_UNREACHABLE",
+    });
   });
 
   it("wraps a thrown fetch error in NetworkError", async () => {
@@ -99,7 +101,9 @@ describe("DA.publish", () => {
       encoderUrl: "https://enc.example",
       fetch: vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
     });
-    await expect(da.publish({ x: 1 })).rejects.toMatchObject({ code: "NETWORK" });
+    await expect(da.publish({ x: 1 })).rejects.toMatchObject({
+      code: "CHAIN_RPC_UNREACHABLE",
+    });
   });
 
   it("sends Authorization when apiKey is set, and daRef falls back to blobId", async () => {

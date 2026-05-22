@@ -1,20 +1,18 @@
 import { expect } from "vitest";
-import { ZeroGError } from "@foundryprotocol/0gkit-core";
+import { ZeroGError, isErrorCode } from "@foundryprotocol/0gkit-core";
 
 interface MatchResult {
   pass: boolean;
   message: () => string;
 }
 
-const VALID_CODES = new Set(["CONFIG", "NETWORK", "CHAIN", "ATTESTATION"]);
-
 export function toBeZeroGError(received: unknown, code: string): MatchResult {
-  if (!VALID_CODES.has(code)) {
+  if (!isErrorCode(code)) {
     return {
       pass: false,
       message: () =>
         `toBeZeroGError: '${code}' is not a known ZeroGError code. ` +
-        `Use one of: ${Array.from(VALID_CODES).join(", ")}.`,
+        `Use one of the canonical codes from ERROR_CODES (e.g. CONFIG_INVALID_ARGUMENT, CHAIN_RPC_UNREACHABLE).`,
     };
   }
   if (!(received instanceof ZeroGError)) {

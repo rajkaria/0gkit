@@ -27,7 +27,7 @@ describe("createOutput", () => {
     expect(JSON.parse(lines[0])).toEqual({ ok: true, root: "0xabc" });
   });
 
-  it("renders errors as red+hint in human mode", () => {
+  it("renders errors with hint and help URL in human mode", () => {
     const lines: string[] = [];
     const out = createOutput({
       json: false,
@@ -36,15 +36,18 @@ describe("createOutput", () => {
       write: (s) => lines.push(s),
     });
     out.failure({
-      code: "CONFIG",
+      code: "CONFIG_MISSING_ENV",
       message: "missing key",
       hint: "set ZEROG_PRIVATE_KEY",
+      helpUrl: "https://0gkit.dev/errors/CONFIG_MISSING_ENV",
     });
-    expect(lines.join("\n")).toContain("missing key");
-    expect(lines.join("\n")).toContain("set ZEROG_PRIVATE_KEY");
+    const joined = lines.join("\n");
+    expect(joined).toContain("missing key");
+    expect(joined).toContain("set ZEROG_PRIVATE_KEY");
+    expect(joined).toContain("https://0gkit.dev/errors/CONFIG_MISSING_ENV");
   });
 
-  it("renders errors as ok:false JSON in --json mode", () => {
+  it("renders errors as ok:false JSON in --json mode (includes helpUrl)", () => {
     const lines: string[] = [];
     const out = createOutput({
       json: true,
@@ -52,10 +55,20 @@ describe("createOutput", () => {
       noColor: true,
       write: (s) => lines.push(s),
     });
-    out.failure({ code: "NETWORK", message: "down", hint: "retry" });
+    out.failure({
+      code: "CHAIN_RPC_UNREACHABLE",
+      message: "down",
+      hint: "retry",
+      helpUrl: "https://0gkit.dev/errors/CHAIN_RPC_UNREACHABLE",
+    });
     expect(JSON.parse(lines[0])).toEqual({
       ok: false,
-      error: { code: "NETWORK", message: "down", hint: "retry" },
+      error: {
+        code: "CHAIN_RPC_UNREACHABLE",
+        message: "down",
+        hint: "retry",
+        helpUrl: "https://0gkit.dev/errors/CHAIN_RPC_UNREACHABLE",
+      },
     });
   });
 
@@ -67,7 +80,12 @@ describe("createOutput", () => {
       noColor: false,
       write: (s) => lines.push(s),
     });
-    out.failure({ code: "CONFIG", message: "x", hint: "y" });
+    out.failure({
+      code: "CONFIG_INVALID_ARGUMENT",
+      message: "x",
+      hint: "y",
+      helpUrl: "https://0gkit.dev/errors/CONFIG_INVALID_ARGUMENT",
+    });
     expect(lines.join("")).toContain("\x1b[");
   });
 });
