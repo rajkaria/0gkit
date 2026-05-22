@@ -9,7 +9,11 @@ import { join } from "node:path";
 const root = new URL("../templates", import.meta.url).pathname;
 const REQUIRED = ["README.md", "package.json", ".gitignore", ".env.example"];
 
-const dirs = readdirSync(root).filter((d) => statSync(join(root, d)).isDirectory());
+// `_ci/` (and any other leading-underscore directory) holds scaffold helpers
+// copied in by `create-0gkit-app --ci <provider>`, not standalone templates.
+const dirs = readdirSync(root).filter(
+  (d) => !d.startsWith("_") && statSync(join(root, d)).isDirectory()
+);
 
 let failed = 0;
 for (const dir of dirs) {
