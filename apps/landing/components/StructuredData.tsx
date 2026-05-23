@@ -4,9 +4,11 @@
  * GitHub repo, and landing page as one entity.
  */
 
+import { getLatestRelease } from "@/lib/version";
+
 const SITE_URL = "https://0gkit.com";
 
-const SOFTWARE_APPLICATION = {
+const buildSoftwareApplication = (version: string) => ({
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: "0Gkit",
@@ -17,7 +19,7 @@ const SOFTWARE_APPLICATION = {
   applicationCategory: "DeveloperApplication",
   applicationSubCategory: "Web3 SDK",
   operatingSystem: "Cross-platform (Node.js >= 20.10)",
-  softwareVersion: "1.0.0",
+  softwareVersion: version,
   programmingLanguage: ["TypeScript", "JavaScript"],
   downloadUrl: "https://www.npmjs.com/package/create-0gkit-app",
   installUrl: "https://www.npmjs.com/package/create-0gkit-app",
@@ -39,7 +41,7 @@ const SOFTWARE_APPLICATION = {
     url: "https://foundryprotocol.xyz",
   },
   aggregateRating: undefined,
-};
+});
 
 const ORGANIZATION = {
   "@context": "https://schema.org",
@@ -113,7 +115,9 @@ const FAQ = {
   ],
 };
 
-export function StructuredData() {
+export async function StructuredData() {
+  const release = await getLatestRelease();
+  const SOFTWARE_APPLICATION = buildSoftwareApplication(release.version);
   return (
     <>
       <script

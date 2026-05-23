@@ -1,11 +1,13 @@
 import { ImageResponse } from "next/og";
+import { getLatestRelease } from "@/lib/version";
 
 export const alt =
   "0Gkit — The TypeScript Toolkit for the 0G Network. npm create 0gkit-app@latest";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OpengraphImage() {
+export default async function OpengraphImage() {
+  const release = await getLatestRelease();
   return new ImageResponse(
     <div
       style={{
@@ -93,8 +95,7 @@ export default function OpengraphImage() {
           lineHeight: 1.35,
         }}
       >
-        The neutral TypeScript toolkit for storage, compute, DA, attestation, and chain.
-        18 packages. v1.0.0 stable.
+        {`The neutral TypeScript toolkit for storage, compute, DA, attestation, and chain. 18 packages. v${release.version} stable.`}
       </div>
 
       <div

@@ -1,7 +1,9 @@
 import { InstallCommand } from "./InstallCommand";
 import { HeroBackground } from "./HeroBackground";
+import { getLatestRelease } from "@/lib/version";
 
-export function Hero() {
+export async function Hero() {
+  const release = await getLatestRelease();
   return (
     <section
       style={{
@@ -17,14 +19,14 @@ export function Hero() {
         style={{ position: "relative", textAlign: "center", zIndex: 1 }}
       >
         <a
-          href="https://github.com/rajkaria/0gkit/releases/tag/v1.0.0"
+          href={release.url}
           target="_blank"
           rel="noreferrer"
           className="pill pill-accent rise rise-d-1"
           style={{ marginBottom: "1.8rem" }}
         >
-          <span className="pill-dot" />
-          v1.0.0 shipped — 18 packages on npm, API stable until v2 →
+          <span className="pill-dot" />v{release.version} shipped — 18 packages on npm,
+          API stable until v2 →
         </a>
 
         <h1

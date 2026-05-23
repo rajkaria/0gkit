@@ -1,33 +1,35 @@
+import { getLatestRelease } from "@/lib/version";
+
 type Stat = {
   value: string;
   label: string;
   sub?: string;
 };
 
-const STATS: Stat[] = [
-  {
-    value: "v1.0.0",
-    label: "API stable",
-    sub: "Public surface frozen until v2",
-  },
-  {
-    value: "18",
-    label: "packages on npm",
-    sub: "Install only what you use",
-  },
-  {
-    value: "600+",
-    label: "tests passing",
-    sub: "CI gate on every PR",
-  },
-  {
-    value: "MIT",
-    label: "open source",
-    sub: "No strings, no contracts",
-  },
-];
-
-export function TrustSignals() {
+export async function TrustSignals() {
+  const release = await getLatestRelease();
+  const STATS: Stat[] = [
+    {
+      value: `v${release.version}`,
+      label: "API stable",
+      sub: "Public surface frozen until v2",
+    },
+    {
+      value: "18",
+      label: "packages on npm",
+      sub: "Install only what you use",
+    },
+    {
+      value: "600+",
+      label: "tests passing",
+      sub: "CI gate on every PR",
+    },
+    {
+      value: "MIT",
+      label: "open source",
+      sub: "No strings, no contracts",
+    },
+  ];
   return (
     <section style={{ paddingTop: "3.5rem", paddingBottom: "0.5rem" }}>
       <div className="container-x">
