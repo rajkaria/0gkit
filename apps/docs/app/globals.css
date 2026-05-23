@@ -1,17 +1,16 @@
 /* 0Gkit brand-aligned palette — sourced from 0g.ai/brandkit + landing
- * site. Dark by default (matches landing). Light fallback retained for
- * users on prefers-color-scheme: light. */
+ * site. Dark-only, matches landing. The brand palette (#9200E1 +
+ * tints toward white) doesn't have enough contrast on light backgrounds
+ * for WCAG AA, so we don't ship a light theme. color-scheme: dark
+ * tells the UA to render scrollbars / form controls dark too. */
 :root {
-  /* Dark base (default) */
   --bg: #000000;
   --bg-elev: #0a0a0a;
   --bg-card: #0d0d10;
   --fg: #fefefe;
   --fg-dim: #b8b8c2;
-  /* WCAG AA needs ≥ 4.5:1 for small text. #8a8a96 on #000 is ~5.4:1; the
-   * landing site's #6e6e7a (~4.3:1) is only used on larger / non-text
-   * elements there, but the docs uses --muted on the sidebar section
-   * titles + topbar tag, both small text — bumped here. */
+  /* WCAG AA needs ≥ 4.5:1 for small text on #000. #8a8a96 is ~5.4:1; used
+   * on sidebar section titles + topbar tag (both small). */
   --muted: #8a8a96;
   --border: #1a1a1e;
   --border-strong: #2a2a32;
@@ -32,22 +31,6 @@
   --max-content: 54rem;
 
   color-scheme: dark;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #ffffff;
-    --bg-elev: #fafafa;
-    --bg-card: #f4f4f6;
-    --fg: #0a0a0c;
-    --fg-dim: #4a4a55;
-    --muted: #6e6e7a;
-    --border: #e5e7eb;
-    --border-strong: #d4d4d8;
-    --code-bg: #f6f8fa;
-    --sidebar-bg: #fafafa;
-    color-scheme: light;
-  }
 }
 
 * {
@@ -99,6 +82,21 @@ a:hover {
   text-decoration: underline;
   text-underline-offset: 0.18em;
   text-decoration-thickness: 1px;
+}
+
+/* Prose links carry an underline by default — axe-core's link-in-text-block
+ * requires either ≥3:1 contrast with surrounding text OR a non-color signal
+ * (underline, weight, etc.). Brand purple vs. --fg-dim is ~1.85:1, so the
+ * non-color signal is the underline. Navigation links (topbar, sidebar) keep
+ * the original color-only treatment since context makes them unambiguous. */
+.prose a {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent-2) 40%, transparent);
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+}
+.prose a:hover {
+  text-decoration-color: var(--brand-2);
 }
 
 .layout {
