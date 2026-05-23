@@ -46,6 +46,22 @@ export const NAV: NavSection[] = [
         title: "@foundryprotocol/0gkit-observability",
         href: "/packages/0gkit-observability",
       },
+      {
+        title: "@foundryprotocol/0gkit-contracts",
+        href: "/packages/0gkit-contracts",
+      },
+      {
+        title: "@foundryprotocol/0gkit-indexer",
+        href: "/packages/0gkit-indexer",
+      },
+      {
+        title: "@foundryprotocol/0gkit-testing",
+        href: "/packages/0gkit-testing",
+      },
+      {
+        title: "@foundryprotocol/0gkit-devnet",
+        href: "/packages/0gkit-devnet",
+      },
       { title: "@foundryprotocol/0gkit-mcp", href: "/packages/mcp" },
       { title: "@foundryprotocol/0gkit-react", href: "/packages/react" },
     ],

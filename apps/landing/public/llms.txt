@@ -1,0 +1,44 @@
+# 0Gkit
+
+> The neutral TypeScript toolkit for the 0G decentralized AI network. MIT-licensed. 18 packages on npm at v1.0.1.
+
+0Gkit gives developers everything needed to ship apps on 0G: storage, compute, data availability (DA), attestation, a reorg-safe indexer, durable async jobs, wallet, typed contracts, OpenTelemetry observability, plus a `0g` CLI, MCP server for agents, and React hooks. Designed to drop into any TypeScript stack — no Foundry SDK lock-in, no provider lock-in. Live at 0gkit.com.
+
+## Documentation
+
+- [Getting started](https://docs.0gkit.com/getting-started): 60-second install + first commands
+- [CLI reference](https://docs.0gkit.com/cli): The `0g` command line — `init`, `doctor`, `chain`, `storage`, `infer`, `da`, `attest`, `contracts`, `jobs`, `cost`
+- [Packages](https://docs.0gkit.com/packages): All 18 packages and their public APIs (one MDX page per package)
+- [Concepts](https://docs.0gkit.com/concepts): Storage roots + Merkle math, attestation envelopes, durable jobs delivery model, OpenTelemetry instrumentation, cost estimation
+- [Error codes](https://docs.0gkit.com/errors): Every `ZeroGError` code with cause / fix / runnable example (CI-enforced one page per code)
+- [MCP server](https://docs.0gkit.com/mcp): Every CLI capability exposed as an MCP tool (`og_storage_put`, `og_infer`, ...) for agents
+- [React hooks](https://docs.0gkit.com/react): `useUpload`, `useInference`, `useEvent`, `useLogs`, `<ZeroGErrorBoundary>`
+- [Templates](https://docs.0gkit.com/templates): 9 archetype starters (`chat`, `ai-agent`, `nft-with-storage`, `tee-attested-api`, `storage-app`, `attestation-verify`, `inference-app`, `mcp-agent`, `react-app`)
+- [Troubleshooting](https://docs.0gkit.com/troubleshooting): Common errors + the `0g doctor` preflight pattern
+- [Contributing](https://docs.0gkit.com/contributing): How to contribute (also at /CONTRIBUTING.md in the repo)
+
+## Quickstart
+
+- [Scaffold an app](https://www.npmjs.com/package/create-0gkit-app): `npm create 0gkit-app@latest`
+- [Install CLI globally](https://www.npmjs.com/package/@foundryprotocol/0gkit-cli): `npm install -g @foundryprotocol/0gkit-cli` (exposes the `0g` binary)
+- [Run CLI without install](https://www.npmjs.com/package/@foundryprotocol/0gkit-cli): `npx @foundryprotocol/0gkit-cli doctor` (note the full scoped name — `npx 0g` resolves to an unrelated package on npm)
+- [Playground (browser)](https://playground.0gkit.com): Try the toolkit without installing anything
+
+## Source
+
+- [GitHub repo](https://github.com/rajkaria/0gkit): Source, issues, discussions
+- [Issues](https://github.com/rajkaria/0gkit/issues): Bug reports
+- [Discussions](https://github.com/rajkaria/0gkit/discussions): Q&A, RFCs, show-and-tell
+- [Changelog / releases](https://github.com/rajkaria/0gkit/releases): Per-release notes (one tag per `@foundryprotocol/0gkit-*@<version>`)
+- [Security policy](https://github.com/rajkaria/0gkit/blob/main/SECURITY.md): Responsible disclosure
+
+## Stability
+
+- v1.0.0 frozen the public API surface until v2.0.0. Bug fixes ship as patches, new features as minors, breaking changes only as a new major.
+- Every error code has a stable `helpUrl` rooted at `https://0gkit.com/errors/<CODE>`, redirected to `docs.0gkit.com/errors/<CODE>` (frozen forever for tarballs already on npm).
+
+## Optional
+
+- [Network: 0G](https://0g.ai): The chain 0gkit targets (storage, compute, DA, attestation primitives)
+- [Maintainer: Raj Karia on X](https://x.com/rajkaria_)
+- [Maintainer: Raj Karia on Telegram](https://t.me/rajkaria)

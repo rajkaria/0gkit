@@ -141,6 +141,23 @@ canonicalJsonStringify({ b: 1, a: 2 }); // '{"a":2,"b":1}'
 digestJson({ a: 2, b: 1 }) === digestJson({ b: 1, a: 2 }); // true
 ```
 
+## Deeper concept guides
+
+Topics that don't fit on one page — each is its own walkthrough:
+
+- [Durable async jobs](/concepts/durable-jobs) — at-least-once delivery model,
+  retry + backoff semantics, the three backends (memory / sqlite / redis),
+  HMAC-signed webhooks, and graceful shutdown on Vercel Fluid Compute.
+- [Observability with OpenTelemetry](/concepts/observability) — the
+  `0gkit.*` semantic attribute namespace, the `instrument0g()`
+  prototype-patching strategy, cost attribution, and the bundle budget that
+  keeps observability "free."
+- Exporter wire-ups:
+  [Honeycomb](/concepts/observability/exporters/honeycomb) ·
+  [Datadog](/concepts/observability/exporters/datadog) ·
+  [Vercel](/concepts/observability/exporters/vercel) — each is a runnable
+  `instrument0g({...})` snippet with auth notes.
+
 ## The escape hatch to the raw SDK
 
 0gkit is a thin, faithful wrapper, never a cage. When you outgrow a wrapper,
