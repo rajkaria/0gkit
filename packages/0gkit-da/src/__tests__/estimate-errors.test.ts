@@ -9,7 +9,7 @@ describe("estimateBytes (DA) error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("DA_INVALID_PAYLOAD");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/DA_INVALID_PAYLOAD"
+        "https://0gkit.com/errors/DA_INVALID_PAYLOAD"
       );
       expect(e instanceof Error).toBe(true);
     }

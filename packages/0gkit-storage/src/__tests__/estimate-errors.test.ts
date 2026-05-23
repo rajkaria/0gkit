@@ -9,7 +9,7 @@ describe("estimateBytes error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("STORAGE_INVALID_BYTES");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/STORAGE_INVALID_BYTES"
+        "https://0gkit.com/errors/STORAGE_INVALID_BYTES"
       );
       expect(e instanceof Error).toBe(true);
     }

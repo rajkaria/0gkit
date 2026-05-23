@@ -596,3 +596,23 @@ session-to-session); a 0.90 floor is noise (most regressions hide in the
 **How to apply:** When the score drops, the right move is fix the root
 cause, not lower the gate. The score isn't a brag — it's the floor below
 which builders' trust drops.
+
+---
+
+## D38 — `ERROR_HELP_BASE` locked to `https://0gkit.com/errors/` from v1.0.1
+
+**Date:** 2026-05-23 · **SP:** SP13 (landing + helpUrl)
+
+`0gkit.com` is the canonical landing + docs + playground deployment.
+From v1.0.1 onward, every `ZeroGError.helpUrl` resolves against
+`https://0gkit.com/errors/<CODE>` — derived from this single constant,
+never hard-coded at the throw site (per D27).
+
+**Why:** D27 set the helpUrl up to be rebaseable by changing one
+constant. Locking it to the canonical domain at the first v1.0.x patch
+stabilises the URL pattern early in the v1 series, before there's any
+meaningful install base on a divergent base.
+
+**How to apply:** Never hard-code `helpUrl` at a `throw` site. Always
+derive via `helpUrlFor(code)`. If the domain ever needs to move, edit
+this one constant and ship a patch.

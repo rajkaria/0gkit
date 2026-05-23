@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Durable async job runner for 0G compute / storage / DA workflows. Memory / SQLite / Redis backends, zod-typed job definitions, HMAC-signed webhooks, graceful shutdown.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-jobs",
+  "homepage": "https://0gkit.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",

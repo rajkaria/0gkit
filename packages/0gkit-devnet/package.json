@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Local chain + storage + compute + DA stack for 0G app development (`0g dev`).",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-devnet",
+  "homepage": "https://0gkit.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",

@@ -20,7 +20,7 @@ describe("deriveAccounts error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("WALLET_NO_PRIVATE_KEY");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/WALLET_NO_PRIVATE_KEY"
+        "https://0gkit.com/errors/WALLET_NO_PRIVATE_KEY"
       );
       expect(e instanceof Error).toBe(true);
     }

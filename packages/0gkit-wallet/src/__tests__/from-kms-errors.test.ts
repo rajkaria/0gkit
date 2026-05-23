@@ -35,7 +35,7 @@ describe("fromKMS error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("WALLET_KMS_PUBKEY_FAILED");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/WALLET_KMS_PUBKEY_FAILED"
+        "https://0gkit.com/errors/WALLET_KMS_PUBKEY_FAILED"
       );
       expect(e instanceof Error).toBe(true);
     }
@@ -49,7 +49,7 @@ describe("fromKMS error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("WALLET_KMS_PUBKEY_FAILED");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/WALLET_KMS_PUBKEY_FAILED"
+        "https://0gkit.com/errors/WALLET_KMS_PUBKEY_FAILED"
       );
       expect(e instanceof Error).toBe(true);
     }
@@ -65,7 +65,7 @@ describe("fromKMS error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("WALLET_KMS_SIGN_FAILED");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/WALLET_KMS_SIGN_FAILED"
+        "https://0gkit.com/errors/WALLET_KMS_SIGN_FAILED"
       );
       expect(e instanceof Error).toBe(true);
     }
@@ -81,7 +81,7 @@ describe("fromKMS error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("WALLET_KMS_SIGN_FAILED");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/WALLET_KMS_SIGN_FAILED"
+        "https://0gkit.com/errors/WALLET_KMS_SIGN_FAILED"
       );
       expect(e instanceof Error).toBe(true);
     }
@@ -98,7 +98,7 @@ describe("fromKMS error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("WALLET_BAD_DER_SIGNATURE");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/WALLET_BAD_DER_SIGNATURE"
+        "https://0gkit.com/errors/WALLET_BAD_DER_SIGNATURE"
       );
       expect(e instanceof Error).toBe(true);
     }
@@ -117,7 +117,7 @@ describe("fromKMS error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("WALLET_BAD_DER_SIGNATURE");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/WALLET_BAD_DER_SIGNATURE"
+        "https://0gkit.com/errors/WALLET_BAD_DER_SIGNATURE"
       );
       expect(e instanceof Error).toBe(true);
     }
@@ -136,7 +136,7 @@ describe("fromKMS error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("WALLET_BAD_DER_SIGNATURE");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/WALLET_BAD_DER_SIGNATURE"
+        "https://0gkit.com/errors/WALLET_BAD_DER_SIGNATURE"
       );
       expect(e instanceof Error).toBe(true);
     }

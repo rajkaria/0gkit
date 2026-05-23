@@ -70,7 +70,14 @@ export function errorNamespace(code: ErrorCode): string {
   return idx === -1 ? code : code.slice(0, idx);
 }
 
-export const ERROR_HELP_BASE = "https://0gkit.dev/errors/";
+/**
+ * The canonical base for every `ZeroGError.helpUrl`. Concatenated with the
+ * error `code` to produce a stable, frozen-in-tarball remediation URL.
+ *
+ * See `docs/DECISIONS.md` D38. If this ever needs to move, only this
+ * constant changes — the URL is derived, never hard-coded at throw sites.
+ */
+export const ERROR_HELP_BASE = "https://0gkit.com/errors/";
 
 export function helpUrlFor(code: ErrorCode): string {
   return `${ERROR_HELP_BASE}${code}`;

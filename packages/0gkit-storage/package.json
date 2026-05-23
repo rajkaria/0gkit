@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Neutral 0G Storage client — upload/download/computeRoot/exists over @0gfoundation/0g-storage-ts-sdk.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-storage",
+  "homepage": "https://0gkit.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",

@@ -10,7 +10,7 @@ describe("mockStorageClient error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("STORAGE_ROOT_NOT_FOUND");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/STORAGE_ROOT_NOT_FOUND"
+        "https://0gkit.com/errors/STORAGE_ROOT_NOT_FOUND"
       );
       expect(e instanceof Error).toBe(true);
     }

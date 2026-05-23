@@ -50,7 +50,7 @@ describe("testWallet", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("CONFIG_INVALID_ARGUMENT");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/CONFIG_INVALID_ARGUMENT"
+        "https://0gkit.com/errors/CONFIG_INVALID_ARGUMENT"
       );
       expect(e).toBeInstanceOf(Error);
     }

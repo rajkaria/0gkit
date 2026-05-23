@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Neutral 0G Compute client — provider discovery, broker inference, OpenAI-compatible shim.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-compute",
+  "homepage": "https://0gkit.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",

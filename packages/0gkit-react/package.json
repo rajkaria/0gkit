@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Neutral React hooks for 0G — useUpload, useDownload, useInference, useAttestation over @foundryprotocol/0gkit-*.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-react",
+  "homepage": "https://0gkit.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",

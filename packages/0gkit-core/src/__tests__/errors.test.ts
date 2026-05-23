@@ -15,7 +15,7 @@ describe("ZeroGError", () => {
       "raise quota or shrink upload"
     );
     expect(e.code).toBe("STORAGE_QUOTA_EXCEEDED");
-    expect(e.helpUrl).toBe("https://0gkit.dev/errors/STORAGE_QUOTA_EXCEEDED");
+    expect(e.helpUrl).toBe("https://0gkit.com/errors/STORAGE_QUOTA_EXCEEDED");
     expect(e.hint).toBe("raise quota or shrink upload");
     expect(e.message).toBe("over quota");
     expect(e.name).toBe("ZeroGError");
@@ -29,7 +29,7 @@ describe("ZeroGError", () => {
       code: "CHAIN_RPC_UNREACHABLE",
       message: "rpc down",
       hint: "check connectivity",
-      helpUrl: "https://0gkit.dev/errors/CHAIN_RPC_UNREACHABLE",
+      helpUrl: "https://0gkit.com/errors/CHAIN_RPC_UNREACHABLE",
     });
   });
 });
