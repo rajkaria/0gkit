@@ -158,6 +158,75 @@ TEE attestation. Operates on a `SignedEnvelope` JSON file
 0g attest report signed.json --json
 ```
 
+## `0g cost`
+
+Cost forecasting across 0G primitives. Two modes — synthesise estimates from
+flags, or aggregate _real_ per-op costs from a [Jaeger](https://www.jaegertracing.io/) trace
+emitted by `@foundryprotocol/0gkit-observability`.
+
+| Subcommand                                                               | What                                                                                                       |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `0g cost forecast --storage <bytes...> --compute <spec...> --da <bytes>` | Sum hypothetical estimates across one or more ops. Pass any combination of the three primitives.           |
+| `0g cost forecast --from-jaeger <trace.json>`                            | Aggregate **real** per-op gas + fee totals from a Jaeger v1 trace dump. Mutually exclusive with the above. |
+
+```bash
+# Hypothetical: forecast a workload before you run it
+0g cost forecast \
+  --storage 1024,4096 \
+  --compute "summarise|llama-3-8b|512" \
+  --da 2048 \
+  --json
+
+# Real: replay an existing trace through the cost calculator
+0g cost forecast --from-jaeger ./trace.json --json
+```
+
+`--from-jaeger` scans every span carrying the `0gkit.op` attribute (emitted
+automatically by [`@foundryprotocol/0gkit-observability`](/packages/0gkit-observability)),
+groups by op, and sums `0gkit.fee_native` + `0gkit.gas_native`. Dry-run spans
+(`0gkit.dry_run=true`) and errored spans (any `0gkit.error_code` tag) are
+counted but excluded from totals — they did not spend on-chain resources.
+
+The JSON envelope from `--from-jaeger`:
+
+```json
+{
+  "ok": true,
+  "source": "jaeger",
+  "file": "trace.json",
+  "spansScanned": 42,
+  "spansAttributed": 18,
+  "spansSkipped": 2,
+  "byOp": {
+    "storage.upload": {
+      "count": 3,
+      "totalGas": "240000",
+      "totalFeeWei": "3000000000",
+      "totalSizeBytes": 12288
+    },
+    "compute.inference": {
+      "count": 12,
+      "totalGas": "0",
+      "totalFeeWei": "6000000000",
+      "totalInputTokens": 2400,
+      "totalOutputTokens": 6144
+    },
+    "da.publish": {
+      "count": 3,
+      "totalGas": "0",
+      "totalFeeWei": "1536000000",
+      "totalSizeBytes": 1536
+    }
+  },
+  "totalGas": "240000",
+  "totalFeeWei": "10536000000"
+}
+```
+
+Download a trace dump from the Jaeger UI (Trace → ⋮ → Download JSON) or hit
+the query API directly (`/api/traces/<id>`). The same parser works against any
+OTLP collector that exports the Jaeger JSON format.
+
 ## `0g foundry …` (opt-in, hidden)
 
 The optional Foundry plugin namespace. Hidden unless `@foundryprotocol/mcp`

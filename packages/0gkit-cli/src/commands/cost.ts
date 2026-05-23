@@ -6,11 +6,13 @@ import {
 } from "@foundryprotocol/0gkit-core";
 import { runCommand, type ProgramDeps } from "../program.js";
 import { bigintsToStrings } from "./_helpers.js";
+import { aggregateJaegerDump, forecastToJson, renderForecast } from "./jaeger.js";
 
 interface ForecastOpts {
   storage?: number[];
   compute?: string[];
   da?: number;
+  fromJaeger?: string;
   json?: boolean;
 }
 
@@ -67,9 +69,54 @@ export function registerCost(program: Command, deps: ProgramDeps): void {
       parseComputeSpec
     )
     .option("--da <bytes>", "DA payload byte count", parseDA)
+    .option(
+      "--from-jaeger <path>",
+      "aggregate real per-op gas + fee totals from a Jaeger trace JSON dump (mutually exclusive with --storage/--compute/--da)"
+    )
     .action(async function (this: Command) {
       await runCommand(deps, this, async () => {
         const opts = this.opts() as ForecastOpts;
+
+        if (opts.fromJaeger) {
+          if (
+            (opts.storage && opts.storage.length > 0) ||
+            (opts.compute && opts.compute.length > 0) ||
+            typeof opts.da === "number"
+          ) {
+            throw new ConfigError(
+              "--from-jaeger cannot be combined with --storage, --compute, or --da.",
+              "Use --from-jaeger alone to aggregate real per-op costs from a trace, or use the synthesis flags to forecast hypothetical costs."
+            );
+          }
+          let raw: Uint8Array;
+          try {
+            raw = await deps.fs.readFile(opts.fromJaeger);
+          } catch (err) {
+            throw new ConfigError(
+              `Could not read Jaeger trace file '${opts.fromJaeger}': ${
+                err instanceof Error ? err.message : String(err)
+              }`,
+              "Pass a path to a Jaeger v1 trace JSON file (UI export, or /api/traces response)."
+            );
+          }
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(new TextDecoder().decode(raw));
+          } catch (err) {
+            throw new ConfigError(
+              `Jaeger trace file '${opts.fromJaeger}' is not valid JSON: ${
+                err instanceof Error ? err.message : String(err)
+              }`,
+              "Export the trace as JSON (Jaeger UI → Trace → ⋮ → Download JSON), then re-run."
+            );
+          }
+          const forecast = aggregateJaegerDump(parsed);
+          return {
+            human: renderForecast(forecast, opts.fromJaeger),
+            json: forecastToJson(forecast, opts.fromJaeger),
+          };
+        }
+
         const byOp: {
           storage: Estimate[];
           compute: Estimate[];
