@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-testing",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "description": "Test toolkit for 0gkit: deterministic mock providers for storage/compute/DA, signed fixture attestations + receipts, an HD-derived testWallet, a setupLocalDevnet() vitest helper that wraps `0g dev`, and four vitest matchers (toBeConfirmedOn0G, toHaveRootMatching, toBeValidAttestation, toBeZeroGError).",
   "license": "MIT",
   "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-testing",
