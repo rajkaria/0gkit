@@ -81,7 +81,7 @@ export class Compute {
     } else if (config.brokerKey !== undefined) {
       if (!warnedBrokerKey) {
         console.warn(
-          "@foundryprotocol/0gkit-compute: `{ brokerKey }` is deprecated and will be removed in v0.3.\n" +
+          "@foundryprotocol/0gkit-compute: `{ brokerKey }` is deprecated and will be removed in v2.\n" +
             "  Migrate to `{ signer: await fromEnv() }` (or fromPrivateKey/fromKMS) from @foundryprotocol/0gkit-wallet."
         );
         warnedBrokerKey = true;

@@ -1,0 +1,244 @@
+---
+title: Migrating from the official 0G SDKs
+---
+
+# Migrating from the official 0G SDKs
+
+If you are already using `@0gfoundation/0g-storage-ts-sdk`,
+`@0gfoundation/0g-compute-ts-sdk`, or rolling your own DA HTTP client,
+**0gkit is a drop-in replacement** that gives you a uniform
+[`Receipt`](/concepts), a [typed error taxonomy](/errors), and an
+[escape hatch](/packages/storage#storageraw) to the underlying SDK whenever
+you need it.
+
+You can migrate one primitive at a time. The official SDKs continue to work
+inside 0gkit as the underlying transport — nothing is wrapped that prevents
+you from reaching the raw client.
+
+## Why migrate?
+
+| Pain point                                                                           | 0gkit fix                                                                    |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Each SDK has a different signer shape (`PrivateKey`, `ethers.Wallet`, broker key, …) | Single [`Signer`](/packages/wallet) interface across every primitive.        |
+| Errors are bare `Error`s — no codes, no hints, no docs links                         | Every failure is a [`ZeroGError`](/errors) with `code` + `hint` + `helpUrl`. |
+| No cost estimate before broadcasting                                                 | [`primitive.estimate(input)`](/concepts) on storage / compute / DA.          |
+| No deterministic preview                                                             | `{ dryRun: true }` returns the receipt envelope **without** any tx.          |
+| Untyped contract calls                                                               | [Typed contracts](/packages/0gkit-contracts) with wagmi-style read/write.    |
+| No browser-safe client                                                               | `Storage.computeRoot` and `Storage.exists` are pure — no SDK import.         |
+| No CLI                                                                               | `npx @foundryprotocol/0gkit-cli storage put` (or `infer`, `da publish`).     |
+
+You **do not lose** anything: `storage.raw()` returns the loaded
+`@0gfoundation/0g-storage-ts-sdk` module so any feature 0gkit does not surface
+yet is still one call away.
+
+## 1. Storage
+
+Replace `@0gfoundation/0g-storage-ts-sdk` with `@foundryprotocol/0gkit-storage`.
+The SDK is still installed as an optional peer — 0gkit loads it lazily.
+
+### Install
+
+```bash
+# before
+npm install @0gfoundation/0g-storage-ts-sdk ethers
+
+# after — 0gkit + the same peers (kept lazy)
+npm install @foundryprotocol/0gkit-storage@latest @foundryprotocol/0gkit-core@latest viem
+npm install @0gfoundation/0g-storage-ts-sdk ethers   # optional peers
+```
+
+### Upload
+
+```ts
+// before — @0gfoundation/0g-storage-ts-sdk
+import { Indexer, ZgFile } from "@0gfoundation/0g-storage-ts-sdk";
+import { Wallet, JsonRpcProvider } from "ethers";
+
+const provider = new JsonRpcProvider("https://evmrpc-testnet.0g.ai");
+const wallet = new Wallet(process.env.PRIVATE_KEY!, provider);
+const indexer = new Indexer("https://indexer-storage-testnet.0g.ai");
+
+const file = ZgFile.fromBytes(new TextEncoder().encode("hello 0G"));
+const [tree, err] = await file.merkleTree();
+if (err) throw err;
+const root = tree!.rootHash();
+
+const [tx, uploadErr] = await indexer.upload(
+  file,
+  "https://evmrpc-testnet.0g.ai",
+  wallet
+);
+if (uploadErr) throw uploadErr;
+console.log("root:", root, "tx:", tx);
+```
+
+```ts
+// after — @foundryprotocol/0gkit-storage
+import { Storage } from "@foundryprotocol/0gkit-storage";
+import { fromEnv } from "@foundryprotocol/0gkit-wallet";
+
+const storage = new Storage({ network: "galileo", signer: await fromEnv() });
+
+const { root, tx } = await storage.upload(new TextEncoder().encode("hello 0G"));
+console.log("root:", root, "tx:", tx.txHash, `(${tx.latencyMs} ms)`);
+```
+
+What you gain: typed `Signer` from env/file/private key/KMS, uniform `Receipt`
+(`{ txHash, latencyMs }`), `ConfigError` with `hint` when the SDK is missing,
+and a `{ dryRun: true }` overload that returns the **predicted** root + the
+gas estimate without broadcasting.
+
+### Download / probe / hash locally
+
+```ts
+// after
+const bytes = await storage.download(root); // download by root
+const exists = await storage.exists(root); // poll for finality
+const localRoot = await storage.computeRoot(bytes); // no SDK, no network
+```
+
+Need the underlying SDK for something not exposed yet?
+
+```ts
+const raw = await storage.raw(); // the loaded @0gfoundation module
+```
+
+See [`@foundryprotocol/0gkit-storage`](/packages/storage) for the full API
+and the [estimate + dry-run concept](/concepts) for cost preflight.
+
+## 2. Compute (TEE inference)
+
+Replace `@0gfoundation/0g-compute-ts-sdk` (or `@0glabs/0g-serving-broker`)
+with `@foundryprotocol/0gkit-compute`.
+
+### Install
+
+```bash
+# before
+npm install @0gfoundation/0g-compute-ts-sdk ethers
+
+# after
+npm install @foundryprotocol/0gkit-compute@latest @foundryprotocol/0gkit-core@latest viem
+npm install @0gfoundation/0g-compute-ts-sdk ethers   # optional peer
+```
+
+### Inference
+
+```ts
+// before — @0gfoundation/0g-compute-ts-sdk
+import { createZGComputeNetworkBroker } from "@0gfoundation/0g-compute-ts-sdk";
+import { Wallet, JsonRpcProvider } from "ethers";
+
+const provider = new JsonRpcProvider("https://evmrpc-testnet.0g.ai");
+const wallet = new Wallet(process.env.BROKER_KEY!, provider);
+const broker = await createZGComputeNetworkBroker(wallet);
+
+const account = await broker.inference.getAccount(process.env.PROVIDER!);
+const { endpoint, model } = await broker.inference.getServiceMetadata(
+  process.env.PROVIDER!
+);
+const headers = await broker.inference.getRequestHeaders(
+  process.env.PROVIDER!,
+  "hello"
+);
+
+const res = await fetch(`${endpoint}/v1/chat/completions`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json", ...headers },
+  body: JSON.stringify({ messages: [{ role: "user", content: "hello" }], model }),
+});
+const json = await res.json();
+const output = json.choices[0].message.content;
+```
+
+```ts
+// after — @foundryprotocol/0gkit-compute
+import { Compute } from "@foundryprotocol/0gkit-compute";
+import { fromEnv } from "@foundryprotocol/0gkit-wallet";
+
+const compute = new Compute({
+  network: "galileo",
+  signer: await fromEnv(),
+  provider: process.env.ZEROG_PROVIDER!,
+});
+
+const { output, receipt } = await compute.inference({
+  messages: [{ role: "user", content: "hello" }],
+});
+console.log(output, receipt.txHash);
+```
+
+What you gain: no manual header dance, no manual broker setup, a typed
+`ZeroGError` taxonomy (`COMPUTE_NO_PROVIDER`, `COMPUTE_INFERENCE_FAILED`,
+`COMPUTE_BAD_ATTESTATION`) with one-line fixes, and an
+`{ dryRun: true }` overload that returns a token-count + cost estimate.
+
+See [`@foundryprotocol/0gkit-compute`](/packages/compute).
+
+## 3. DA (Data Availability)
+
+Replace direct HTTP calls to the 0G DA encoder with
+`@foundryprotocol/0gkit-da`.
+
+### Install
+
+```bash
+# after — no upstream SDK install required; DA is HTTP-only
+npm install @foundryprotocol/0gkit-da@latest @foundryprotocol/0gkit-core@latest viem
+```
+
+### Publish
+
+```ts
+// before — hand-rolled HTTP
+const res = await fetch("https://da-encoder-testnet.0g.ai/v1/publish", {
+  method: "POST",
+  headers: { "Content-Type": "application/octet-stream" },
+  body: payload,
+});
+if (!res.ok) throw new Error(`DA publish failed: ${res.status}`);
+const { digest } = await res.json();
+```
+
+```ts
+// after — @foundryprotocol/0gkit-da
+import { DA } from "@foundryprotocol/0gkit-da";
+
+const da = new DA({ network: "galileo" });
+const { digest, raw } = await da.publish(payload);
+```
+
+What you gain: a network preset (no manual URLs), `NetworkError` with a
+`hint` when the encoder is unreachable, an `estimate(payload)` for the
+expected fee, and a `{ dryRun: true }` overload that returns the digest
+**without** a network call.
+
+See [`@foundryprotocol/0gkit-da`](/packages/da).
+
+## What stays the same
+
+- **The on-chain receipt.** `tx.txHash` is the same hash you would have seen
+  before; the explorer link works in both worlds.
+- **The storage root.** A blob uploaded via `Storage.upload` has the same
+  merkle root that `@0gfoundation/0g-storage-ts-sdk` would produce for the
+  same bytes — that's what makes `computeRoot` deterministic.
+- **The TEE attestation.** Inference receipts carry the provider's attestation
+  unchanged — `@foundryprotocol/0gkit-attestation` parses + verifies it.
+
+## Hybrid usage
+
+You can mix 0gkit with the underlying SDK indefinitely. `storage.raw()`,
+`compute.raw()`, and `da.raw()` return the loaded module so any feature not
+yet surfaced through 0gkit's API is one call away. This is also how you
+adopt incrementally — keep the old code paths working while you migrate
+endpoints one at a time.
+
+## Next steps
+
+- [Getting started](/getting-started) — install + a 60-second end-to-end
+  example.
+- [`create-0gkit-app`](/getting-started/create-0gkit-app) — scaffold a
+  runnable project with the right peers wired in.
+- [Cookbook](/cookbook) — end-to-end builds (chat, AI agent, NFT minter).
+- [CLI reference](/cli) — `npx @foundryprotocol/0gkit-cli` for the same
+  operations from a script.

@@ -213,6 +213,120 @@ async function runExportsCheck() {
   return ok;
 }
 
+// ---------------------------------------------------------------------------
+// --versions mode: docs MDX and template READMEs must not pin a
+// @foundryprotocol/0gkit-* version lower than the package's current
+// package.json version. Equal-or-higher pins (and the literal `@latest` /
+// no-version-at-all forms) always pass. Guards against drift after a release.
+// ---------------------------------------------------------------------------
+
+// Matches `@foundryprotocol/0gkit-<name>@<x.y.z>` with optional `^` / `~`.
+// Captures: 1 = package short name (e.g. "core"), 2 = version (e.g. "1.0.2").
+const VERSION_PIN_RE =
+  /@foundryprotocol\/0gkit-([a-z][a-z0-9-]*)@[~^]?(\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?)/gi;
+
+function* walkText(dir, exts) {
+  if (!existsSync(dir)) return;
+  for (const ent of readdirSync(dir)) {
+    if (ent === "node_modules" || ent === "dist" || ent === ".next") continue;
+    const p = join(dir, ent);
+    const s = statSync(p);
+    if (s.isDirectory()) yield* walkText(p, exts);
+    else if (exts.some((e) => p.endsWith(e))) yield p;
+  }
+}
+
+export function findVersionPins(roots) {
+  const out = [];
+  const exts = [".mdx", ".md"];
+  for (const root of roots) {
+    for (const file of walkText(root, exts)) {
+      const src = readFileSync(file, "utf8");
+      let m;
+      VERSION_PIN_RE.lastIndex = 0;
+      while ((m = VERSION_PIN_RE.exec(src)) !== null) {
+        const before = src.lastIndexOf("\n", m.index) + 1;
+        const lineNo = src.slice(0, before).split("\n").length;
+        out.push({
+          file,
+          line: lineNo,
+          pkg: `0gkit-${m[1]}`,
+          version: m[2],
+        });
+      }
+    }
+  }
+  return out;
+}
+
+export function readCurrentVersions(packagesDir) {
+  const out = new Map();
+  if (!existsSync(packagesDir)) return out;
+  for (const ent of readdirSync(packagesDir)) {
+    if (!ent.startsWith("0gkit-")) continue;
+    const pkgJson = join(packagesDir, ent, "package.json");
+    if (!existsSync(pkgJson)) continue;
+    try {
+      const { version } = JSON.parse(readFileSync(pkgJson, "utf8"));
+      if (typeof version === "string") out.set(ent, version);
+    } catch {
+      // Skip unparseable package.json — covered by other CI gates.
+    }
+  }
+  return out;
+}
+
+/** Numeric semver compare, ignoring pre-release suffix. Returns -1/0/1. */
+export function semverCompare(a, b) {
+  const parse = (v) => v.split("-")[0].split(".").map((n) => parseInt(n, 10));
+  const [aa, ab, ac] = parse(a);
+  const [ba, bb, bc] = parse(b);
+  if (aa !== ba) return aa < ba ? -1 : 1;
+  if (ab !== bb) return ab < bb ? -1 : 1;
+  if (ac !== bc) return ac < bc ? -1 : 1;
+  return 0;
+}
+
+export function diffVersions(pins, current) {
+  const stale = [];
+  for (const pin of pins) {
+    const cur = current.get(pin.pkg);
+    if (!cur) continue; // unknown package — ignore (e.g. test fixture).
+    if (semverCompare(pin.version, cur) < 0) {
+      stale.push({ ...pin, current: cur });
+    }
+  }
+  return { stale, ok: stale.length === 0 };
+}
+
+async function runVersionsCheck() {
+  const docsDir = join(ROOT, "apps/docs/app");
+  const templatesDir = join(ROOT, "templates");
+  const pins = findVersionPins([docsDir, templatesDir]);
+  const current = readCurrentVersions(join(ROOT, "packages"));
+  const result = diffVersions(pins, current);
+
+  if (result.stale.length > 0) {
+    console.error(
+      `✗ docs:check versions — ${result.stale.length} stale pin(s) below current package.json:`
+    );
+    for (const s of result.stale) {
+      const rel = s.file.startsWith(ROOT) ? s.file.slice(ROOT.length + 1) : s.file;
+      console.error(
+        `  ${rel}:${s.line} — @foundryprotocol/${s.pkg}@${s.version} (current ${s.current})`
+      );
+    }
+    console.error(
+      "  Use `@latest` or drop the version pin; let the npm registry be the source of truth."
+    );
+  } else {
+    console.log(
+      `✓ docs:check versions passed — ${pins.length} pin(s) checked across docs + templates`
+    );
+  }
+  return result.ok;
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   const mode = argv[0];
@@ -224,10 +338,15 @@ async function main() {
     const ok = await runExportsCheck();
     process.exit(ok ? 0 : 1);
   }
-  // No flag → run both checks. Exit non-zero if either fails.
+  if (mode === "--versions") {
+    const ok = await runVersionsCheck();
+    process.exit(ok ? 0 : 1);
+  }
+  // No flag → run all checks. Exit non-zero if any fails.
   const codesOk = await runCodesCheck();
   const exportsOk = await runExportsCheck();
-  if (!codesOk || !exportsOk) process.exit(1);
+  const versionsOk = await runVersionsCheck();
+  if (!codesOk || !exportsOk || !versionsOk) process.exit(1);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -2,7 +2,7 @@
 
 The fastest path from a file on disk to a content-addressed blob on **0G Storage**.
 
-Built on `@foundryprotocol/0gkit-storage@0.3.0`. Demos:
+Built on `@foundryprotocol/0gkit-storage`. Demos:
 
 - **SP3 wallet** (`fromEnv` signer)
 - **SP7 estimate + dry-run** (predict the cost + Merkle root before broadcasting)
@@ -65,7 +65,7 @@ Dedup: 0xabc…123 already on 0G Storage — skipping broadcast.
 - **`src/storage-flow.ts`** — the testable surface. Pure with respect to `deps`. This is what the tests exercise.
 - **`src/estimate.ts`** — standalone cost estimator: `pnpm estimate path/to/file` prints the predicted gas + fee without doing anything else.
 
-The dry-run uses [`Storage.upload(bytes, { dryRun: true })`](https://0gkit.dev/packages/storage#dryrun) and the live upload omits the flag. Both calls return the same `result.root` shape, so the dedup check is a simple `storage.exists(predictedRoot)`.
+The dry-run uses [`Storage.upload(bytes, { dryRun: true })`](https://docs.0gkit.com/packages/storage#dryrun) and the live upload omits the flag. Both calls return the same `result.root` shape, so the dedup check is a simple `storage.exists(predictedRoot)`.
 
 ## Test it offline
 
@@ -77,13 +77,13 @@ The tests use an in-process fake `Storage` (sha256 keys, in-memory blob store) �
 
 ## Where to go next
 
-- Swap `fromEnv` for a hardware-backed signer via [`fromKMS`](https://0gkit.dev/packages/wallet#fromkms).
+- Swap `fromEnv` for a hardware-backed signer via [`fromKMS`](https://docs.0gkit.com/packages/wallet#fromkms).
 - Wire the flow into your own data pipeline — `runStorageFlow` accepts any `bytes: Uint8Array` and `label: string`.
-- When [`@foundryprotocol/0gkit-jobs`](https://0gkit.dev/packages/jobs) (SP10) ships, long uploads will be moved off the main loop into a durable queue.
+- When [`@foundryprotocol/0gkit-jobs`](https://docs.0gkit.com/packages/jobs) (SP10) ships, long uploads will be moved off the main loop into a durable queue.
 
 ## Deploy on Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frajkaria%2F0gkit%2Ftree%2Fmain%2Ftemplates%2Fstorage-app&project-name=0gkit-storage-app&env=NETWORK%2CPRIVATE_KEY&envDescription=See%200gkit.dev%20env%20vars&envLink=https%3A%2F%2F0gkit.dev%2Fgetting-started%2Fenv-vars)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frajkaria%2F0gkit%2Ftree%2Fmain%2Ftemplates%2Fstorage-app&project-name=0gkit-storage-app&env=NETWORK%2CPRIVATE_KEY&envDescription=See%20docs.0gkit.com%20env%20vars&envLink=https%3A%2F%2Fdocs.0gkit.com%2Fgetting-started%2Fenv-vars)
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.

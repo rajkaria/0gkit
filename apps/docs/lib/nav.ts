@@ -88,4 +88,13 @@ export const NAV: NavSection[] = [
       { title: "Troubleshooting & FAQ", href: "/troubleshooting" },
     ],
   },
+  {
+    title: "Migration",
+    links: [
+      {
+        title: "From official 0G SDKs",
+        href: "/migrate-from-official-sdks",
+      },
+    ],
+  },
 ];

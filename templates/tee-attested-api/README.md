@@ -45,7 +45,7 @@ Every request emits an OTel span (`{METHOD} {PATH}` with `http.method`,
 `http.route`, `http.status_code`, `http.duration_ms` attributes). Every 0G
 primitive call inside the request — for example `Compute.inference()` in
 `/chat` — also emits a `0gkit.*` span via
-[`instrument0g()`](https://0gkit.dev/packages/0gkit-observability).
+[`instrument0g()`](https://docs.0gkit.com/packages/0gkit-observability).
 
 Out of the box the runtime is silent (no `console.log` access lines — pull a
 real exporter for production). To ship spans, set
@@ -70,7 +70,7 @@ some other way, swap `instrument0g({ exporter: { kind: 'otlp', ... } })` for
 `instrument0g({ mode: 'attach' })` and we'll skip SDK setup but still patch
 the primitives.
 
-See [`@foundryprotocol/0gkit-observability` docs](https://0gkit.dev/packages/0gkit-observability)
+See [`@foundryprotocol/0gkit-observability` docs](https://docs.0gkit.com/packages/0gkit-observability)
 for the full span-attribute reference.
 
 ## Verifying the header on the client side
@@ -134,7 +134,7 @@ JSON, provider failure) and assert OTel spans via an in-memory exporter — at
 
 ## Deploy on Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frajkaria%2F0gkit%2Ftree%2Fmain%2Ftemplates%2Ftee-attested-api&project-name=0gkit-tee-attested-api&env=NETWORK%2CPRIVATE_KEY%2COTEL_EXPORTER_OTLP_ENDPOINT&envDescription=See%200gkit.dev%20env%20vars&envLink=https%3A%2F%2F0gkit.dev%2Fgetting-started%2Fenv-vars)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frajkaria%2F0gkit%2Ftree%2Fmain%2Ftemplates%2Ftee-attested-api&project-name=0gkit-tee-attested-api&env=NETWORK%2CPRIVATE_KEY%2COTEL_EXPORTER_OTLP_ENDPOINT&envDescription=See%20docs.0gkit.com%20env%20vars&envLink=https%3A%2F%2Fdocs.0gkit.com%2Fgetting-started%2Fenv-vars)
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.

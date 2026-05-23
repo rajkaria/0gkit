@@ -11,19 +11,19 @@ Consolidates the four open carryover items (CLAUDE.md) with the 13-item P0/P1/P2
 
 ## TL;DR — what changed vs the input list
 
-| Input item | Verdict | Action |
-|---|---|---|
-| #17 Error pages | **Already done** — 45 pages live since SP9, every code has cause/fix/example. | Move to SP19 polish ("copy issue context" CLI output is the only gap). |
-| #16 Contract registry | **Mostly done** — `0g contracts generate/list/info` shipped in SP4 with `standardContracts.{erc20,erc721,multicall3,registry,attestationVerifier}`. | One follow-up only: `0g contracts import <address-or-abi>` (chain-explorer ABI fetcher). |
-| #5 CLI cold-start | **Partially done** — D39 lazy-loaded `0gkit-jobs` via computed specifier; better-sqlite3 no longer in CLI deps. | Add CI benchmark + small audit pass. |
-| #1 Docs cleanup + #14 Migration guide | Same surface (MDX edits + version-sync CI gate). | **Clubbed** as SP13. |
-| #4 Compute Router + #11 MCP init | Both are DX/integration tooling, both touch templates. | **Clubbed** as SP19. |
-| #15 Trace explorer | The in-flight PR #42 (`0g cost forecast --from-jaeger`) is half of this. Local `.0gkit/traces` is the other half. | **Clubbed** as SP15 follow-up to PR #42. |
-| #2 Golden path + #12 Typed config | Golden path is "every template runs in 5 min"; typed config is "every template uses `define0GConfig`". Same per-template touch. | **Clubbed** as SP16. |
-| #3 `doctor --fix` + #9 `0g test` | Both extend `doctor` semantics (one writes config, one runs conformance). | **Clubbed** as SP17. |
-| Foundry SDK refresh (carryover) | Cross-repo, no urgency; user just deferred this session. | SP23 — last sprint. |
-| Showcase app (carryover) | High-impact but blocked on the trust/golden-path stories landing first. | SP24. |
-| Community surface (carryover) | Config-only, fits anywhere. | SP25 — drop-in. |
+| Input item                            | Verdict                                                                                                                                             | Action                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| #17 Error pages                       | **Already done** — 45 pages live since SP9, every code has cause/fix/example.                                                                       | Move to SP19 polish ("copy issue context" CLI output is the only gap).                   |
+| #16 Contract registry                 | **Mostly done** — `0g contracts generate/list/info` shipped in SP4 with `standardContracts.{erc20,erc721,multicall3,registry,attestationVerifier}`. | One follow-up only: `0g contracts import <address-or-abi>` (chain-explorer ABI fetcher). |
+| #5 CLI cold-start                     | **Partially done** — D39 lazy-loaded `0gkit-jobs` via computed specifier; better-sqlite3 no longer in CLI deps.                                     | Add CI benchmark + small audit pass.                                                     |
+| #1 Docs cleanup + #14 Migration guide | Same surface (MDX edits + version-sync CI gate).                                                                                                    | **Clubbed** as SP13.                                                                     |
+| #4 Compute Router + #11 MCP init      | Both are DX/integration tooling, both touch templates.                                                                                              | **Clubbed** as SP19.                                                                     |
+| #15 Trace explorer                    | The in-flight PR #42 (`0g cost forecast --from-jaeger`) is half of this. Local `.0gkit/traces` is the other half.                                   | **Clubbed** as SP15 follow-up to PR #42.                                                 |
+| #2 Golden path + #12 Typed config     | Golden path is "every template runs in 5 min"; typed config is "every template uses `define0GConfig`". Same per-template touch.                     | **Clubbed** as SP16.                                                                     |
+| #3 `doctor --fix` + #9 `0g test`      | Both extend `doctor` semantics (one writes config, one runs conformance).                                                                           | **Clubbed** as SP17.                                                                     |
+| Foundry SDK refresh (carryover)       | Cross-repo, no urgency; user just deferred this session.                                                                                            | SP23 — last sprint.                                                                      |
+| Showcase app (carryover)              | High-impact but blocked on the trust/golden-path stories landing first.                                                                             | SP24.                                                                                    |
+| Community surface (carryover)         | Config-only, fits anywhere.                                                                                                                         | SP25 — drop-in.                                                                          |
 
 **Net:** the 13-item input + 4-item carryover = **13 sprints** (SP13–SP25), batched into four themed waves.
 
@@ -90,7 +90,7 @@ Clubs **#3** + **#9**.
   - Missing `.env` → generate `.env.example` + `.env.local` from `define0GConfig` schema.
   - Stale `@foundryprotocol/0gkit-*` pins → npm-install latest in the current project.
   - Unreachable galileo RPC/indexer/encoder → suggest `0g dev` local fallback + print the exact command.
-  - Each check prints `→ run \`<cmd>\` to fix` even when `--fix` not passed (currently doctor only diagnoses).
+  - Each check prints `→ run \`<cmd>\` to fix`even when`--fix` not passed (currently doctor only diagnoses).
 - `0g test [--suite=storage,compute,da,wallet] [--local|--galileo]` — conformance runner:
   - storage: upload 1KB, download, assert byte-equality.
   - compute: inference with a 4-token prompt, assert non-empty output.

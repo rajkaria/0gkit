@@ -11,6 +11,10 @@ import {
   diffCodes,
   findPublicExports,
   assertExportsDocumented,
+  findVersionPins,
+  readCurrentVersions,
+  semverCompare,
+  diffVersions,
 } from "../docs-check.mjs";
 
 function scratch() {
@@ -211,5 +215,161 @@ describe("assertExportsDocumented", () => {
     });
     assert.equal(res.ok, false);
     assert.deepEqual(res.missing.sort(), ["A", "B", "C"]);
+  });
+});
+
+describe("semverCompare", () => {
+  it("compares major.minor.patch numerically", () => {
+    assert.equal(semverCompare("1.0.0", "1.0.0"), 0);
+    assert.equal(semverCompare("0.9.9", "1.0.0"), -1);
+    assert.equal(semverCompare("1.0.1", "1.0.0"), 1);
+    assert.equal(semverCompare("1.10.0", "1.9.99"), 1);
+    assert.equal(semverCompare("2.0.0", "10.0.0"), -1);
+  });
+
+  it("ignores pre-release suffixes", () => {
+    assert.equal(semverCompare("1.0.0-rc.1", "1.0.0"), 0);
+    assert.equal(semverCompare("1.0.0-rc.1", "1.0.1"), -1);
+  });
+});
+
+describe("findVersionPins", () => {
+  it("extracts @foundryprotocol/0gkit-*@x.y.z pins from MDX and README", () => {
+    const dir = scratch();
+    writeFileSync(
+      join(dir, "page.mdx"),
+      "Install `@foundryprotocol/0gkit-storage@0.3.0` and `@foundryprotocol/0gkit-core@1.0.2`."
+    );
+    writeFileSync(
+      join(dir, "README.md"),
+      "Run with @foundryprotocol/0gkit-cli@^1.1.0 — caret pin accepted."
+    );
+    const pins = findVersionPins([dir]).sort((a, b) =>
+      a.pkg.localeCompare(b.pkg)
+    );
+    assert.equal(pins.length, 3);
+    assert.deepEqual(
+      pins.map((p) => ({ pkg: p.pkg, version: p.version })),
+      [
+        { pkg: "0gkit-cli", version: "1.1.0" },
+        { pkg: "0gkit-core", version: "1.0.2" },
+        { pkg: "0gkit-storage", version: "0.3.0" },
+      ]
+    );
+    for (const p of pins) {
+      assert.ok(p.line > 0);
+      assert.ok(p.file.endsWith(".mdx") || p.file.endsWith(".md"));
+    }
+  });
+
+  it("ignores @latest and unversioned mentions", () => {
+    const dir = scratch();
+    writeFileSync(
+      join(dir, "page.mdx"),
+      [
+        "`@foundryprotocol/0gkit-cli@latest`",
+        "`@foundryprotocol/0gkit-storage` (no version)",
+        "npm install @foundryprotocol/0gkit-core",
+      ].join("\n")
+    );
+    assert.equal(findVersionPins([dir]).length, 0);
+  });
+
+  it("skips node_modules and dist directories", () => {
+    const dir = scratch();
+    const nm = join(dir, "node_modules");
+    mkdirSync(nm);
+    writeFileSync(join(nm, "leak.md"), "@foundryprotocol/0gkit-core@1.0.0");
+    assert.equal(findVersionPins([dir]).length, 0);
+  });
+
+  it("captures the source line number", () => {
+    const dir = scratch();
+    writeFileSync(
+      join(dir, "page.mdx"),
+      ["line 1", "line 2", "@foundryprotocol/0gkit-core@1.0.0 on line 3"].join("\n")
+    );
+    const pins = findVersionPins([dir]);
+    assert.equal(pins[0].line, 3);
+  });
+});
+
+describe("readCurrentVersions", () => {
+  it("reads versions from packages/<name>/package.json", () => {
+    const dir = scratch();
+    mkdirSync(join(dir, "0gkit-core"));
+    mkdirSync(join(dir, "0gkit-cli"));
+    mkdirSync(join(dir, "not-a-0gkit-pkg"));
+    writeFileSync(
+      join(dir, "0gkit-core", "package.json"),
+      JSON.stringify({ name: "@foundryprotocol/0gkit-core", version: "1.0.3" })
+    );
+    writeFileSync(
+      join(dir, "0gkit-cli", "package.json"),
+      JSON.stringify({ name: "@foundryprotocol/0gkit-cli", version: "1.1.0" })
+    );
+    writeFileSync(
+      join(dir, "not-a-0gkit-pkg", "package.json"),
+      JSON.stringify({ name: "other", version: "9.9.9" })
+    );
+    const versions = readCurrentVersions(dir);
+    assert.equal(versions.get("0gkit-core"), "1.0.3");
+    assert.equal(versions.get("0gkit-cli"), "1.1.0");
+    assert.equal(versions.has("not-a-0gkit-pkg"), false);
+  });
+
+  it("returns an empty map when the directory does not exist", () => {
+    assert.equal(readCurrentVersions("/no/such/path/anywhere").size, 0);
+  });
+
+  it("silently skips packages with unparseable package.json", () => {
+    const dir = scratch();
+    mkdirSync(join(dir, "0gkit-broken"));
+    writeFileSync(join(dir, "0gkit-broken", "package.json"), "{ not json");
+    assert.equal(readCurrentVersions(dir).size, 0);
+  });
+});
+
+describe("diffVersions", () => {
+  it("flags pins that are lower than the current package version", () => {
+    const pins = [
+      { file: "a.mdx", line: 1, pkg: "0gkit-core", version: "0.3.0" },
+      { file: "b.mdx", line: 2, pkg: "0gkit-cli", version: "1.0.0" },
+    ];
+    const current = new Map([
+      ["0gkit-core", "1.0.2"],
+      ["0gkit-cli", "1.1.0"],
+    ]);
+    const res = diffVersions(pins, current);
+    assert.equal(res.ok, false);
+    assert.equal(res.stale.length, 2);
+    assert.deepEqual(
+      res.stale.map((s) => s.pkg).sort(),
+      ["0gkit-cli", "0gkit-core"]
+    );
+    assert.equal(
+      res.stale.find((s) => s.pkg === "0gkit-core").current,
+      "1.0.2"
+    );
+  });
+
+  it("passes when every pin is equal to or higher than current", () => {
+    const pins = [
+      { file: "a.mdx", line: 1, pkg: "0gkit-core", version: "1.0.2" },
+      { file: "b.mdx", line: 2, pkg: "0gkit-cli", version: "1.5.0" },
+    ];
+    const current = new Map([
+      ["0gkit-core", "1.0.2"],
+      ["0gkit-cli", "1.1.0"],
+    ]);
+    assert.equal(diffVersions(pins, current).ok, true);
+  });
+
+  it("ignores pins for packages not in the current map", () => {
+    const pins = [
+      { file: "a.mdx", line: 1, pkg: "0gkit-unknown", version: "0.0.1" },
+    ];
+    const current = new Map([["0gkit-core", "1.0.2"]]);
+    assert.equal(diffVersions(pins, current).ok, true);
   });
 });

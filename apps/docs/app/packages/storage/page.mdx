@@ -178,10 +178,10 @@ try {
 ### Legacy (deprecated)
 
 Passing `privateKey` directly is still supported but deprecated. It emits a
-`DeprecationWarning` and will be removed in the next major version.
+`DeprecationWarning` and will be removed in v2.
 
 ```ts
-// ⚠ deprecated — works today, removed in v1.0
+// ⚠ deprecated — works today, removed in v2
 const storage = new Storage({
   network: "galileo",
   privateKey: process.env.ZEROG_PRIVATE_KEY,
@@ -211,7 +211,7 @@ const storage = new Storage({ network: "galileo", signer });
 [core](/packages/core) · [wallet](/packages/wallet) (loaders: `fromEnv`, `fromKMS`, …) ·
 CLI: [`0g storage`](/cli#0g-storage) · MCP: `og_storage_*` ([MCP guide](/mcp)) ·
 React: [`useUpload` / `useDownload`](/react). Template:
-`npx degit rajkaria/0g-ai-kit/templates/storage-app`.
+`npx degit rajkaria/0gkit/templates/storage-app`.
 
 ## Exports
 

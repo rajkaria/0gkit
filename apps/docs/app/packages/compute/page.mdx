@@ -211,10 +211,10 @@ try {
 ### Legacy (deprecated)
 
 Passing `brokerKey` directly is still supported but deprecated. It emits a
-`DeprecationWarning` and will be removed in the next major version.
+`DeprecationWarning` and will be removed in v2.
 
 ```ts
-// ⚠ deprecated — works today, removed in v1.0
+// ⚠ deprecated — works today, removed in v2
 const compute = new Compute({
   network: "galileo",
   brokerKey: process.env.ZEROG_BROKER_KEY,
@@ -245,7 +245,7 @@ const compute = new Compute({ network: "galileo", signer, provider: "0x…" });
 [core](/packages/core) · [wallet](/packages/wallet) (loaders: `fromEnv`, `fromKMS`, …) ·
 CLI: [`0g infer`](/cli#0g-infer) · MCP: `og_infer` ([MCP guide](/mcp)) ·
 React: [`useInference`](/react). Template:
-`npx degit rajkaria/0g-ai-kit/templates/inference-app`.
+`npx degit rajkaria/0gkit/templates/inference-app`.
 
 ## Exports
 

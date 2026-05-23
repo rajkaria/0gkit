@@ -104,7 +104,7 @@ export class Storage {
     } else if (config.privateKey !== undefined) {
       if (!warnedPrivateKey) {
         console.warn(
-          "@foundryprotocol/0gkit-storage: `{ privateKey }` is deprecated and will be removed in v0.3.\n" +
+          "@foundryprotocol/0gkit-storage: `{ privateKey }` is deprecated and will be removed in v2.\n" +
             "  Migrate to `{ signer: await fromEnv() }` (or fromPrivateKey/fromKMS) from @foundryprotocol/0gkit-wallet."
         );
         warnedPrivateKey = true;

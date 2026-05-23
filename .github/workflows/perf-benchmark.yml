@@ -1,0 +1,54 @@
+name: perf-benchmark
+
+# Tracks `0g --help` cold-start latency to keep the SP13 perf budget honest.
+# Fails the build if p95 > 5000ms on Node 22 ubuntu.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: perf-benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cli-coldstart:
+    name: 0g --help cold-start
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # core's DTS must exist before the CLI build can complete.
+      - run: pnpm --filter @foundryprotocol/0gkit-core build
+
+      - run: pnpm --filter @foundryprotocol/0gkit-cli build
+
+      - name: Measure cold-start (8 iterations, p95 budget 5000ms)
+        run: |
+          node scripts/bench-cli-coldstart.mjs \
+            --iterations 8 \
+            --warmup 2 \
+            --budget-ms 5000 \
+            --out bench/cli-coldstart.json
+          echo "--- bench/cli-coldstart.json ---"
+          cat bench/cli-coldstart.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-coldstart-${{ github.run_number }}
+          path: bench/cli-coldstart.json
+          retention-days: 30

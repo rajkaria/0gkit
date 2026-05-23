@@ -108,7 +108,7 @@ private key.
 
 > **Deprecated.** Prefer `signEnvelopeWithSigner` — it accepts the `Signer`
 > interface and works with KMS / browser wallets. `signEnvelope` continues to
-> work but emits a deprecation warning and will be removed in v1.0.
+> work but emits a deprecation warning and will be removed in v2.
 
 ### `recoverSigner(signed)`
 
@@ -223,7 +223,7 @@ function checkUntrusted(raw: unknown, expectedSigner: string) {
 [core](/packages/core) (`digestJson`) · [wallet](/packages/wallet) (`signEnvelopeWithSigner`) ·
 [da](/packages/da) (digest anchor) · CLI: [`0g attest`](/cli#0g-attest) ·
 MCP: `og_attest_verify` ([MCP guide](/mcp)) · React: [`useAttestation`](/react).
-Template: `npx degit rajkaria/0g-ai-kit/templates/attestation-verify`.
+Template: `npx degit rajkaria/0gkit/templates/attestation-verify`.
 
 ## Exports
 

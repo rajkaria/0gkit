@@ -119,7 +119,7 @@ funds with the `og_chain_faucet` tool or <https://faucet.0g.ai>.
 
 ## Deploy on Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frajkaria%2F0gkit%2Ftree%2Fmain%2Ftemplates%2Fmcp-agent&project-name=0gkit-mcp-agent&env=NETWORK%2CPRIVATE_KEY&envDescription=See%200gkit.dev%20env%20vars&envLink=https%3A%2F%2F0gkit.dev%2Fgetting-started%2Fenv-vars)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frajkaria%2F0gkit%2Ftree%2Fmain%2Ftemplates%2Fmcp-agent&project-name=0gkit-mcp-agent&env=NETWORK%2CPRIVATE_KEY&envDescription=See%20docs.0gkit.com%20env%20vars&envLink=https%3A%2F%2Fdocs.0gkit.com%2Fgetting-started%2Fenv-vars)
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.
