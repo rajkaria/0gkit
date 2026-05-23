@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-da",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "description": "Neutral 0G Data Availability client — canonical digest + encoder publish. Built on @foundryprotocol/0gkit-core + viem.",
   "license": "MIT",
   "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-da",

@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-core",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "description": "Neutral 0G core — network presets, viem client factory, Receipt, and the ZeroGError taxonomy. No Foundry, ever.",
   "license": "MIT",
   "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-core",

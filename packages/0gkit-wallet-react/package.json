@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-wallet-react",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "description": "React adapter for @foundryprotocol/0gkit-wallet — ZeroGWalletProvider + hooks backed by wagmi v2.",
   "license": "MIT",
   "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-wallet-react",
