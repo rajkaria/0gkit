@@ -32,10 +32,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # core's DTS must exist before the CLI build can complete.
+      # Build the whole workspace via turbo. The CLI imports several
+      # 0gkit-* packages at runtime (chain, storage, compute, da, …) and
+      # they all need built `dist/` before `0g --help` can resolve.
       - run: pnpm --filter @foundryprotocol/0gkit-core build
 
-      - run: pnpm --filter @foundryprotocol/0gkit-cli build
+      - run: pnpm build
 
       - name: Measure cold-start (8 iterations, p95 budget 5000ms)
         run: |
