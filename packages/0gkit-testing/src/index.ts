@@ -3,11 +3,18 @@ export {
   mockStorageClient,
   type MockStorageClient,
   type MockStorageOptions,
+  type MockStorageEstimate,
+  type MockStorageEstimateBreakdown,
+  type MockUploadResult,
 } from "./mocks/storage.js";
 export {
   mockComputeClient,
   type MockComputeClient,
   type MockComputeOptions,
+  type MockComputeEstimate,
+  type MockComputeEstimateBreakdown,
+  type MockInferenceArgs,
+  type MockInferenceResult,
   type ChatMessage,
 } from "./mocks/compute.js";
 export { mockDAClient, type MockDAClient, type MockDAOptions } from "./mocks/da.js";

@@ -20,19 +20,32 @@ import {
 const storage = mockStorageClient();
 const { root, tx } = await storage.upload(new TextEncoder().encode("gm"));
 const bytes = await storage.download(root); // round-trips deterministically
+const est = await storage.estimate(new Uint8Array(300_000));
+//=> { kind: "storage", gas, fee, breakdown: { sizeBytes: 300_000, segments: 2 } }
+const dr = await storage.upload(bytes, { dryRun: true });
+//=> { dryRun: true, estimate, result: { root, tx: { latencyMs: 0 }, raw } }
 
 const compute = mockComputeClient(); // default echo responder
-const reply = await compute.chat([{ role: "user", content: "ping" }]);
-//=> { role: "assistant", content: "echo: ping", tx, raw }
+const reply = await compute.inference({
+  messages: [{ role: "user", content: "ping" }],
+});
+//=> { output: "echo: ping", receipt, raw }
+const ce = await compute.estimate({
+  messages: [{ role: "user", content: "ping" }],
+});
+//=> { kind: "compute", gas: 0n, fee, breakdown: { inputTokens, outputTokensMax, model } }
 
 const da = mockDAClient();
 const { digest } = await da.publish(bytes);
 const ok = await da.verify(digest, bytes); // true; tamper bytes → false
 ```
 
-Same `upload` / `download` / `chat` / `publish` shape as the real packages.
-Roots and digests are sha256 of the input bytes — deterministic, so tests
-assert on stable values without snapshots.
+Same `upload` / `download` / `inference` / `estimate` / `publish` shape as the
+real packages — including the SP6 `inference()` API on Compute and the SP7
+`{ dryRun: true }` overloads on Storage and Compute (returning the
+`DryRunResult<T>` envelope from `@foundryprotocol/0gkit-core`). Roots and
+digests are sha256 of the input bytes — deterministic, so tests assert on
+stable values without snapshots.
 
 ## Fixtures
 

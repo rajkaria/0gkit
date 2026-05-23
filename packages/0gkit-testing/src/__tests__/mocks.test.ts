@@ -5,11 +5,11 @@ describe("mockStorageClient", () => {
   it("upload→download round-trip with deterministic root", async () => {
     const s = mockStorageClient();
     const data = new TextEncoder().encode("hello 0g");
-    const { root, tx } = await s.upload(data);
-    expect(root).toMatch(/^0x[0-9a-f]{64}$/);
-    expect(tx.txHash).toMatch(/^0x[0-9a-f]{64}$/);
-    expect(await s.exists(root)).toBe(true);
-    expect(new TextDecoder().decode(await s.download(root))).toBe("hello 0g");
+    const result = await s.upload(data);
+    expect(result.root).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(result.tx.txHash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(await s.exists(result.root)).toBe(true);
+    expect(new TextDecoder().decode(await s.download(result.root))).toBe("hello 0g");
   });
 
   it("same input → same root", async () => {
@@ -36,47 +36,115 @@ describe("mockStorageClient", () => {
     await s.upload(new Uint8Array([1]));
     expect(s.__store().size).toBe(1);
   });
+
+  it("estimate(data) returns a shape-compatible StorageEstimate", async () => {
+    const s = mockStorageClient();
+    const est = await s.estimate(new Uint8Array(300_000)); // > 256 KiB → 2 segments
+    expect(est.kind).toBe("storage");
+    expect(est.breakdown.segments).toBe(2);
+    expect(est.breakdown.sizeBytes).toBe(300_000);
+    expect(est.gas).toBeGreaterThan(0n);
+    expect(est.fee).toBe(2n * 1_000_000_000n);
+  });
+
+  it("estimate(empty) reports zero segments", async () => {
+    const s = mockStorageClient();
+    const est = await s.estimate(new Uint8Array(0));
+    expect(est.breakdown.segments).toBe(0);
+    expect(est.fee).toBe(0n);
+  });
+
+  it("upload with { dryRun: true } returns a DryRunResult and skips the store", async () => {
+    const s = mockStorageClient();
+    const data = new TextEncoder().encode("dry");
+    const dr = await s.upload(data, { dryRun: true });
+    expect(dr.dryRun).toBe(true);
+    expect(dr.estimate.kind).toBe("storage");
+    expect(dr.result.root).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(dr.result.tx.txHash).toBeUndefined();
+    expect(s.__store().size).toBe(0);
+    expect(await s.exists(dr.result.root)).toBe(false);
+  });
 });
 
 describe("mockComputeClient", () => {
-  it("echoes the last user message by default", async () => {
+  it("inference echoes the last user message by default", async () => {
     const c = mockComputeClient();
-    const reply = await c.chat([
-      { role: "system", content: "you are a test" },
-      { role: "user", content: "ping" },
-    ]);
-    expect(reply.role).toBe("assistant");
-    expect(reply.content).toBe("echo: ping");
-    expect(reply.tx.txHash).toMatch(/^0x[0-9a-f]{64}$/);
+    const reply = await c.inference({
+      messages: [
+        { role: "system", content: "you are a test" },
+        { role: "user", content: "ping" },
+      ],
+    });
+    expect(reply.output).toBe("echo: ping");
+    expect(reply.receipt.txHash).toMatch(/^0x[0-9a-f]{64}$/);
   });
 
   it("supports a custom responder", async () => {
     const c = mockComputeClient({
       responder: (msgs) => `seen ${msgs.length} message(s)`,
     });
-    const r = await c.chat([{ role: "user", content: "x" }]);
-    expect(r.content).toBe("seen 1 message(s)");
+    const r = await c.inference({ messages: [{ role: "user", content: "x" }] });
+    expect(r.output).toBe("seen 1 message(s)");
   });
 
-  it("returns a stable provider list from discover()", async () => {
+  it("returns a stable provider list from listProviders()", async () => {
     const c = mockComputeClient();
-    const { providers } = await c.discover();
+    const providers = await c.listProviders();
     expect(providers).toHaveLength(2);
     expect(providers[0]).toMatchObject({ id: "mock-provider-0" });
   });
 
-  it("tracks call count", async () => {
+  it("tracks call count for live inferences only", async () => {
     const c = mockComputeClient();
     expect(c.__callCount()).toBe(0);
-    await c.chat([{ role: "user", content: "a" }]);
-    await c.chat([{ role: "user", content: "b" }]);
+    await c.inference({ messages: [{ role: "user", content: "a" }] });
+    await c.inference({ messages: [{ role: "user", content: "b" }] });
+    await c.inference(
+      { messages: [{ role: "user", content: "skip-me" }] },
+      { dryRun: true }
+    );
     expect(c.__callCount()).toBe(2);
   });
 
   it("handles the no-user-message case gracefully", async () => {
     const c = mockComputeClient();
-    const reply = await c.chat([{ role: "system", content: "noop" }]);
-    expect(reply.content).toContain("no user message");
+    const reply = await c.inference({
+      messages: [{ role: "system", content: "noop" }],
+    });
+    expect(reply.output).toContain("no user message");
+  });
+
+  it("estimate({messages, ...}) returns a ComputeEstimate", async () => {
+    const c = mockComputeClient();
+    const est = await c.estimate({
+      messages: [{ role: "user", content: "hello world" }],
+      model: "test-model",
+      maxOutputTokens: 100,
+    });
+    expect(est.kind).toBe("compute");
+    expect(est.breakdown.inputTokens).toBe(Math.ceil("hello world".length / 4));
+    expect(est.breakdown.outputTokensMax).toBe(100);
+    expect(est.breakdown.model).toBe("test-model");
+    expect(est.fee).toBeGreaterThan(0n);
+  });
+
+  it("inference with { dryRun: true } returns a DryRunResult without invoking the responder", async () => {
+    let called = 0;
+    const c = mockComputeClient({
+      responder: () => {
+        called++;
+        return "should not run";
+      },
+    });
+    const dr = await c.inference(
+      { messages: [{ role: "user", content: "dry" }] },
+      { dryRun: true }
+    );
+    expect(dr.dryRun).toBe(true);
+    expect(dr.estimate.kind).toBe("compute");
+    expect(dr.result.output).toBe("");
+    expect(called).toBe(0);
   });
 });
 
