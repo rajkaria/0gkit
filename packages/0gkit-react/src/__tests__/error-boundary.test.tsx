@@ -33,7 +33,7 @@ describe("ZeroGErrorBoundary", () => {
       const link = screen.getByRole("link", {
         name: /how to fix/i,
       }) as HTMLAnchorElement;
-      expect(link.href).toBe("https://0gkit.dev/errors/STORAGE_QUOTA_EXCEEDED");
+      expect(link.href).toBe("https://0gkit.com/errors/STORAGE_QUOTA_EXCEEDED");
     } finally {
       spy.mockRestore();
       cleanup();

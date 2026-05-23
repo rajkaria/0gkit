@@ -27,7 +27,7 @@ export async function initGitRepo(opts: {
       git,
       [
         "-c",
-        "user.email=hello@0gkit.dev",
+        "user.email=hello@0gkit.com",
         "-c",
         "user.name=create-0g-app",
         "commit",

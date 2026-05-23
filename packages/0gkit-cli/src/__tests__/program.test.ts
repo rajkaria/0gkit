@@ -115,7 +115,7 @@ describe("buildProgram", () => {
         code: "CHAIN_RPC_UNREACHABLE",
         message: "rpc dead",
         hint: "run 0g doctor",
-        helpUrl: "https://0gkit.dev/errors/CHAIN_RPC_UNREACHABLE",
+        helpUrl: "https://0gkit.com/errors/CHAIN_RPC_UNREACHABLE",
       },
     });
     expect(process.exitCode).toBe(1);

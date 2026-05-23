@@ -1,12 +1,16 @@
 # 0gkit — the neutral 0G builder toolkit
 
+**Website:** [**0gkit.com**](https://0gkit.com) · **Docs:** [docs.0gkit.com](https://docs.0gkit.com) · **Playground:** [playground.0gkit.com](https://playground.0gkit.com)
+
 [![CI](https://github.com/rajkaria/0gkit/actions/workflows/ci.yml/badge.svg)](https://github.com/rajkaria/0gkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![npm](https://img.shields.io/npm/v/create-0gkit-app?label=create-0gkit-app)](https://www.npmjs.com/package/create-0gkit-app)
+[![v1.0.0](https://img.shields.io/badge/release-v1.0.0-22d3ee.svg)](https://github.com/rajkaria/0gkit/releases/tag/v1.0.0)
 
 **0gkit** is the fastest way to build on the [0G](https://0g.ai) network —
 Storage, Compute (inference), Data Availability, TEE Attestation, and chain
-helpers — as small, independently-installable npm packages, plus a `0g` CLI,
-an MCP server for AI agents, and React hooks.
+helpers — as 18 small, independently-installable npm packages, plus a `0g`
+CLI, an MCP server for AI agents, and React hooks.
 
 It is **neutral and standalone**: no package depends on any application
 framework or protocol. Install only what you need.

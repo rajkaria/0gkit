@@ -77,10 +77,10 @@ cleanly before the instance is reaped.
 
 ## Error codes
 
-- [`JOBS_BACKEND_UNREACHABLE`](https://0gkit.dev/errors/JOBS_BACKEND_UNREACHABLE)
-- [`JOBS_JOB_NOT_FOUND`](https://0gkit.dev/errors/JOBS_JOB_NOT_FOUND)
-- [`JOBS_HANDLER_THREW`](https://0gkit.dev/errors/JOBS_HANDLER_THREW)
-- [`JOBS_WEBHOOK_BAD_SIGNATURE`](https://0gkit.dev/errors/JOBS_WEBHOOK_BAD_SIGNATURE)
+- [`JOBS_BACKEND_UNREACHABLE`](https://0gkit.com/errors/JOBS_BACKEND_UNREACHABLE)
+- [`JOBS_JOB_NOT_FOUND`](https://0gkit.com/errors/JOBS_JOB_NOT_FOUND)
+- [`JOBS_HANDLER_THREW`](https://0gkit.com/errors/JOBS_HANDLER_THREW)
+- [`JOBS_WEBHOOK_BAD_SIGNATURE`](https://0gkit.com/errors/JOBS_WEBHOOK_BAD_SIGNATURE)
 
 ## At-least-once delivery
 

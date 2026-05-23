@@ -9,7 +9,7 @@ describe("RedisCursorStore error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("INDEXER_CURSOR_BACKEND_UNREACHABLE");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/INDEXER_CURSOR_BACKEND_UNREACHABLE"
+        "https://0gkit.com/errors/INDEXER_CURSOR_BACKEND_UNREACHABLE"
       );
       expect(e instanceof Error).toBe(true);
     }

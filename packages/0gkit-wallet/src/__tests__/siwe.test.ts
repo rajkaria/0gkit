@@ -21,9 +21,9 @@ describe("siwe.buildMessage + siwe.verify", () => {
     const signer = await fromPrivateKey(PK);
     const nonce = siwe.generateNonce();
     const message = siwe.buildMessage({
-      domain: "0gkit.dev",
+      domain: "0gkit.com",
       address: signer.address,
-      uri: "https://0gkit.dev/login",
+      uri: "https://0gkit.com/login",
       nonce,
       chainId: 16602,
       statement: "Sign in with 0G.",
@@ -39,9 +39,9 @@ describe("siwe.buildMessage + siwe.verify", () => {
     const signer = await fromPrivateKey(PK);
     const nonce = siwe.generateNonce();
     const message = siwe.buildMessage({
-      domain: "0gkit.dev",
+      domain: "0gkit.com",
       address: signer.address,
-      uri: "https://0gkit.dev/login",
+      uri: "https://0gkit.com/login",
       nonce,
       chainId: 16602,
       issuedAt: new Date("2026-05-21T00:00:00Z"),
@@ -60,15 +60,15 @@ describe("siwe.buildMessage + siwe.verify", () => {
     const signer = await fromPrivateKey(PK);
     const nonce = siwe.generateNonce();
     const message = siwe.buildMessage({
-      domain: "0gkit.dev",
+      domain: "0gkit.com",
       address: signer.address,
-      uri: "https://0gkit.dev/login",
+      uri: "https://0gkit.com/login",
       nonce,
       chainId: 16602,
       issuedAt: new Date("2026-05-21T00:00:00Z"),
     });
     const signature = await signer.signMessage(message);
-    const tampered = message.replace("0gkit.dev", "evil.example");
+    const tampered = message.replace("0gkit.com", "evil.example");
     const r = await siwe.verify({
       message: tampered,
       signature,
@@ -81,9 +81,9 @@ describe("siwe.buildMessage + siwe.verify", () => {
     const signer = await fromPrivateKey(PK);
     const nonce = siwe.generateNonce();
     const message = siwe.buildMessage({
-      domain: "0gkit.dev",
+      domain: "0gkit.com",
       address: signer.address,
-      uri: "https://0gkit.dev/login",
+      uri: "https://0gkit.com/login",
       nonce,
       chainId: 16602,
       issuedAt: new Date("2026-05-01T00:00:00Z"),
@@ -104,9 +104,9 @@ describe("siwe.buildMessage + siwe.verify", () => {
     const signer = await fromPrivateKey(PK);
     const nonce = siwe.generateNonce();
     const message = siwe.buildMessage({
-      domain: "0gkit.dev",
+      domain: "0gkit.com",
       address: signer.address,
-      uri: "https://0gkit.dev/login",
+      uri: "https://0gkit.com/login",
       nonce,
       chainId: 16602,
       issuedAt: new Date("2026-05-01T00:00:00Z"),
@@ -127,9 +127,9 @@ describe("siwe.buildMessage + siwe.verify", () => {
     const signer = await fromPrivateKey(PK);
     const nonce = siwe.generateNonce();
     const message = siwe.buildMessage({
-      domain: "0gkit.dev",
+      domain: "0gkit.com",
       address: signer.address,
-      uri: "https://0gkit.dev/login",
+      uri: "https://0gkit.com/login",
       nonce,
       chainId: 16602,
       issuedAt: new Date("2026-05-21T00:00:00Z"),
@@ -148,13 +148,13 @@ describe("siwe.buildMessage + siwe.verify", () => {
     const signer = await fromPrivateKey(PK);
     const nonce = siwe.generateNonce();
     const message = siwe.buildMessage({
-      domain: "0gkit.dev",
+      domain: "0gkit.com",
       address: signer.address,
-      uri: "https://0gkit.dev/login",
+      uri: "https://0gkit.com/login",
       nonce,
       chainId: 16602,
       issuedAt: new Date("2026-05-21T00:00:00Z"),
-      resources: ["https://0gkit.dev/resource1", "https://0gkit.dev/resource2"],
+      resources: ["https://0gkit.com/resource1", "https://0gkit.com/resource2"],
     });
     // message should include the Resources section
     expect(message).toContain("Resources:");
@@ -171,9 +171,9 @@ describe("siwe.buildMessage + siwe.verify", () => {
     const nonce = siwe.generateNonce();
     // Build message with otherSigner's address, but sign with signer
     const message = siwe.buildMessage({
-      domain: "0gkit.dev",
+      domain: "0gkit.com",
       address: otherSigner.address,
-      uri: "https://0gkit.dev/login",
+      uri: "https://0gkit.com/login",
       nonce,
       chainId: 16602,
       issuedAt: new Date("2026-05-21T00:00:00Z"),

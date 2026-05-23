@@ -14,7 +14,7 @@ describe("log-decoder error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("INDEXER_EVENT_DECODE_FAILED");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/INDEXER_EVENT_DECODE_FAILED"
+        "https://0gkit.com/errors/INDEXER_EVENT_DECODE_FAILED"
       );
       expect(e instanceof Error).toBe(true);
     }

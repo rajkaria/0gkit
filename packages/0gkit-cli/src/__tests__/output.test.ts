@@ -39,12 +39,12 @@ describe("createOutput", () => {
       code: "CONFIG_MISSING_ENV",
       message: "missing key",
       hint: "set ZEROG_PRIVATE_KEY",
-      helpUrl: "https://0gkit.dev/errors/CONFIG_MISSING_ENV",
+      helpUrl: "https://0gkit.com/errors/CONFIG_MISSING_ENV",
     });
     const joined = lines.join("\n");
     expect(joined).toContain("missing key");
     expect(joined).toContain("set ZEROG_PRIVATE_KEY");
-    expect(joined).toContain("https://0gkit.dev/errors/CONFIG_MISSING_ENV");
+    expect(joined).toContain("https://0gkit.com/errors/CONFIG_MISSING_ENV");
   });
 
   it("renders errors as ok:false JSON in --json mode (includes helpUrl)", () => {
@@ -59,7 +59,7 @@ describe("createOutput", () => {
       code: "CHAIN_RPC_UNREACHABLE",
       message: "down",
       hint: "retry",
-      helpUrl: "https://0gkit.dev/errors/CHAIN_RPC_UNREACHABLE",
+      helpUrl: "https://0gkit.com/errors/CHAIN_RPC_UNREACHABLE",
     });
     expect(JSON.parse(lines[0])).toEqual({
       ok: false,
@@ -67,7 +67,7 @@ describe("createOutput", () => {
         code: "CHAIN_RPC_UNREACHABLE",
         message: "down",
         hint: "retry",
-        helpUrl: "https://0gkit.dev/errors/CHAIN_RPC_UNREACHABLE",
+        helpUrl: "https://0gkit.com/errors/CHAIN_RPC_UNREACHABLE",
       },
     });
   });
@@ -84,7 +84,7 @@ describe("createOutput", () => {
       code: "CONFIG_INVALID_ARGUMENT",
       message: "x",
       hint: "y",
-      helpUrl: "https://0gkit.dev/errors/CONFIG_INVALID_ARGUMENT",
+      helpUrl: "https://0gkit.com/errors/CONFIG_INVALID_ARGUMENT",
     });
     expect(lines.join("")).toContain("\x1b[");
   });

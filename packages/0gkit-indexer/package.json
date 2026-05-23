@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Reorg-safe, persisted-cursor event subscriptions on 0G. Memory / SQLite / Redis cursor backends. Built on @foundryprotocol/0gkit-contracts typed contracts.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-indexer",
+  "homepage": "https://0gkit.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",

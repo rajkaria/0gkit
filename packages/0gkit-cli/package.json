@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "The neutral 0G command line — init, doctor, chain, storage, infer, da, attest. Foundry is a separate opt-in plugin.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-cli",
+  "homepage": "https://0gkit.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",

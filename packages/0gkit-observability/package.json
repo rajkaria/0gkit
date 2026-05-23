@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "OpenTelemetry instrumentation for 0gkit primitives. One call wires every Storage / Compute / DA / Attestation operation as an OTel span with 0gkit.* semantic attributes.",
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-observability",
+  "homepage": "https://0gkit.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",

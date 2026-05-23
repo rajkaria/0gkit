@@ -26,7 +26,7 @@ describe("useConnect error codes", () => {
     } catch (e) {
       expect((e as { code?: string }).code).toBe("WALLET_NO_CONNECTOR");
       expect((e as { helpUrl?: string }).helpUrl).toBe(
-        "https://0gkit.dev/errors/WALLET_NO_CONNECTOR"
+        "https://0gkit.com/errors/WALLET_NO_CONNECTOR"
       );
       expect(e instanceof Error).toBe(true);
     }

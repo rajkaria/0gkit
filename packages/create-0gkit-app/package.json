@@ -39,7 +39,7 @@
     "node": ">=20.10"
   },
   "license": "MIT",
-  "homepage": "https://github.com/rajkaria/0gkit/tree/main/packages/create-0gkit-app",
+  "homepage": "https://0gkit.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/rajkaria/0gkit.git",

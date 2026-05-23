@@ -43,6 +43,6 @@ describe("setupSdk", () => {
   it("OBSERVABILITY_EXPORTER_FAILED is a recognised error code", () => {
     const e = new ZeroGError("OBSERVABILITY_EXPORTER_FAILED", "test", "test hint");
     expect(e.code).toBe("OBSERVABILITY_EXPORTER_FAILED");
-    expect(e.helpUrl).toBe("https://0gkit.dev/errors/OBSERVABILITY_EXPORTER_FAILED");
+    expect(e.helpUrl).toBe("https://0gkit.com/errors/OBSERVABILITY_EXPORTER_FAILED");
   });
 });

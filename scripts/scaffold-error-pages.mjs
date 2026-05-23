@@ -471,7 +471,7 @@ ${t.example}
 ## Reference
 
 - Namespace: \`${ns}\`
-- Help URL: \`https://0gkit.dev/errors/${code}\`
+- Help URL: \`https://0gkit.com/errors/${code}\`
 - See also: [all error codes](/errors)
 `;
 }
