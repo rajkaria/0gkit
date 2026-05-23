@@ -1,0 +1,445 @@
+---
+title: "Cookbook · AI agent"
+---
+
+# Build an AI agent with TEE-attested inference
+
+A multi-step ReAct agent where every inference call is paid through **0G
+Compute**, gated on a TEE attestation, and orchestrated as a durable job.
+The loop survives worker restarts when you point the runner at sqlite or
+redis.
+
+By the end you'll have an agent that can read a goal, decide which tool to
+invoke, call the tool, fold the result back into context, and keep going
+until it produces a final answer — with every reasoning step provably run
+on a trusted enclave.
+
+## What you're building
+
+```
+$ pnpm dev "What is 17 + 25? Use the add tool."
+step 1: action=tool add
+step 2: action=done
+
+Agent result: final
+  Answer: 42
+  Steps : 2
+    [1] tx=0xabc… tool=add
+    [2] tx=0xdef…
+```
+
+Each step is a durable job, persisted in the backend. Each inference call
+returns a receipt with the on-chain compute transaction hash. The whole
+loop is auditable end-to-end.
+
+## Prerequisites
+
+- Node 20.10 or newer.
+- A funded `galileo` testnet key (storage upload gas, contract gas).
+- **A 0G Compute prepaid balance.** Inference is billed per token; see the
+  [0G Compute docs](https://docs.0g.ai/build-with-0g/compute-network) for
+  how to fund a broker key.
+- About 20 minutes.
+
+## Scaffold
+
+```bash
+npm create 0gkit-app@latest my-agent -- --template ai-agent
+cd my-agent
+cp .env.example .env
+```
+
+Fill in `.env`:
+
+```
+NETWORK=galileo
+PRIVATE_KEY=0x…                                 # gas
+ZEROG_BROKER_KEY=0x…                            # compute prepaid wallet
+ZEROG_PROVIDER=0x…                              # an inference provider address
+```
+
+`ZEROG_PROVIDER` is the address of the provider you want to route through.
+The 0G Compute network has a list at
+[`docs.0g.ai/build-with-0g/compute-network`](https://docs.0g.ai/build-with-0g/compute-network).
+
+## Run the math agent
+
+```bash
+pnpm install
+pnpm dev "What is 17 + 25? Use the add tool."
+```
+
+You should see two `step` lines followed by `action=done` and a final
+answer. If you see `error=compute_inference_failed`, your broker balance
+is empty — top it up and retry.
+
+If you see `error=verify_failed`, the stub attestation rejected (it's
+designed to be replaced). The template ships with `verifyStep: async () =>
+true` — replace it before going to prod (see "Wire real attestation"
+below).
+
+## Walk the code
+
+### 1. The tool registry — `src/tools.ts`
+
+```ts
+export interface Tool {
+  name: string;
+  description: string;
+  invoke(args: unknown): Promise<unknown>;
+}
+
+export class ToolRegistry {
+  private tools = new Map<string, Tool>();
+  register(tool: Tool) {
+    this.tools.set(tool.name, tool);
+  }
+  list(): { name: string; description: string }[] {
+    return [...this.tools.values()].map(({ name, description }) => ({
+      name,
+      description,
+    }));
+  }
+  invoke(name: string, args: unknown): Promise<unknown> {
+    const tool = this.tools.get(name);
+    if (!tool) throw new Error(`unknown tool: ${name}`);
+    return tool.invoke(args);
+  }
+}
+```
+
+A flat registry of typed tools. The agent prompt lists `tool.name + tool.description` to the model; when the model emits
+`{"action":"tool","name":"add","args":{"a":17,"b":25}}` the runner looks
+the name up and invokes it.
+
+### 2. The per-step job — `src/agent.ts`
+
+```ts
+import { jobs } from "@foundryprotocol/0gkit-jobs";
+import { z } from "zod";
+
+export function buildStepJob({
+  compute,
+  verifyStep,
+}: {
+  compute: Compute;
+  verifyStep: (step: number, res: InferenceResult) => Promise<boolean>;
+}) {
+  return jobs.define({
+    name: "agent.step",
+    input: z.object({
+      step: z.number(),
+      messages: z.array(z.object({ role: z.string(), content: z.string() })),
+      model: z.string(),
+    }),
+    output: z.object({
+      receipt: z.object({ txHash: z.string() }),
+      decision: z.union([
+        z.object({ action: z.literal("tool"), name: z.string(), args: z.any() }),
+        z.object({ action: z.literal("done"), answer: z.string() }),
+      ]),
+    }),
+    maxAttempts: 2,
+    handler: async ({ input }) => {
+      const res = await compute.inference({
+        messages: input.messages,
+        model: input.model,
+      });
+      const verified = await verifyStep(input.step, res);
+      if (!verified) {
+        throw new Error("AGENT_VERIFY_FAILED");
+      }
+      const decision = parseDecision(res.output);
+      return { receipt: res.receipt, decision };
+    },
+  });
+}
+```
+
+Key choices:
+
+- **Zod schemas** validate input/output at the runner boundary. A bad
+  upstream call surfaces as a validation error, not a runtime mystery.
+- **`maxAttempts: 2`** = one retry. Inference failures are usually transient
+  (rate limit, provider hiccup). More retries would burn compute budget on
+  a persistent issue.
+- **Verify gate throws** rather than returning a verified flag. Throwing
+  lets the runner's retry + backoff policy handle the failure mode
+  consistently.
+
+### 3. The orchestration loop — `src/agent.ts` (continued)
+
+```ts
+export async function runAgent(
+  prompt: string,
+  deps: {
+    runner: JobRunner;
+    stepJob: JobDefinition;
+    tools: ToolRegistry;
+    log: (msg: string) => void;
+    maxSteps?: number;
+    stepTimeoutMs?: number;
+  }
+): Promise<AgentResult> {
+  const { runner, stepJob, tools, log, maxSteps = 8, stepTimeoutMs = 60_000 } = deps;
+  const messages: Message[] = [
+    { role: "system", content: systemPrompt(tools) },
+    { role: "user", content: prompt },
+  ];
+  const trace: { txHash: string; tool?: string }[] = [];
+
+  for (let step = 1; step <= maxSteps; step++) {
+    const jobId = await runner.enqueue({
+      name: "agent.step",
+      input: { step, messages, model: "default" },
+    });
+    const result = await runner.waitFor(jobId, { timeoutMs: stepTimeoutMs });
+
+    if (result.state !== "done") {
+      log(`step ${step}: failed (${result.error?.message})`);
+      return { kind: "error", reason: result.error?.message, trace };
+    }
+    const { decision, receipt } = result.output;
+    trace.push({ txHash: receipt.txHash });
+
+    if (decision.action === "done") {
+      log(`step ${step}: action=done`);
+      return { kind: "final", answer: decision.answer, trace };
+    }
+    log(`step ${step}: action=tool ${decision.name}`);
+    trace[trace.length - 1].tool = decision.name;
+    const toolResult = await tools.invoke(decision.name, decision.args);
+    messages.push({
+      role: "assistant",
+      content: JSON.stringify(decision),
+    });
+    messages.push({
+      role: "tool",
+      content: JSON.stringify(toolResult),
+    });
+  }
+  return { kind: "error", reason: "max_steps_exceeded", trace };
+}
+```
+
+What's happening:
+
+1. Push a fresh per-step job onto the runner.
+2. Wait for it to finish (with a timeout — never block forever).
+3. Inspect the decision.
+4. If `done`, return.
+5. If `tool`, invoke the tool, fold its result back into context as a
+   `tool`-role message, loop.
+
+Because each step is a job, **the loop is durable**. If the worker
+crashes after step 3, restart and step 3's persisted state lets you resume
+from step 4. Your tools must be idempotent — running them twice should be
+safe.
+
+### 4. Wiring — `src/index.ts`
+
+```ts
+import { Compute } from "@foundryprotocol/0gkit-compute";
+import { JobRunner } from "@foundryprotocol/0gkit-jobs";
+import { MemoryBackend } from "@foundryprotocol/0gkit-jobs/backends/memory";
+import { buildStepJob, runAgent } from "./agent";
+import { ToolRegistry } from "./tools";
+import { addTool } from "./tools/add";
+
+const compute = new Compute({
+  network: process.env.NETWORK as "galileo",
+  brokerKey: process.env.ZEROG_BROKER_KEY!,
+  provider: process.env.ZEROG_PROVIDER as `0x${string}`,
+});
+
+const verifyStep = async () => true; // ← stub. Replace before prod.
+const stepJob = buildStepJob({ compute, verifyStep });
+
+const runner = new JobRunner({ backend: new MemoryBackend() });
+runner.register(stepJob);
+await runner.start();
+
+const tools = new ToolRegistry();
+tools.register(addTool);
+
+const prompt = process.argv.slice(2).join(" ");
+const result = await runAgent(prompt, { runner, stepJob, tools, log: console.log });
+console.log("Agent result:", result.kind);
+if (result.kind === "final") console.log("  Answer:", result.answer);
+console.log("  Steps :", result.trace.length);
+
+await runner.stop({ drain: true });
+```
+
+`MemoryBackend` is the right default for a tutorial — zero infrastructure,
+perfect for ergonomics. We replace it later.
+
+## Wire real attestation
+
+The template's `verifyStep` is a stub that always returns `true`. In
+production, replace it with a real attestation gate:
+
+```ts
+import { verifyEnvelope } from "@foundryprotocol/0gkit-attestation";
+
+const PROVIDER_SIGNER = "0xabc…" as const; // your trusted enclave's signing addr
+
+const verifyStep = async (_step: number, _res: InferenceResult) => {
+  // Fetch the envelope from your provider's sidecar API.
+  // The exact shape varies by provider — check their docs.
+  const envelope = await fetch(
+    `${PROVIDER_ATTESTATION_URL}/latest?broker=${BROKER_ADDR}`
+  ).then((r) => r.json());
+  const { ok } = await verifyEnvelope(envelope, PROVIDER_SIGNER);
+  return ok;
+};
+```
+
+The shape `InferenceResult` returned by `Compute.inference` is `{ output,
+receipt, raw }` — there is **no `attestation` field** on the inference
+response itself, by design. Attestations are a separate envelope you
+fetch out-of-band so the same template works against providers who hand it
+back over a sidecar API, a websocket, or an on-chain event.
+
+`verifyEnvelope` checks the signature on the envelope's claim — typically a
+hash of the enclave measurement plus the broker address. If it returns
+`{ ok: true }`, the inference was provably executed by a TEE binary
+matching the expected measurement.
+
+## Make it durable
+
+Swap `MemoryBackend` for `SqliteBackend` so a worker crash mid-loop
+resumes on restart:
+
+```ts
+import { SqliteBackend } from "@foundryprotocol/0gkit-jobs/backends/sqlite";
+const backend = new SqliteBackend({ path: "./.jobs.db" });
+```
+
+For multi-node setups (multiple workers consuming the same queue):
+
+```bash
+pnpm add ioredis
+```
+
+```ts
+import { RedisBackend } from "@foundryprotocol/0gkit-jobs/backends/redis";
+const backend = new RedisBackend({ url: process.env.REDIS_URL! });
+```
+
+`RedisBackend` uses `BLPOP` semantics to ensure exactly one worker claims
+each job. Failed claims unwind cleanly — see the
+[durable jobs concept guide](/concepts/durable-jobs#delivery-model) for
+the at-least-once contract.
+
+## Webhook delivery
+
+Want your app notified when an agent run finishes (or each step
+completes)? Pass a `webhook` config to the runner:
+
+```ts
+const runner = new JobRunner({
+  backend,
+  webhook: {
+    url: process.env.AGENT_WEBHOOK_URL!,
+    secret: process.env.AGENT_WEBHOOK_SECRET!,
+  },
+});
+```
+
+On your receiver:
+
+```ts
+import { jobs } from "@foundryprotocol/0gkit-jobs";
+
+app.post("/agent-webhook", async (req, res) => {
+  const signature = req.headers["x-0gkit-signature"] as string;
+  const body = await readBody(req); // raw bytes!
+  const ok = jobs.verifyWebhook({
+    body,
+    signature,
+    secret: process.env.AGENT_WEBHOOK_SECRET!,
+  });
+  if (!ok) return res.status(403).end();
+  const event = JSON.parse(body.toString());
+  // event = { jobId, name, state: "done" | "failed", output?, error? }
+  await persistAgentResult(event);
+  res.status(204).end();
+});
+```
+
+**Important:** verify against the raw body bytes, not a re-serialized
+object. The HMAC signs exactly what the runner sent.
+
+## Production hardening
+
+### Cost estimation
+
+Every step burns compute budget. Estimate before you run a long agent:
+
+```bash
+0g estimate compute --messages "What is 17+25?" --model default
+```
+
+For programmatic budgeting, `compute.estimate({ messages })` returns the
+same `Estimate` envelope. Wrap `runAgent` in a budget check:
+
+```ts
+const est = await compute.estimate({ messages, model });
+if (est.gas > BUDGET) throw new Error("AGENT_BUDGET_EXCEEDED");
+```
+
+### Observability
+
+Instrument once, get spans for every inference + every job state
+transition:
+
+```ts
+import { instrument0g } from "@foundryprotocol/0gkit-observability";
+await instrument0g({ serviceName: "agent-worker", exporter: { kind: "otlp" } });
+```
+
+The agent loop then produces a span tree per run: one root span per
+`runAgent` call, child spans per step, grandchild spans per `compute.inference`
+with `0gkit.input_tokens` / `0gkit.output_tokens` / `0gkit.fee_native`.
+Filter on `0gkit.error_code` to spot which steps fail.
+
+### Tool isolation
+
+The toy `add` tool does math; real tools call APIs, read files, talk to
+chains. Run untrusted tools in a sandbox:
+
+- `@foundryprotocol/0gkit-jobs` tool sub-jobs in a worker pool with a
+  smaller `maxAttempts` budget than the main loop.
+- Use Vercel Sandbox for arbitrary code execution.
+- Always set a `stepTimeoutMs` ceiling — runaway tools are the #1 way
+  agents bankrupt their broker balance.
+
+### Idempotency
+
+`runAgent` is at-least-once. Your tools must be safe to invoke twice with
+the same args. Persist any external side effect (a charge, a file write,
+an email) keyed on `(jobId, stepIndex)`.
+
+## What you built
+
+You have:
+
+- An agent loop that's durable (resumes after crash) and attested (every
+  step provably executed by a TEE).
+- A swappable backend story (memory → sqlite → redis) for laptop → single
+  node → multi-node.
+- Webhook delivery for out-of-process notification.
+- A budget-bounded, observable, idempotent pattern that scales to real
+  workloads.
+
+## See also
+
+- [`@foundryprotocol/0gkit-compute`](/packages/compute) — inference + cost
+  estimation.
+- [`@foundryprotocol/0gkit-jobs`](/packages/jobs) — durable runner API.
+- [`@foundryprotocol/0gkit-attestation`](/packages/attestation) — envelope
+  verification.
+- [Durable jobs concept](/concepts/durable-jobs) — delivery semantics,
+  backoff, shutdown.
+- [Observability concept](/concepts/observability) — OTel setup.

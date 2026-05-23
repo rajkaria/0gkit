@@ -1,0 +1,77 @@
+---
+title: Cookbook
+---
+
+# Cookbook
+
+End-to-end tutorials. Pick an archetype, follow it from `npm create` to a
+running app, then graduate to production hardening. Every tutorial uses only
+the published `@foundryprotocol/0gkit-*` packages — nothing fabricated, every
+command verified.
+
+These are deeper than the [template READMEs](/templates) — they walk you
+through _why_ each piece exists, not just _what_ the code does.
+
+## Tutorials
+
+### [Chat app](/cookbook/chat-app)
+
+A real-time chat where every message is persisted to **0G Storage** and the
+on-chain `MessagePosted` event log is the source of truth for the message
+list. Teaches: SP3 wallet (server), SP4 typed contracts, SP6 indexer with
+reorg-safe `useEvent`, SP3 storage upload + download.
+
+**Stack:** Next.js 16 App Router · React 19 · `0gkit-storage` ·
+`0gkit-indexer` · `0gkit-react` · `0gkit-contracts`.
+
+### [AI agent with TEE-attested inference](/cookbook/ai-agent)
+
+A LangChain-style ReAct agent where every step is paid through **0G
+Compute**, gated on a TEE attestation, and orchestrated as a durable job.
+Survives worker crashes when you point the runner at sqlite or redis.
+Teaches: `Compute.inference`, attestation envelopes, durable jobs, webhook
+delivery, swappable backends.
+
+**Stack:** `0gkit-compute` · `0gkit-attestation` · `0gkit-wallet` ·
+`0gkit-jobs`.
+
+### [NFT minter with media + metadata on 0G Storage](/cookbook/nft-minter)
+
+Mint an ERC-721 token whose **metadata JSON** and **media file** both live
+on 0G Storage. `tokenURI` resolves to `0g-storage://<root>`. Teaches: SP4
+Foundry codegen, two-step storage uploads with cross-referencing roots,
+typed contract `write.mint(...)` calls, marketplace gateway design.
+
+**Stack:** Foundry · `0gkit-storage` · `0gkit-contracts` · `0gkit-wallet`.
+
+## What you need before starting
+
+- **Node 20.10+** (CI tests 20, 22, 24).
+- **A funded testnet key** for `galileo` — grab one from
+  [`faucet.0g.ai`](https://faucet.0g.ai). You never need real funds.
+- **A terminal**, an editor, and `npm` (or `pnpm` / `yarn` / `bun`).
+
+The AI-agent tutorial additionally needs a 0G Compute prepaid balance; the
+NFT tutorial additionally needs [Foundry](https://getfoundry.sh) installed.
+Each tutorial spells these out at the top.
+
+## How these are structured
+
+Every tutorial follows the same shape:
+
+1. **What you're building** — a screenshot or sample output of the end state.
+2. **Prerequisites** — exact versions and key requirements.
+3. **Scaffold** — one `npm create 0gkit-app` command.
+4. **Walk the code, file-by-file** — every line you'll touch, with the
+   "why" inline.
+5. **Run it** — copy/paste commands; you should see the live thing.
+6. **Extend it** — one or two real upgrades, not toy modifications.
+7. **Production hardening** — the gap between "works on my laptop" and
+   "won't page you at 3 AM".
+
+## Something missing?
+
+If you want a tutorial for a workflow we haven't covered (e.g. a fully
+on-chain marketplace, a TEE-enclaved fine-tuning loop, a multi-tenant
+storage SaaS), open a discussion at
+[github.com/rajkaria/0gkit/discussions](https://github.com/rajkaria/0gkit/discussions).

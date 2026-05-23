@@ -1,0 +1,425 @@
+---
+title: "Cookbook · NFT minter"
+---
+
+# Mint an NFT with media + metadata on 0G Storage
+
+Mint an ERC-721 token whose **metadata JSON** and **media file** both live
+on **0G Storage** rather than IPFS or AWS S3. `tokenURI(id)` returns
+`0g-storage://<root>` where `<root>` is the Merkle root returned by the
+storage upload — the chain bookmarks the storage location, never the
+content itself.
+
+By the end you'll have a Foundry-deployed ERC-721, typed TypeScript
+clients generated from the ABI, and a runnable mint flow that uploads two
+files and submits one on-chain transaction.
+
+## What you're building
+
+```
+$ pnpm dev 0xRecipient "Genesis" ./genesis.png
+Media uploaded: 0xabc… (tx 0xfeed…)
+Metadata uploaded: 0xdef… (tx 0xcafe…)
+Minted to 0xRecipient: tx 0xmint…
+
+Mint OK.
+  media    : 0g-storage://0xabc…
+  metadata : 0g-storage://0xdef…
+  tx       : 0xmint…
+```
+
+The recipient now owns an ERC-721 whose `tokenURI` resolves to a metadata
+JSON containing the title, a description, and a pointer to the media
+file. All of it is durable on 0G Storage.
+
+## Prerequisites
+
+- Node 20.10 or newer.
+- A funded `galileo` testnet key (gas + storage segments).
+- [Foundry installed](https://book.getfoundry.sh/getting-started/installation):
+  ```bash
+  curl -L https://foundry.paradigm.xyz | bash
+  foundryup
+  ```
+- About 25 minutes.
+
+## Scaffold
+
+```bash
+npm create 0gkit-app@latest my-nft -- --template nft-with-storage
+cd my-nft
+cp .env.example .env
+```
+
+Fill in `.env`:
+
+```
+NETWORK=galileo
+PRIVATE_KEY=0x…                                 # gas + storage signer
+RPC_URL=https://evmrpc-testnet.0g.ai            # Foundry deploy target
+NFT_ADDRESS=                                    # filled in after deploy
+```
+
+## Walk the contract
+
+`contracts/StorageNFT.sol`:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract StorageNFT {
+    error NotOwner();
+    error AlreadyMinted();
+
+    string public name;
+    string public symbol;
+    address public owner;
+    uint256 public nextId;
+
+    mapping(uint256 => address) private _owners;
+    mapping(uint256 => bytes32) private _roots;
+
+    event Transfer(address indexed from, address indexed to, uint256 indexed id);
+
+    constructor(string memory n, string memory s) {
+        name = n;
+        symbol = s;
+        owner = msg.sender;
+    }
+
+    function mint(address to, bytes32 metadataRoot) external returns (uint256 id) {
+        if (msg.sender != owner) revert NotOwner();
+        id = ++nextId;
+        _owners[id] = to;
+        _roots[id] = metadataRoot;
+        emit Transfer(address(0), to, id);
+    }
+
+    function ownerOf(uint256 id) external view returns (address) {
+        return _owners[id];
+    }
+
+    function tokenURI(uint256 id) external view returns (string memory) {
+        bytes32 root = _roots[id];
+        return string(abi.encodePacked("0g-storage://", _toHex(root)));
+    }
+
+    // … (transfer, approval — omitted here for brevity, see the template)
+
+    function _toHex(bytes32 b) internal pure returns (string memory) {
+        bytes memory out = new bytes(66);
+        out[0] = "0";
+        out[1] = "x";
+        bytes16 alphabet = 0x30313233343536373839616263646566;
+        for (uint256 i = 0; i < 32; i++) {
+            out[2 + 2 * i] = alphabet[uint8(b[i]) >> 4];
+            out[2 + 2 * i + 1] = alphabet[uint8(b[i]) & 0x0f];
+        }
+        return string(out);
+    }
+}
+```
+
+Key choices:
+
+- **Inline ERC-721** (not OpenZeppelin) so a tutorial reader can read the
+  whole contract top-to-bottom. **In production, use
+  [`@openzeppelin/contracts`](https://github.com/OpenZeppelin/openzeppelin-contracts).**
+  See "Production hardening" below.
+- **`mint(to, metadataRoot)`** takes the metadata root as a `bytes32`,
+  not a string URI. Smaller calldata, cheaper gas, type-safe.
+- **`tokenURI`** prefixes with `0g-storage://` — a URI scheme that's not
+  resolvable by browsers directly. We'll address that with a gateway in
+  "Production hardening".
+
+## Build the contract
+
+```bash
+pnpm build:contracts
+# → calls `forge build`, writes out/StorageNFT.sol/StorageNFT.json
+```
+
+## Generate the typed TS client
+
+```bash
+pnpm generate:contracts
+# → calls `0g contracts generate --abi out/StorageNFT.sol/StorageNFT.json --out src/generated`
+```
+
+This produces `src/generated/StorageNFT.ts` — a deterministic TypeScript
+module with full IntelliSense on every contract method:
+
+```ts
+// src/generated/StorageNFT.ts (generated)
+export const StorageNFTAbi = [
+  /* … typed ABI … */
+] as const;
+
+export type StorageNFT = {
+  read: {
+    name(): Promise<string>;
+    symbol(): Promise<string>;
+    ownerOf(id: bigint): Promise<`0x${string}`>;
+    tokenURI(id: bigint): Promise<string>;
+    // …
+  };
+  write: {
+    mint(args: [to: `0x${string}`, metadataRoot: `0x${string}`]): Promise<Receipt>;
+  };
+  events: {
+    /* … */
+  };
+};
+```
+
+You get autocomplete on `read.tokenURI(...)`, type errors when you pass
+the wrong argument shape, and the runtime path goes through viem with the
+SP4 `createTypedContract` wrapper.
+
+## Deploy
+
+```bash
+forge script scripts/Deploy.s.sol \
+  --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
+```
+
+The script prints `Deployed to: 0x…`. Paste that address into `NFT_ADDRESS`
+in your `.env`.
+
+## Walk the mint flow — `src/mint-flow.ts`
+
+```ts
+import { Storage } from "@foundryprotocol/0gkit-storage";
+import { createTypedContract } from "@foundryprotocol/0gkit-contracts";
+import { StorageNFTAbi } from "./generated/StorageNFT";
+import { encodeMetadata } from "./metadata";
+
+export async function runMintFlow(
+  input: {
+    to: `0x${string}`;
+    title: string;
+    mediaBytes: Uint8Array;
+    mediaContentType: string;
+  },
+  deps: { storage: Storage; nft: ReturnType<typeof createTypedContract> }
+): Promise<MintResult> {
+  // 1. Upload media.
+  const { root: mediaRoot, tx: mediaTx } = await deps.storage.upload(input.mediaBytes);
+
+  // 2. Build + upload metadata referencing the media root.
+  const metadataBytes = encodeMetadata({
+    name: input.title,
+    description: `0G-native NFT for ${input.title}`,
+    image: `0g-storage://${mediaRoot}`,
+    contentType: input.mediaContentType,
+  });
+  const { root: metadataRoot, tx: metaTx } = await deps.storage.upload(metadataBytes);
+
+  // 3. Mint on chain, passing the metadata root.
+  const { txHash } = await deps.nft.write.mint([input.to, metadataRoot]);
+
+  return {
+    kind: "ok",
+    media: mediaRoot,
+    metadata: metadataRoot,
+    mediaTx: mediaTx.txHash,
+    metaTx: metaTx.txHash,
+    mintTx: txHash,
+  };
+}
+```
+
+The flow is intentionally three sequential steps because each one
+**depends** on the previous: metadata references the media root; the mint
+references the metadata root. There's no way to parallelize without
+breaking the dependency chain.
+
+For very large media (multi-MB), the upload latency is the long pole.
+Consider pre-uploading media before the user finishes choosing options,
+then committing the mint when they confirm.
+
+## Run it
+
+```bash
+pnpm dev 0xRecipient "Genesis" ./genesis.png
+```
+
+You should see three transactions: media upload, metadata upload, mint.
+Each prints its hash. The final line shows the mint receipt.
+
+Verify on chain:
+
+```bash
+cast call $NFT_ADDRESS \
+  "tokenURI(uint256)(string)" 1 \
+  --rpc-url $RPC_URL
+# → 0g-storage://0xdef…
+```
+
+That's the metadata root. Resolve it:
+
+```bash
+0g storage get 0xdef… - | jq
+# → { "name": "Genesis", "description": "…", "image": "0g-storage://0xabc…", … }
+```
+
+## Marketplace gateway
+
+Marketplaces like OpenSea expect `tokenURI` to be HTTPS-resolvable. The
+`0g-storage://<root>` scheme isn't — it points at a content-addressed
+storage layer the browser doesn't understand.
+
+The solution is a **read-through gateway**: a tiny HTTP service that
+resolves `0g-storage://` to JSON.
+
+```ts
+// gateway/api/[root].ts
+import { Storage } from "@foundryprotocol/0gkit-storage";
+const storage = new Storage({ network: "galileo" });
+
+export async function GET(req, { params }) {
+  const bytes = await storage.download(params.root as `0x${string}`);
+  return new Response(bytes, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
+}
+```
+
+Then update your contract's `tokenURI` to return an HTTPS URL:
+
+```solidity
+function tokenURI(uint256 id) external view returns (string memory) {
+    return string(abi.encodePacked(
+        "https://nft-gateway.your-domain.com/api/",
+        _toHex(_roots[id])
+    ));
+}
+```
+
+Two design notes:
+
+- **Set `Cache-Control: immutable`.** A storage root is content-addressed
+  — its content can never change. Browsers and CDNs can cache forever.
+- **The gateway is read-only.** No keys, no signers, no privileged ops.
+  Deploy on Vercel / Cloudflare Workers / a static $5 box. It's a CDN
+  proxy with a fancier resolver.
+
+## Production hardening
+
+### Use OpenZeppelin's ERC-721
+
+The inline contract is for legibility, not safety. Replace with OZ:
+
+```solidity
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract StorageNFT is ERC721, Ownable {
+    mapping(uint256 => bytes32) private _roots;
+    uint256 public nextId;
+
+    constructor() ERC721("Storage NFT", "SNFT") Ownable(msg.sender) {}
+
+    function mint(address to, bytes32 metadataRoot) external onlyOwner returns (uint256 id) {
+        id = ++nextId;
+        _safeMint(to, id);
+        _roots[id] = metadataRoot;
+    }
+
+    function tokenURI(uint256 id) public view override returns (string memory) {
+        _requireOwned(id);
+        return string(abi.encodePacked("https://nft-gateway.your-domain.com/api/", Strings.toHexString(uint256(_roots[id]), 32)));
+    }
+}
+```
+
+OZ gives you audited `safeTransferFrom`, approval logic, owner enumeration,
+the `IERC721` interface, and EIP-165 support — months of subtle gotchas
+already solved.
+
+### Durable uploads
+
+A 50-MB media upload shouldn't block a request handler. Move uploads onto
+[`@foundryprotocol/0gkit-jobs`](/packages/jobs):
+
+```ts
+const uploadJobId = await runner.enqueue({
+  name: "upload-media",
+  input: { mediaBytes, mediaContentType },
+});
+// Return jobId to the client. Webhook fires when upload completes.
+```
+
+The webhook handler then enqueues the metadata upload + mint. See
+[durable jobs concept](/concepts/durable-jobs) for the full pattern.
+
+### Cost estimation
+
+Storage uploads cost gas + fee per 256-KiB segment. Estimate before mint:
+
+```ts
+const est = await storage.estimate(input.mediaBytes.length);
+console.log(`Estimated cost: ${est.fee} wei across ${est.breakdown.segments} segments`);
+if (est.fee > userBudget) throw new Error("upload too expensive");
+```
+
+For a CLI smoke test:
+
+```bash
+0g estimate storage ./genesis.png
+```
+
+### Royalty enforcement (ERC-2981)
+
+Marketplaces query ERC-2981's `royaltyInfo(tokenId, salePrice)` to read
+royalty terms. OZ has a base class:
+
+```solidity
+import "@openzeppelin/contracts/token/common/ERC2981.sol";
+
+contract StorageNFT is ERC721, ERC2981, Ownable {
+    constructor() ERC2981() { _setDefaultRoyalty(owner, 500); /* 5% */ }
+    // … remember to override supportsInterface for ERC2981 + ERC721
+}
+```
+
+### Observability
+
+Instrument once, get spans for every storage upload and every mint
+transaction:
+
+```ts
+import { instrument0g } from "@foundryprotocol/0gkit-observability";
+await instrument0g({ serviceName: "nft-minter", exporter: { kind: "otlp" } });
+```
+
+The mint flow produces a span tree per call: root span per `runMintFlow`,
+child spans per `storage.upload` (with `0gkit.size_bytes`,
+`0gkit.segments`), child span for the contract mint
+(`0gkit.gas_native`, `0gkit.tx_hash`).
+
+## What you built
+
+You have:
+
+- An ERC-721 contract whose metadata and media live on 0G Storage —
+  off-chain, content-addressed, durable.
+- Typed TypeScript clients generated from your Foundry artifact.
+- A two-upload, one-mint flow that's auditable end-to-end.
+- A gateway design that makes the NFT marketplace-compatible without
+  giving up storage neutrality.
+- Production wiring: OZ contracts, durable uploads, royalties,
+  observability.
+
+## See also
+
+- [`@foundryprotocol/0gkit-storage`](/packages/storage) — upload + download.
+- [`@foundryprotocol/0gkit-contracts`](/packages/contracts) — typed
+  contracts and codegen.
+- [`0g contracts` CLI](/cli) — `generate`, `list`, `info`.
+- [Durable jobs concept](/concepts/durable-jobs) — for moving uploads
+  off the request path.

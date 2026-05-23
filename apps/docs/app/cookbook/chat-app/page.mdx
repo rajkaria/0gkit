@@ -1,0 +1,344 @@
+---
+title: "Cookbook · Chat app"
+---
+
+# Build a chat app on 0G
+
+A real-time chat where every message is persisted to **0G Storage** and the
+on-chain `MessagePosted` event log is the source of truth. By the end you'll
+have a Next.js app that lets you type a message, persists it, and renders the
+running history reactively as other writers post.
+
+This tutorial uses the `chat` template under the hood — but instead of just
+reading the README, you'll understand the design choices and graduate to a
+production-shaped extension.
+
+## What you're building
+
+```
+┌────────────────────────────────────────┐
+│  0Gkit chat                            │
+├────────────────────────────────────────┤
+│  alice  Hi everyone                    │
+│  bob    Hi alice!                      │
+│  alice  How is the testnet treating    │
+│         you?                           │
+│                                        │
+│  [ type a message …          ] [Send]  │
+└────────────────────────────────────────┘
+```
+
+Each row is one `MessagePosted` event on chain → one root in storage → one
+decoded body. Reorg-safe via `useEvent`: if a chain reorg drops the block
+the message was in, the row disappears automatically.
+
+## Prerequisites
+
+- Node 20.10 or newer.
+- A funded `galileo` testnet key. Get one at
+  [`faucet.0g.ai`](https://faucet.0g.ai).
+- About 10 minutes.
+
+## Scaffold
+
+```bash
+npm create 0gkit-app@latest my-chat -- --template chat
+cd my-chat
+cp .env.example .env
+```
+
+Open `.env` and paste your testnet key into `PRIVATE_KEY`. Leave
+`NETWORK=galileo` unless you're running a local devnet.
+
+## Deploy the `MessageRegistry` contract
+
+The contract is 30 lines of Solidity:
+
+```solidity
+// contracts/MessageRegistry.sol
+pragma solidity ^0.8.20;
+contract MessageRegistry {
+    event MessagePosted(address indexed author, bytes32 root, uint256 ts);
+    function post(bytes32 root, uint256 ts) external {
+        emit MessagePosted(msg.sender, root, ts);
+    }
+}
+```
+
+It does one thing: emit an event tying an author to a storage root. No
+on-chain text, no balance, no permission checks — those add up to gas you
+don't need. The text lives in 0G Storage, the chain just bookmarks it.
+
+Deploy options, in order of friction:
+
+- **Local devnet (zero setup):** run `0g dev` in another terminal. It boots
+  an Anvil node and deploys the registry automatically. Copy the printed
+  address into `NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS`.
+- **Galileo testnet via Foundry:**
+  ```bash
+  forge create --rpc-url https://evmrpc-testnet.0g.ai \
+    --private-key $PRIVATE_KEY \
+    contracts/MessageRegistry.sol:MessageRegistry
+  ```
+  Paste the returned `Deployed to:` address into the env.
+
+## Walk the code
+
+### 1. The wire format — `lib/message.ts`
+
+```ts
+export type Message = { v: 1; author: `0x${string}`; ts: number; body: string };
+
+const MAX_BODY = 4 * 1024; // 4 KiB
+
+export function encodeMessage(m: Message): Uint8Array {
+  if (m.body.length > MAX_BODY) throw new Error("body too long");
+  return new TextEncoder().encode(JSON.stringify(m));
+}
+
+export function decodeMessage(bytes: Uint8Array): Message {
+  const m = JSON.parse(new TextDecoder().decode(bytes));
+  if (m.v !== 1) throw new Error("unknown message version");
+  return m;
+}
+```
+
+A versioned JSON envelope is the right call here. The `v: 1` field
+future-proofs the codec: when you change the format you bump the version
+and write a decoder that branches on it. Old roots stay readable forever.
+
+### 2. Server-side write — `app/api/post/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from "next/server";
+import { Storage } from "@foundryprotocol/0gkit-storage";
+import { createTypedContract } from "@foundryprotocol/0gkit-contracts";
+import { encodeMessage } from "@/lib/message";
+import { registryAbi } from "@/lib/abi";
+
+const storage = new Storage({
+  network: process.env.NETWORK as "galileo",
+  privateKey: process.env.PRIVATE_KEY!,
+});
+
+const registry = createTypedContract({
+  abi: registryAbi,
+  address: process.env.NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS as `0x${string}`,
+  signer: { privateKey: process.env.PRIVATE_KEY! },
+  network: process.env.NETWORK as "galileo",
+});
+
+export async function POST(req: NextRequest) {
+  const { author, body } = await req.json();
+  const ts = Math.floor(Date.now() / 1000);
+
+  const bytes = encodeMessage({ v: 1, author, ts, body });
+  const { root } = await storage.upload(bytes);
+  const { txHash } = await registry.write.post([root, BigInt(ts)]);
+
+  return NextResponse.json({ root, txHash, ts });
+}
+
+export async function GET(req: NextRequest) {
+  const root = req.nextUrl.searchParams.get("root") as `0x${string}`;
+  const bytes = await storage.download(root);
+  return new Response(bytes, {
+    headers: { "Content-Type": "application/octet-stream" },
+  });
+}
+```
+
+Two endpoints sharing one signer. The server holds the private key so the
+browser never sees it. Production refinement: rate-limit by `author`,
+authenticate the post call against a real wallet signature, charge per
+message.
+
+### 3. The UI — `app/page.tsx`
+
+```tsx
+"use client";
+import { useEvent } from "@foundryprotocol/0gkit-react";
+import { registryAbi } from "@/lib/abi";
+import { decodeMessage } from "@/lib/message";
+
+export default function Page() {
+  const events = useEvent({
+    contract: {
+      abi: registryAbi,
+      address: process.env.NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS as `0x${string}`,
+    },
+    event: "MessagePosted",
+  });
+  // events is an array; on reorg, rolled-back blocks are filtered out
+  // automatically.
+
+  return (
+    <main>
+      <ul>
+        {events.map((e) => (
+          <MessageRow key={e.blockHash + e.logIndex} ev={e} />
+        ))}
+      </ul>
+      <Composer />
+    </main>
+  );
+}
+
+function MessageRow({ ev }: { ev: { args: { root: `0x${string}` } } }) {
+  const [body, setBody] = useState<string | null>(null);
+  useEffect(() => {
+    fetch(`/api/post?root=${ev.args.root}`)
+      .then((r) => r.arrayBuffer())
+      .then((buf) => decodeMessage(new Uint8Array(buf)))
+      .then((m) => setBody(m.body));
+  }, [ev.args.root]);
+  return <li>{body ?? "loading…"}</li>;
+}
+```
+
+`useEvent` is the magic here. It subscribes to a single contract event
+through the indexer's polling loop, dedupes against the current cursor, and
+**filters out rolled-back blocks on reorg** automatically. You don't write
+the reorg handler — it's the indexer's job.
+
+### 4. Provider plumbing — `app/providers.tsx`
+
+```tsx
+"use client";
+import { ZeroGIndexerProvider } from "@foundryprotocol/0gkit-react";
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <ZeroGIndexerProvider
+      network={process.env.NEXT_PUBLIC_NETWORK as "galileo"}
+      pollIntervalMs={1500}
+      reorgDepth={32}
+    >
+      {children}
+    </ZeroGIndexerProvider>
+  );
+}
+```
+
+One provider per app. Every `useEvent` / `useLogs` hook in the tree shares
+its single polling loop. `reorgDepth: 32` means we keep the last 32 block
+hashes for divergence detection — generous for testnet, conservative
+enough that detection is cheap.
+
+## Run it
+
+```bash
+pnpm dev
+```
+
+Open [`http://localhost:3000`](http://localhost:3000). The first message
+takes ~3 seconds round-trip (storage upload + on-chain confirm). Subsequent
+messages appear within the poll interval. Try opening two tabs as different
+authors — both see each other's messages without a manual refresh.
+
+## Extend it: per-room channels
+
+Add a `room` field to the event signature so users can chat in distinct
+rooms:
+
+```solidity
+event MessagePosted(
+    address indexed author,
+    bytes32 indexed room,
+    bytes32 root,
+    uint256 ts
+);
+function post(bytes32 room, bytes32 root, uint256 ts) external {
+    emit MessagePosted(msg.sender, room, root, ts);
+}
+```
+
+Update `useEvent` to filter by indexed topic:
+
+```ts
+const events = useEvent({
+  contract: { abi: registryAbi, address: REGISTRY },
+  event: "MessagePosted",
+  args: { room: keccak256(toUtf8Bytes(roomName)) }, // filtered server-side
+});
+```
+
+Because `room` is `indexed`, the chain stores it as a topic — filtering by
+topic is free at the RPC layer. Don't index `body`; that defeats the
+storage offload.
+
+## Production hardening
+
+### Move the signer off the server
+
+The server-key model is fine for a tutorial. In production, the user signs
+their own post call:
+
+- Add `@foundryprotocol/0gkit-wallet-react` to the client bundle.
+- Use a wallet hook to obtain a viem `WalletClient`.
+- Call `createTypedContract({ ..., signer: walletClient })` client-side.
+- The storage upload still needs a server-side service key (storage uploads
+  fund segments — you don't want every user to hold storage gas), or you can
+  move uploads to your own gateway and charge users out-of-band.
+
+### Rate limiting and abuse
+
+- Rate-limit `/api/post` by author (Upstash, Vercel KV, anything). One
+  message per user per second is a generous bound.
+- Cap `body.length` server-side before the storage call. Storage gas is
+  cheap but not free.
+- Reject roots whose decoded `author` doesn't match a signed payload
+  from the browser. Otherwise anyone can impersonate.
+
+### Durable uploads
+
+A 50-MB attachment shouldn't block a request handler. Move uploads onto
+[`@foundryprotocol/0gkit-jobs`](/packages/jobs):
+
+```ts
+// app/api/post/route.ts becomes:
+const jobId = await runner.enqueue({
+  name: "post-message",
+  input: { author, body },
+});
+return NextResponse.json({ jobId, status: "queued" });
+```
+
+Wire a webhook on the runner to push the final root to your browser via
+SSE / websocket / poll. See the
+[durable jobs concept guide](/concepts/durable-jobs) for the full pattern.
+
+### Observability
+
+Instrument every call so you can see latency, cost, and failure mode in
+your trace backend:
+
+```ts
+import { instrument0g } from "@foundryprotocol/0gkit-observability";
+await instrument0g({ serviceName: "chat-server", exporter: { kind: "otlp" } });
+```
+
+Every `storage.upload` and `contract.write.post` then emits a span tagged
+with `0gkit.op`, `0gkit.size_bytes`, `0gkit.gas_native`, etc. See the
+[observability concept](/concepts/observability) and the [Honeycomb
+guide](/concepts/observability/exporters/honeycomb).
+
+## What you built
+
+You have:
+
+- A chat where every message has a Merkle root + an on-chain event.
+- A reorg-safe UI that doesn't need polling code.
+- A scalable storage path that doesn't congest the chain.
+
+Production handoff: rate-limit, move signing client-side, durable uploads,
+spans. Each of these is a one-day project, not a rewrite.
+
+## See also
+
+- [`@foundryprotocol/0gkit-indexer`](/packages/0gkit-indexer) reference.
+- [`useEvent` and `useLogs`](/packages/react) hooks.
+- [`@foundryprotocol/0gkit-contracts`](/packages/contracts) — typed
+  contracts and codegen.
+- [Durable jobs](/concepts/durable-jobs).
+- [Observability](/concepts/observability).

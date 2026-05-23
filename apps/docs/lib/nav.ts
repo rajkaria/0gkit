@@ -67,6 +67,15 @@ export const NAV: NavSection[] = [
     ],
   },
   {
+    title: "Cookbook",
+    links: [
+      { title: "Overview", href: "/cookbook" },
+      { title: "Chat app", href: "/cookbook/chat-app" },
+      { title: "AI agent", href: "/cookbook/ai-agent" },
+      { title: "NFT minter", href: "/cookbook/nft-minter" },
+    ],
+  },
+  {
     title: "Guides",
     links: [
       { title: "CLI reference", href: "/cli" },
