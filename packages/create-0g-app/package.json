@@ -1,6 +1,6 @@
 {
   "name": "create-0g-app",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Scaffold a 0G app in seconds. Internal name — public entry is `create-0gkit-app` because the `0g-app` name on npm is held by another publisher.",
   "type": "module",
