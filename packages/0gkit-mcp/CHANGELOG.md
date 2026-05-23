@@ -1,5 +1,13 @@
 # @foundryprotocol/0gkit-mcp
 
+## 1.2.1
+
+### Patch Changes
+
+- Updated dependencies [d964721]
+  - @foundryprotocol/0gkit-storage@1.2.1
+  - @foundryprotocol/0gkit-compute@1.2.1
+
 ## 1.0.1
 
 ### Patch Changes
