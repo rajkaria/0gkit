@@ -1,6 +1,6 @@
 # 0Gkit
 
-> The neutral TypeScript toolkit for the 0G decentralized AI network. MIT-licensed. 18 packages on npm at v1.0.1.
+> The neutral TypeScript toolkit for the 0G decentralized AI network. MIT-licensed. 18 packages on npm under the `@foundryprotocol/0gkit-*` scope (currently in the v1.0.x release line, surface-stable until v2).
 
 0Gkit gives developers everything needed to ship apps on 0G: storage, compute, data availability (DA), attestation, a reorg-safe indexer, durable async jobs, wallet, typed contracts, OpenTelemetry observability, plus a `0g` CLI, MCP server for agents, and React hooks. Designed to drop into any TypeScript stack — no Foundry SDK lock-in, no provider lock-in. Live at 0gkit.com.
 
