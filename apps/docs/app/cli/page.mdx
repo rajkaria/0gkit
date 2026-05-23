@@ -9,7 +9,13 @@ language-agnostic surface for 0G. Every command mirrors a primitive package;
 `--json` makes it scriptable from any language.
 
 ```bash
-npm install -g @foundryprotocol/0gkit-cli   # or: npx 0g <command>
+# Install globally (exposes the `0g` binary):
+npm install -g @foundryprotocol/0gkit-cli
+0g doctor
+
+# Or run one-off via npx (note the full scope — `npx 0g` resolves to an
+# unrelated package on npm):
+npx @foundryprotocol/0gkit-cli doctor
 ```
 
 ## Global flags
@@ -23,7 +29,7 @@ These apply to every command and are inherited by subcommands.
 | `--private-key <hex>` | `ZEROG_PRIVATE_KEY` | _(none)_   | Signer key (funds storage tx).                    |
 | `--json`              | —                   | off        | Machine-readable JSON output.                     |
 | `--foundry`           | —                   | off        | Force-show the optional Foundry plugin namespace. |
-| `--version`           | —                   | —          | Prints `0.1.0`.                                   |
+| `--version`           | —                   | —          | Prints the installed CLI version.                 |
 
 Precedence: **flag > env > preset default**. Additional env vars:
 `ZEROG_BROKER_KEY`, `ZEROG_PROVIDER` (for `infer`).

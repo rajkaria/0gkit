@@ -37,7 +37,7 @@ npm install @0gfoundation/0g-storage-ts-sdk ethers
 Prefer the CLI? You do not have to install anything:
 
 ```bash
-npx 0g doctor
+npx @foundryprotocol/0gkit-cli doctor
 ```
 
 Requirements: Node `>=20.10`. `viem` `^2.21` is a peer dependency of every
@@ -75,8 +75,8 @@ Or do the same thing without writing any code, using the CLI:
 echo "hello 0G" > hello.txt
 export ZEROG_NETWORK=galileo
 export ZEROG_PRIVATE_KEY=0x...                       # funded testnet key
-ROOT=$(npx 0g storage put hello.txt --json | jq -r .root)
-npx 0g storage get "$ROOT" out.txt
+ROOT=$(npx @foundryprotocol/0gkit-cli storage put hello.txt --json | jq -r .root)
+npx @foundryprotocol/0gkit-cli storage get "$ROOT" out.txt
 cat out.txt
 ```
 

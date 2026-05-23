@@ -7,16 +7,22 @@ Foundry is a **separate, opt-in plugin**, never required.
 ## Install
 
 ```bash
-npm install -g @foundryprotocol/0gkit-cli   # or: npx 0g <command>
+# Recommended: install once, then use the short `0g` binary
+npm install -g @foundryprotocol/0gkit-cli
+0g doctor
+
+# Or one-off via npx (use the full scoped name — `npx 0g` resolves to an
+# unrelated package on npm):
+npx @foundryprotocol/0gkit-cli doctor
 ```
 
 ## 60-second start (no funds, testnet)
 
 ```bash
-npx 0g init my-app && cd my-app
+npx @foundryprotocol/0gkit-cli init my-app && cd my-app
 npm install
-npx 0g doctor                 # preflight every 0G surface
-npx 0g chain faucet 0xYourAddress   # Galileo → points you at https://faucet.0g.ai
+npx @foundryprotocol/0gkit-cli doctor                 # preflight every 0G surface
+npx @foundryprotocol/0gkit-cli chain faucet 0xYourAddress   # Galileo → points you at https://faucet.0g.ai
 ```
 
 ## Commands

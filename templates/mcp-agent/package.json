@@ -11,7 +11,7 @@
     "node": ">=20.10"
   },
   "dependencies": {
-    "@foundryprotocol/0gkit-mcp": "^0.1.0",
+    "@foundryprotocol/0gkit-mcp": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.0.4"
   },
   "devDependencies": {

@@ -13,9 +13,9 @@
     "node": ">=20.10"
   },
   "dependencies": {
-    "@foundryprotocol/0gkit-attestation": "^0.1.0",
-    "@foundryprotocol/0gkit-core": "^0.1.0",
-    "@foundryprotocol/0gkit-react": "^0.1.0",
+    "@foundryprotocol/0gkit-attestation": "^1.0.0",
+    "@foundryprotocol/0gkit-core": "^1.0.0",
+    "@foundryprotocol/0gkit-react": "^1.0.0",
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

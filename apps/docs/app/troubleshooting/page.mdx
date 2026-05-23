@@ -9,8 +9,8 @@ title: Troubleshooting & FAQ
 Almost every "it doesn't work" has a one-line answer from the preflight:
 
 ```bash
-npx 0g doctor --network galileo
-npx 0g doctor --json | jq '.checks[] | select(.ok==false)'
+npx @foundryprotocol/0gkit-cli doctor --network galileo
+npx @foundryprotocol/0gkit-cli doctor --json | jq '.checks[] | select(.ok==false)'
 ```
 
 It checks RPC reachability + chain id, signer presence/funding, the storage

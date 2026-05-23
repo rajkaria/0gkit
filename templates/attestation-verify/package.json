@@ -11,8 +11,8 @@
     "node": ">=20.10"
   },
   "dependencies": {
-    "@foundryprotocol/0gkit-attestation": "^0.1.0",
-    "@foundryprotocol/0gkit-core": "^0.1.0",
+    "@foundryprotocol/0gkit-attestation": "^1.0.0",
+    "@foundryprotocol/0gkit-core": "^1.0.0",
     "viem": "^2.21.0"
   },
   "devDependencies": {

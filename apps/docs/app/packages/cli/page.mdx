@@ -30,18 +30,19 @@ A terminal, a CI runner, or any process that can shell out. Node `>=20.10`.
 
 ```bash
 npm install -g @foundryprotocol/0gkit-cli   # provides `0g`
-# or run ad-hoc with no install:
-npx 0g <command>
+# or run ad-hoc with no install (note the full scope — `npx 0g` resolves
+# to an unrelated package on npm):
+npx @foundryprotocol/0gkit-cli <command>
 ```
 
 ## Quick taste
 
 ```bash
-npx 0g init my-app && cd my-app && npm install
-npx 0g doctor                              # preflight every 0G surface
-npx 0g chain faucet 0xYourAddress          # galileo → points at faucet.0g.ai
-ROOT=$(npx 0g storage put model.bin --json | jq -r .root)
-npx 0g storage exists "$ROOT" --json
+npx @foundryprotocol/0gkit-cli init my-app && cd my-app && npm install
+npx @foundryprotocol/0gkit-cli doctor                              # preflight every 0G surface
+npx @foundryprotocol/0gkit-cli chain faucet 0xYourAddress          # galileo → points at faucet.0g.ai
+ROOT=$(npx @foundryprotocol/0gkit-cli storage put model.bin --json | jq -r .root)
+npx @foundryprotocol/0gkit-cli storage exists "$ROOT" --json
 ```
 
 The full command set, every flag, exit codes, and the env-var matrix are in

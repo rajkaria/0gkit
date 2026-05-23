@@ -30,11 +30,41 @@ import {
 } from "@foundryprotocol/0gkit-contracts";
 import { generate as generateContract } from "@foundryprotocol/0gkit-contracts/codegen";
 import { ConfigError } from "@foundryprotocol/0gkit-core";
-import { MemoryBackend } from "@foundryprotocol/0gkit-jobs/backends/memory";
-import { SqliteBackend } from "@foundryprotocol/0gkit-jobs/backends/sqlite";
 import { buildProgram, type ProgramDeps } from "./program.js";
 import { loadFoundry } from "./foundry-loader.js";
 import type { JobsBackendFactory, JobBackendLike } from "./commands/jobs.js";
+
+/**
+ * Optional jobs-backend loader. `@foundryprotocol/0gkit-jobs` is NOT a static
+ * dependency of the CLI because it transitively requires the native
+ * `better-sqlite3` (compiles for minutes on first install). Devs who never run
+ * `0g jobs *` should not pay that cost. Mirror of `loadFoundry()` — computed
+ * specifier means dependency-cruiser sees no edge, and `npm i
+ * @foundryprotocol/0gkit-cli` does not pull jobs by default.
+ */
+async function loadJobsBackend(
+  kind: "memory" | "sqlite",
+  path: string
+): Promise<JobBackendLike> {
+  const spec = ["@foundryprotocol", "0gkit-jobs", "backends", kind].join("/");
+  let mod: Record<string, unknown>;
+  try {
+    mod = (await import(/* @vite-ignore */ spec)) as Record<string, unknown>;
+  } catch {
+    throw new ConfigError(
+      `@foundryprotocol/0gkit-jobs is not installed (needed for "0g jobs ${kind === "memory" ? "status --backend memory" : "status --backend sqlite"}").`,
+      "Install it to enable jobs subcommands: `npm i @foundryprotocol/0gkit-jobs` (or `pnpm add @foundryprotocol/0gkit-jobs`). Memory backend has no native deps; sqlite backend will compile better-sqlite3 on install."
+    );
+  }
+  if (kind === "memory") {
+    const MemoryBackend = mod.MemoryBackend as new () => JobBackendLike;
+    return new MemoryBackend();
+  }
+  const SqliteBackend = mod.SqliteBackend as new (cfg: {
+    path: string;
+  }) => JobBackendLike;
+  return new SqliteBackend({ path });
+}
 
 type NetworkKey = "aristotle" | "galileo" | "local";
 
@@ -144,10 +174,8 @@ const deps: ProgramDeps = {
         () => false
       ),
   },
-  jobsBackendFactory: ((kind, path) => {
-    if (kind === "memory") return new MemoryBackend() as unknown as JobBackendLike;
-    return new SqliteBackend({ path }) as unknown as JobBackendLike;
-  }) satisfies JobsBackendFactory,
+  jobsBackendFactory: ((kind, path) =>
+    loadJobsBackend(kind, path)) satisfies JobsBackendFactory,
   // SP11: pure estimate helpers wired to the published estimate functions —
   // offline, no RPC. Used by `0g cost forecast`.
   storageEstimate: async (bytes) => makeStorageEstimate(bytes),

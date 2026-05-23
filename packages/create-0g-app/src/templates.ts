@@ -63,11 +63,18 @@ export function isValidCiOption(s: string): s is CiOption {
 }
 
 /**
- * Git ref the templates are fetched from. The release pipeline pins this
- * to the published version tag (e.g. `v0.3.x`) so `npm create 0gkit-app@latest`
- * always pulls a template matching the published toolkit.
+ * Git ref the templates are fetched from. Defaults to `main` (the always-green
+ * tip) because the v1.x release line uses per-package tags (e.g.
+ * `@foundryprotocol/0gkit-core@1.0.1`), not a floating `v1.0.x` tag — there
+ * is no single tag that tracks the latest stable workspace state. `main` is
+ * protected by CI (every PR runs the full lint/typecheck/build/test pipeline
+ * + `pnpm boundary:check` + `pnpm templates:check`), so consumers always pull
+ * a verified template snapshot.
+ *
+ * Override at the call site via `OGKIT_TEMPLATE_REF=<sha-or-tag>` to pin to
+ * a specific revision (recommended for reproducible builds).
  */
-const TEMPLATE_REF = process.env.OGKIT_TEMPLATE_REF ?? "v0.3.x";
+const TEMPLATE_REF = process.env.OGKIT_TEMPLATE_REF ?? "main";
 
 const TEMPLATE_REPO = "rajkaria/0gkit";
 

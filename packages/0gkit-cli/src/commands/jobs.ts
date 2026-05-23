@@ -26,7 +26,7 @@ export type JobsBackendKind = "memory" | "sqlite";
 export type JobsBackendFactory = (
   kind: JobsBackendKind,
   path: string
-) => JobBackendLike;
+) => JobBackendLike | Promise<JobBackendLike>;
 
 interface JobsOpts {
   backend: string;
@@ -55,7 +55,7 @@ export function registerJobs(program: Command, deps: ProgramDeps): void {
             "use --backend memory or --backend sqlite."
           );
         }
-        const backend = deps.jobsBackendFactory(opts.backend, opts.path);
+        const backend = await deps.jobsBackendFactory(opts.backend, opts.path);
         try {
           const rec = await backend.status(id);
           if (!rec) {
