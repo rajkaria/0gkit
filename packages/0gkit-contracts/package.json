@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-contracts",
-  "version": "1.0.1",
+  "version": "1.3.0",
   "description": "Typed contract clients for 0G. Five standard 0G contracts pre-bundled (ERC-20, ERC-721, Multicall3, provider registry, attestation verifier) plus `forge build` → typed TS codegen. Wagmi-style .read.method() / .write.method() / .events.Event(); no hand-written ABIs.",
   "license": "MIT",
   "homepage": "https://0gkit.com",
