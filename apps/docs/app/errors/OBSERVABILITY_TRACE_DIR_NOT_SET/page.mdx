@@ -1,0 +1,51 @@
+---
+title: OBSERVABILITY_TRACE_DIR_NOT_SET
+description: No trace directory configured for 0g traces.
+namespace: OBSERVABILITY
+---
+
+# OBSERVABILITY_TRACE_DIR_NOT_SET
+
+**No trace directory configured for `0g traces`.**
+
+## What happened
+
+You ran `0g traces list` or `0g traces inspect <id>` but neither the
+`OGKIT_TRACE_DIR` environment variable is set in your shell nor `--dir <path>`
+was passed on the command line. The CLI has no idea where to look for
+JSONL trace mirrors written by [`@foundryprotocol/0gkit-observability`](/packages/0gkit-observability#local-trace-mirror-ogkit_trace_dir).
+
+## How to fix
+
+Either point the env var at a directory the process that ran your 0gkit code
+wrote to:
+
+```bash
+export OGKIT_TRACE_DIR=.0gkit/traces
+0g traces list
+```
+
+…or pass it inline for a one-off look at a directory copied from a teammate:
+
+```bash
+0g traces list --dir ./shared-traces
+```
+
+If you haven't enabled the sink yet, set `OGKIT_TRACE_DIR` in the process
+that calls `instrument0g(...)` (a server, a script, a Vercel Function) and
+re-run that workload before listing. Off by default; opt-in only.
+
+## Example
+
+```bash
+$ 0g traces list
+✗ No trace directory configured.
+  → Set OGKIT_TRACE_DIR=<path> in the process that emitted spans, or pass --dir <path>.
+  Help: https://0gkit.com/errors/OBSERVABILITY_TRACE_DIR_NOT_SET
+```
+
+## Reference
+
+- Namespace: `OBSERVABILITY`
+- Help URL: `https://0gkit.com/errors/OBSERVABILITY_TRACE_DIR_NOT_SET`
+- See also: [`0g traces`](/cli#0g-traces) · [`OGKIT_TRACE_DIR`](/packages/0gkit-observability#local-trace-mirror-ogkit_trace_dir) · [all error codes](/errors)

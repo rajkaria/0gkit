@@ -1,0 +1,56 @@
+---
+title: OBSERVABILITY_TRACE_READ_FAILED
+description: Trace JSONL file could not be parsed.
+namespace: OBSERVABILITY
+---
+
+# OBSERVABILITY_TRACE_READ_FAILED
+
+**Trace JSONL file could not be parsed.**
+
+## What happened
+
+`0g traces inspect <id>` located the trace file in the configured directory
+but could not parse it. One of the JSONL lines is not valid JSON. Common
+causes:
+
+- **Truncated file.** The process was killed mid-write — the last line is
+  partial.
+- **Hand-edited file.** Someone opened the file, made changes, and
+  introduced a syntax error.
+- **Older toolkit version.** A trace mirrored by a pre-SP14 toolkit (if any
+  forward-port exists) does not match the JSONL contract.
+
+The error message includes the file path and the failing line number so
+you can spot the bad record:
+
+```
+✗ Could not read .0gkit/traces/2026-05-23-7f12ab.jsonl:
+  .0gkit/traces/2026-05-23-7f12ab.jsonl:7 is not valid JSON: Unexpected end of JSON input
+```
+
+## How to fix
+
+Easiest path — delete the file and re-run the workload with `OGKIT_TRACE_DIR`
+set so it regenerates cleanly:
+
+```bash
+rm .0gkit/traces/2026-05-23-7f12ab.jsonl
+OGKIT_TRACE_DIR=.0gkit/traces node ./your-handler.js
+0g traces list
+```
+
+If you can't reproduce the workload (e.g. the trace is from production):
+
+1. Open the JSONL file in an editor.
+2. Jump to the line number in the error message.
+3. Either fix the line so it parses as JSON, or delete it.
+4. Re-run `0g traces inspect <id>`.
+
+The JSONL contract is one record per line; blank lines are tolerated.
+
+## Reference
+
+- Namespace: `OBSERVABILITY`
+- Help URL: `https://0gkit.com/errors/OBSERVABILITY_TRACE_READ_FAILED`
+- See also: [`0g traces`](/cli#0g-traces) · [`OGKIT_TRACE_DIR`](/packages/0gkit-observability#local-trace-mirror-ogkit_trace_dir) · [all error codes](/errors)

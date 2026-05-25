@@ -88,6 +88,27 @@ export function registerCost(program: Command, deps: ProgramDeps): void {
               "Use --from-jaeger alone to aggregate real per-op costs from a trace, or use the synthesis flags to forecast hypothetical costs."
             );
           }
+          // SP14: `-` means read from stdin so `0g traces inspect <id> --json |
+          // 0g cost forecast --from-jaeger -` pipes cleanly.
+          if (opts.fromJaeger === "-") {
+            const stdinBytes = await deps.readStdin();
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(new TextDecoder().decode(stdinBytes));
+            } catch (err) {
+              throw new ConfigError(
+                `stdin is not valid JSON: ${
+                  err instanceof Error ? err.message : String(err)
+                }`,
+                `Pipe Jaeger JSON into the command: 0g traces inspect <id> --json | 0g cost forecast --from-jaeger -`
+              );
+            }
+            const forecast = aggregateJaegerDump(parsed);
+            return {
+              human: renderForecast(forecast, "<stdin>"),
+              json: forecastToJson(forecast, "<stdin>"),
+            };
+          }
           let raw: Uint8Array;
           try {
             raw = await deps.fs.readFile(opts.fromJaeger);

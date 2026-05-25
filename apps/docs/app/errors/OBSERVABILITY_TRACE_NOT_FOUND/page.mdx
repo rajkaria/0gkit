@@ -1,0 +1,59 @@
+---
+title: OBSERVABILITY_TRACE_NOT_FOUND
+description: Trace id not found in the configured trace directory.
+namespace: OBSERVABILITY
+---
+
+# OBSERVABILITY_TRACE_NOT_FOUND
+
+**Trace id not found in the configured trace directory.**
+
+## What happened
+
+`0g traces inspect <traceId>` was called with a trace id that does not match
+any `<YYYY-MM-DD>-<traceId>.jsonl` file in the resolved directory
+(`OGKIT_TRACE_DIR` or `--dir`).
+
+The most common causes:
+
+- **Typo in the id.** The id is the hex string after the date in the
+  filename (e.g. for `2026-05-23-7f12ab.jsonl` the id is `7f12ab`).
+- **Wrong directory.** You're looking in a different directory than the
+  process that emitted the spans wrote to.
+- **The workload never ran with `OGKIT_TRACE_DIR` set.** The sink is
+  opt-in; nothing is written unless the env var is set in the process that
+  calls `instrument0g(...)`.
+
+## How to fix
+
+Run `0g traces list` to see what is actually in the directory:
+
+```bash
+$ 0g traces list
+Traces in .0gkit/traces (3):
+  7f12ab...   spans=4   feeWei=1200   topOp=storage.upload
+  3a91cd...   spans=2   feeWei=400    topOp=compute.inference
+  ...
+```
+
+Pick a trace id from that list, or pass `--dir <path>` if you meant a
+different directory:
+
+```bash
+0g traces inspect 7f12ab --dir /tmp/teammate-traces
+```
+
+## Example
+
+```bash
+$ 0g traces inspect missing-id
+✗ Trace 'missing-id' not found in .0gkit/traces.
+  → Run `0g traces list` to see what is in the directory. Trace ids are the hex string after the date in the filename.
+  Help: https://0gkit.com/errors/OBSERVABILITY_TRACE_NOT_FOUND
+```
+
+## Reference
+
+- Namespace: `OBSERVABILITY`
+- Help URL: `https://0gkit.com/errors/OBSERVABILITY_TRACE_NOT_FOUND`
+- See also: [`0g traces`](/cli#0g-traces) · [all error codes](/errors)

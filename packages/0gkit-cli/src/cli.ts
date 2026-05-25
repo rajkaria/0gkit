@@ -30,6 +30,12 @@ import {
 } from "@foundryprotocol/0gkit-contracts";
 import { generate as generateContract } from "@foundryprotocol/0gkit-contracts/codegen";
 import { ConfigError } from "@foundryprotocol/0gkit-core";
+import {
+  defaultTraceDir as obsDefaultTraceDir,
+  listTraceFiles as obsListTraceFiles,
+  readTraceFile as obsReadTraceFile,
+  summarizeTrace as obsSummarizeTrace,
+} from "@foundryprotocol/0gkit-observability";
 import { buildProgram, type ProgramDeps } from "./program.js";
 import { loadFoundry } from "./foundry-loader.js";
 import type { JobsBackendFactory, JobBackendLike } from "./commands/jobs.js";
@@ -186,6 +192,15 @@ const deps: ProgramDeps = {
       maxOutputTokens,
     }),
   daEstimate: async (bytes) => daEstimateBytes(bytes),
+  // SP14 — read-back helpers from @foundryprotocol/0gkit-observability.
+  // The trace sink itself is a side-channel inside instrument0g; here we
+  // only need the pure file-read helpers, no OTel SDK setup.
+  tracesReader: {
+    defaultTraceDir: obsDefaultTraceDir,
+    listTraceFiles: obsListTraceFiles,
+    readTraceFile: obsReadTraceFile,
+    summarizeTrace: obsSummarizeTrace,
+  },
   readStdin,
   fetch: globalThis.fetch,
   cwd: () => process.cwd(),

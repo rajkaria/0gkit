@@ -55,6 +55,10 @@ export const ERROR_CODES = Object.freeze([
   "JOBS_WEBHOOK_BAD_SIGNATURE",
   // OBSERVABILITY_* (SP11)
   "OBSERVABILITY_EXPORTER_FAILED",
+  // OBSERVABILITY_* (SP14 — local trace explorer)
+  "OBSERVABILITY_TRACE_DIR_NOT_SET",
+  "OBSERVABILITY_TRACE_NOT_FOUND",
+  "OBSERVABILITY_TRACE_READ_FAILED",
 ] as const);
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

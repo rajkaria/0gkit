@@ -64,6 +64,7 @@ describe("buildProgram", () => {
         "init",
         "jobs",
         "storage",
+        "traces",
       ].sort()
     );
   });
