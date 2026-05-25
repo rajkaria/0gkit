@@ -1,5 +1,12 @@
 # @foundryprotocol/0gkit-wallet
 
+## 1.3.0
+
+### Patch Changes
+
+- Updated dependencies [c205c36]
+  - @foundryprotocol/0gkit-core@1.3.0
+
 ## 1.0.1
 
 ### Patch Changes
