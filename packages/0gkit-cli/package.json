@@ -38,6 +38,7 @@
     "@foundryprotocol/0gkit-core": "workspace:*",
     "@foundryprotocol/0gkit-da": "workspace:*",
     "@foundryprotocol/0gkit-devnet": "workspace:*",
+    "@foundryprotocol/0gkit-observability": "workspace:*",
     "@foundryprotocol/0gkit-storage": "workspace:*",
     "commander": "^14.0.0",
     "viem": "^2.21.0"

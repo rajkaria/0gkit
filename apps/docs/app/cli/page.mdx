@@ -227,6 +227,40 @@ Download a trace dump from the Jaeger UI (Trace → ⋮ → Download JSON) or hi
 the query API directly (`/api/traces/<id>`). The same parser works against any
 OTLP collector that exports the Jaeger JSON format.
 
+Pass `-` as the file path to read a Jaeger envelope from stdin — pipes
+cleanly from `0g traces inspect <id> --json` (see below).
+
+## `0g traces`
+
+Inspect local 0gkit trace JSONL files written by the `OGKIT_TRACE_DIR`
+opt-in mirror in `@foundryprotocol/0gkit-observability`. Off by default;
+when the env var is set, every instrumented span is written to
+`<dir>/<YYYY-MM-DD>-<traceId>.jsonl` in addition to your configured OTel
+exporter. Pure local sink — no network, no extra infra.
+
+| Subcommand                  | What it does                                                        |
+| --------------------------- | ------------------------------------------------------------------- |
+| `0g traces list [--last N]` | Show trace files newest-first with span count + fee total + top op. |
+| `0g traces inspect <id>`    | Pretty-print every span in a trace (op, fee, gas, attributes).      |
+
+### Quickstart
+
+```bash
+# In the process that runs your 0gkit code:
+export OGKIT_TRACE_DIR=.0gkit/traces
+
+# After requests have run:
+0g traces list --last 5
+0g traces inspect <traceId>
+
+# Replay one local trace as a cost forecast:
+0g traces inspect <traceId> --json | 0g cost forecast --from-jaeger -
+```
+
+Both subcommands accept `--dir <path>` to override `OGKIT_TRACE_DIR` for a
+one-off look at a directory copied from a teammate. `--json` is supported
+on both for piping into other tooling.
+
 ## `0g foundry …` (opt-in, hidden)
 
 The optional Foundry plugin namespace. Hidden unless `@foundryprotocol/mcp`

@@ -224,4 +224,50 @@ describe("0g cost forecast", () => {
       maxOutputTokens: undefined,
     });
   });
+
+  it("--from-jaeger - reads from stdin and aggregates (SP14)", async () => {
+    const stdinPayload = JSON.stringify({
+      data: [
+        {
+          traceID: "x",
+          spans: [
+            {
+              operationName: "0gkit.storage.upload",
+              tags: [
+                { key: "0gkit.op", value: "storage.upload" },
+                { key: "0gkit.fee_native", value: "777" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const { d, lines } = makeDeps({
+      readStdin: vi.fn(async () => new TextEncoder().encode(stdinPayload)),
+    });
+    const p = buildProgram(d);
+    p.exitOverride();
+    await p.parseAsync(["--json", "cost", "forecast", "--from-jaeger", "-"], {
+      from: "user",
+    });
+    const result = lastJson(lines);
+    expect(result.ok).toBe(true);
+    const byOp = result.byOp as Record<string, { totalFeeWei: string }>;
+    expect(byOp["storage.upload"].totalFeeWei).toBe("777");
+    expect(result.file).toBe("<stdin>");
+  });
+
+  it("--from-jaeger - throws ConfigError on invalid JSON via stdin (SP14)", async () => {
+    const { d, lines } = makeDeps({
+      readStdin: vi.fn(async () => new TextEncoder().encode("{not json")),
+    });
+    const p = buildProgram(d);
+    p.exitOverride();
+    await p.parseAsync(["--json", "cost", "forecast", "--from-jaeger", "-"], {
+      from: "user",
+    });
+    const result = lastJson(lines);
+    expect(result.ok).toBe(false);
+    expect(JSON.stringify(result)).toMatch(/stdin is not valid JSON/);
+  });
 });

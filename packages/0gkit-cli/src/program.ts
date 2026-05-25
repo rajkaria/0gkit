@@ -40,6 +40,12 @@ import { registerContracts } from "./commands/contracts.js";
 import { registerEstimate } from "./commands/estimate.js";
 import { registerJobs, type JobsBackendFactory } from "./commands/jobs.js";
 import { registerCost } from "./commands/cost.js";
+import { registerTraces } from "./commands/traces.js";
+import type {
+  TraceFileEntry,
+  TraceFileSummary,
+  TraceRecord,
+} from "@foundryprotocol/0gkit-observability";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -138,6 +144,17 @@ export interface ProgramDeps {
     maxOutputTokens?: number;
   }) => Promise<Estimate>;
   daEstimate: (bytes: number) => Promise<Estimate>;
+  /**
+   * SP14 — local trace explorer. The CLI reads JSONL trace mirrors written
+   * by `0gkit-observability` when `OGKIT_TRACE_DIR` is set. Wired through
+   * `ProgramDeps` so tests can inject fakes without touching the filesystem.
+   */
+  tracesReader: {
+    defaultTraceDir: () => string | null;
+    listTraceFiles: (dir: string) => Promise<TraceFileEntry[]>;
+    readTraceFile: (path: string) => Promise<TraceRecord[]>;
+    summarizeTrace: (id: string, recs: TraceRecord[]) => TraceFileSummary;
+  };
   fs: FsLike;
   readStdin: () => Promise<Uint8Array>;
   /** Injected so `0g doctor` reachability probes are testable (no real net). */
@@ -220,6 +237,7 @@ export function buildProgram(deps: ProgramDeps): Command {
   registerEstimate(program, deps);
   registerJobs(program, deps);
   registerCost(program, deps);
+  registerTraces(program, deps);
   registerFoundry(program, deps);
 
   return program;

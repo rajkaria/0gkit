@@ -15,6 +15,7 @@ describe("bundle size", () => {
       bundle: true,
       format: "esm",
       target: "es2022",
+      platform: "node",
       write: false,
       // Peers are externalised — users provide them.
       external: [

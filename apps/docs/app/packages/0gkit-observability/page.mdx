@@ -136,6 +136,24 @@ target set skips it; if you wire your own attestation client class, pass
 [`docs/DECISIONS.md` D32](https://github.com/rajkaria/0gkit/blob/main/docs/DECISIONS.md)
 for the rationale.
 
+## Local trace mirror (`OGKIT_TRACE_DIR`)
+
+Set `OGKIT_TRACE_DIR=<path>` in the process that calls `instrument0g(...)`
+and every span will be mirrored as one JSON line to
+`<path>/<YYYY-MM-DD>-<traceId>.jsonl`, in addition to your configured OTel
+exporter. Off by default — pure opt-in, no network, no extra infra.
+
+```bash
+export OGKIT_TRACE_DIR=.0gkit/traces
+node ./your-handler.js
+0g traces list
+```
+
+The sink is fire-and-forget: a full disk or permissions error never crashes
+the handler. The CLI's [`0g traces`](/cli#0g-traces) subcommand reads these
+files back, and `0g traces inspect <id> --json | 0g cost forecast --from-jaeger -`
+replays one local trace as a real per-op cost breakdown.
+
 ## Bundle size
 
 The public entry bundles to ≤ 20 KB gzipped. Asserted by

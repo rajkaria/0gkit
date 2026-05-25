@@ -465,3 +465,99 @@ describe("wrap.ts — edge cases", () => {
     expect(exporter.getFinishedSpans()).toHaveLength(0);
   });
 });
+
+describe("instrument + trace-sink JSONL mirror", () => {
+  const ENV_KEY = "OGKIT_TRACE_DIR";
+  let dir: string;
+  let original: string | undefined;
+
+  beforeEach(async () => {
+    const { mkdtemp } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    dir = await mkdtemp(join(tmpdir(), "ogkit-instrument-sink-"));
+    original = process.env[ENV_KEY];
+    process.env[ENV_KEY] = dir;
+  });
+
+  afterEach(async () => {
+    if (original === undefined) delete process.env[ENV_KEY];
+    else process.env[ENV_KEY] = original;
+    disinstrument0g();
+    const { rm } = await import("node:fs/promises");
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("mirrors a successful span to <dir>/<date>-<traceId>.jsonl when OGKIT_TRACE_DIR is set", async () => {
+    const { readdir, readFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    class LocalFakeStorage {
+      network = "galileo";
+      async upload(_b: Uint8Array, _opts?: { dryRun?: boolean }) {
+        return {
+          root: "0xabc",
+          tx: { hash: "0xdef", blockNumber: 1, latencyMs: 1 },
+        };
+      }
+    }
+    const provider = new BasicTracerProvider();
+    provider.addSpanProcessor(new SimpleSpanProcessor(new InMemorySpanExporter()));
+    trace.setGlobalTracerProvider(provider);
+    await instrument0g({
+      mode: "attach",
+      targets: { storage: { class: LocalFakeStorage, methods: ["upload"] } },
+    });
+    await new LocalFakeStorage().upload(new Uint8Array([1, 2, 3]));
+    const files = await readdir(dir);
+    expect(files).toHaveLength(1);
+    expect(files[0]!).toMatch(/^\d{4}-\d{2}-\d{2}-[0-9a-f]+\.jsonl$/);
+    const content = await readFile(join(dir, files[0]!), "utf8");
+    const rec = JSON.parse(content.trim());
+    expect(rec.name).toBe("0gkit.storage.upload");
+    expect(rec.status).toBe("ok");
+    expect(rec.attributes["0gkit.op"]).toBe("storage.upload");
+    expect(rec.attributes["0gkit.size_bytes"]).toBe(3);
+  });
+
+  it("mirrors an errored span with status=error", async () => {
+    const { readdir, readFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    class BrokenStorage {
+      network = "galileo";
+      async upload(_b: Uint8Array) {
+        const err = new Error("nope") as Error & { code?: string };
+        err.code = "STORAGE_UPLOAD_FAILED";
+        throw err;
+      }
+    }
+    await instrument0g({
+      mode: "attach",
+      targets: { storage: { class: BrokenStorage, methods: ["upload"] } },
+    });
+    await expect(new BrokenStorage().upload(new Uint8Array([9]))).rejects.toThrow(
+      /nope/
+    );
+    const files = await readdir(dir);
+    expect(files).toHaveLength(1);
+    const rec = JSON.parse((await readFile(join(dir, files[0]!), "utf8")).trim());
+    expect(rec.status).toBe("error");
+    expect(rec.attributes["0gkit.error_code"]).toBe("STORAGE_UPLOAD_FAILED");
+  });
+
+  it("does NOT mirror when OGKIT_TRACE_DIR is unset", async () => {
+    const { readdir } = await import("node:fs/promises");
+    delete process.env[ENV_KEY];
+    class FakeS {
+      network = "galileo";
+      async upload(_b: Uint8Array) {
+        return { root: "0x", tx: { hash: "0x", blockNumber: 0, latencyMs: 0 } };
+      }
+    }
+    await instrument0g({
+      mode: "attach",
+      targets: { storage: { class: FakeS, methods: ["upload"] } },
+    });
+    await new FakeS().upload(new Uint8Array([1]));
+    expect(await readdir(dir)).toEqual([]);
+  });
+});
