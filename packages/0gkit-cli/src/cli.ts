@@ -1,4 +1,7 @@
 import { readFile, writeFile, mkdir, readdir, access } from "node:fs/promises";
+import { readFileSync, existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { CommanderError } from "commander";
 import { createClient, getNetwork } from "@foundryprotocol/0gkit-core";
 import {
@@ -36,7 +39,7 @@ import {
   readTraceFile as obsReadTraceFile,
   summarizeTrace as obsSummarizeTrace,
 } from "@foundryprotocol/0gkit-observability";
-import { buildProgram, type ProgramDeps } from "./program.js";
+import { buildProgram, VERSION as CLI_VERSION, type ProgramDeps } from "./program.js";
 import { loadFoundry } from "./foundry-loader.js";
 import type { JobsBackendFactory, JobBackendLike } from "./commands/jobs.js";
 
@@ -89,6 +92,69 @@ async function readStdin(): Promise<Uint8Array> {
   const chunks: Buffer[] = [];
   for await (const c of process.stdin) chunks.push(c as Buffer);
   return new Uint8Array(Buffer.concat(chunks));
+}
+
+const KNOWN_0GKIT_PACKAGES = [
+  "@foundryprotocol/0gkit-core",
+  "@foundryprotocol/0gkit-chain",
+  "@foundryprotocol/0gkit-storage",
+  "@foundryprotocol/0gkit-compute",
+  "@foundryprotocol/0gkit-da",
+  "@foundryprotocol/0gkit-attestation",
+  "@foundryprotocol/0gkit-contracts",
+  "@foundryprotocol/0gkit-devnet",
+  "@foundryprotocol/0gkit-observability",
+] as const;
+
+/**
+ * Walk up from a resolved module file URL to the nearest `package.json` whose
+ * `name` matches. Works for ESM-only packages whose `exports` field doesn't
+ * list `./package.json`, which is most of the `@foundryprotocol/0gkit-*` set.
+ */
+function findPackageJsonForName(name: string): string | null {
+  // `import.meta.resolve` is sync + stable as of Node 20.6 — returns a `file://` URL.
+  let entryUrl: string;
+  try {
+    entryUrl = import.meta.resolve(name);
+  } catch {
+    return null;
+  }
+  let dir = dirname(fileURLToPath(entryUrl));
+  for (let i = 0; i < 10; i++) {
+    const candidate = join(dir, "package.json");
+    if (existsSync(candidate)) {
+      try {
+        const pkg = JSON.parse(readFileSync(candidate, "utf8")) as { name?: string };
+        if (pkg.name === name) return candidate;
+      } catch {
+        // ignore parse failure; keep walking up
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+  return null;
+}
+
+function readPackageVersions(): Array<{ name: string; version: string }> {
+  // The CLI's own version is always known from its package.json (read at module
+  // load by program.ts). pnpm workspace symlinks plus restricted `exports`
+  // fields mean we can't always resolve the CLI's own package via name lookup.
+  const out: Array<{ name: string; version: string }> = [
+    { name: "@foundryprotocol/0gkit-cli", version: CLI_VERSION },
+  ];
+  for (const name of KNOWN_0GKIT_PACKAGES) {
+    const pkgPath = findPackageJsonForName(name);
+    if (!pkgPath) continue;
+    try {
+      const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
+      if (pkg.version) out.push({ name, version: pkg.version });
+    } catch {
+      // Package not installed or unreadable; skip.
+    }
+  }
+  return out;
 }
 
 const deps: ProgramDeps = {
@@ -208,6 +274,10 @@ const deps: ProgramDeps = {
   isTTY: process.stdout.isTTY === true,
   noColor: process.env.NO_COLOR != null,
   write: (line) => process.stdout.write(line + "\n"),
+  argv: process.argv.slice(2),
+  writeErr: (line) => process.stderr.write(line + "\n"),
+  packageVersions: readPackageVersions,
+  now: () => new Date(),
 };
 
 try {
