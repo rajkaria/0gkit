@@ -6,6 +6,7 @@ export interface GlobalFlags {
   privateKey?: string;
   json?: boolean;
   foundry?: boolean;
+  copyIssueContext?: boolean;
 }
 
 export interface CliContext {
@@ -14,6 +15,7 @@ export interface CliContext {
   privateKey?: string;
   json: boolean;
   foundry: boolean;
+  copyIssueContext: boolean;
 }
 
 const KNOWN: readonly NetworkName[] = ["aristotle", "galileo", "local"];
@@ -35,5 +37,6 @@ export function resolveContext(
     privateKey: flags.privateKey ?? env.ZEROG_PRIVATE_KEY,
     json: flags.json === true,
     foundry: flags.foundry === true,
+    copyIssueContext: flags.copyIssueContext === true,
   };
 }

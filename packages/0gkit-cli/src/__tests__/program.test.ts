@@ -1,8 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
-import { buildProgram, type ProgramDeps } from "../program.js";
+import { Command } from "commander";
+import { ZeroGError } from "@foundryprotocol/0gkit-core";
+import { buildProgram, runCommand, type ProgramDeps } from "../program.js";
 
 function fakeDeps(over: Partial<ProgramDeps> = {}): ProgramDeps {
   const lines: string[] = [];
+  const errLines: string[] = [];
   return {
     createClient: vi.fn(),
     getNetwork: vi.fn(),
@@ -41,7 +44,12 @@ function fakeDeps(over: Partial<ProgramDeps> = {}): ProgramDeps {
     isTTY: false,
     noColor: true,
     write: (s: string) => lines.push(s),
+    argv: [],
+    writeErr: (s: string) => errLines.push(s),
+    packageVersions: () => [],
+    now: () => new Date("2026-01-01T00:00:00.000Z"),
     _lines: lines,
+    _errLines: errLines,
     ...over,
   } as unknown as ProgramDeps;
 }
@@ -120,6 +128,56 @@ describe("buildProgram", () => {
       },
     });
     expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});
+
+describe("runCommand --copy-issue-context", () => {
+  it("emits a redacted markdown block to stderr on ZeroGError when flag set", async () => {
+    const errLines: string[] = [];
+    const deps = fakeDeps({
+      writeErr: (s: string) => errLines.push(s),
+      argv: ["storage", "put", "./x.bin", "--private-key", "0xdeadbeef"],
+      packageVersions: () => [
+        { name: "@foundryprotocol/0gkit-cli", version: "1.3.0" },
+      ],
+      now: () => new Date("2026-05-26T05:00:00.000Z"),
+    });
+    const cmd = new Command();
+    cmd.option("--copy-issue-context", "");
+    cmd.parse(["--copy-issue-context"], { from: "user" });
+
+    await runCommand(deps, cmd, async () => {
+      throw new ZeroGError(
+        "STORAGE_QUOTA_EXCEEDED",
+        "Storage quota exceeded.",
+        "Reduce upload size."
+      );
+    });
+
+    const blob = errLines.join("\n");
+    expect(blob).toContain("### 0gkit error report");
+    expect(blob).toContain("STORAGE_QUOTA_EXCEEDED");
+    expect(blob).toContain("--private-key <redacted>");
+    expect(blob).not.toContain("0xdeadbeef");
+    process.exitCode = 0;
+  });
+
+  it("does NOT emit the report when --copy-issue-context is absent", async () => {
+    const errLines: string[] = [];
+    const deps = fakeDeps({
+      writeErr: (s: string) => errLines.push(s),
+      argv: ["storage", "put", "./x.bin"],
+    });
+    const cmd = new Command();
+    cmd.option("--copy-issue-context", "");
+    cmd.parse([], { from: "user" });
+
+    await runCommand(deps, cmd, async () => {
+      throw new ZeroGError("STORAGE_QUOTA_EXCEEDED", "Boom.", "Fix it.");
+    });
+
+    expect(errLines.join("\n")).toBe("");
     process.exitCode = 0;
   });
 });

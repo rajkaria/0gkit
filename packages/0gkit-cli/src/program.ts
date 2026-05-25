@@ -164,6 +164,15 @@ export interface ProgramDeps {
   isTTY: boolean;
   noColor: boolean;
   write: (line: string) => void;
+  /** Original argv (without bin name) used to render the issue-context CLI line. */
+  argv: readonly string[];
+  /** Side-channel for the issue-context report. Goes to stderr in production
+   *  so it never pollutes `--json` stdout. Tests inject a recorder. */
+  writeErr: (line: string) => void;
+  /** Resolves installed `@foundryprotocol/0gkit-*` versions for issue-context. */
+  packageVersions: () => Array<{ name: string; version: string }>;
+  /** Injected for deterministic timestamps in issue-context. */
+  now: () => Date;
 }
 
 /** Build the resolved context + output sink for one command invocation. */
@@ -189,22 +198,45 @@ export async function runCommand(
   try {
     out.success(await body(context));
   } catch (err) {
+    let rendered: { code: string; message: string; hint: string; helpUrl: string };
+    let stack: string | undefined;
     if (err instanceof ZeroGError) {
-      out.failure({
+      rendered = {
         code: err.code,
         message: err.message,
         hint: err.hint,
         helpUrl: err.helpUrl,
-      });
+      };
+      stack = err.stack;
     } else {
-      const e = err as { code?: string; message?: string; hint?: string };
+      const e = err as {
+        code?: string;
+        message?: string;
+        hint?: string;
+        stack?: string;
+      };
       const fallbackCode = "CONFIG_INVALID_ARGUMENT";
-      out.failure({
+      rendered = {
         code: e.code ?? fallbackCode,
         message: e.message ?? String(err),
         hint: e.hint ?? "Unexpected error — re-run with --json for the raw shape.",
         helpUrl: helpUrlFor((e.code as never) ?? fallbackCode),
+      };
+      stack = e.stack;
+    }
+    out.failure(rendered);
+    if (context.copyIssueContext) {
+      const { buildIssueContext } = await import("./issue-context.js");
+      const { release } = await import("node:os");
+      const md = buildIssueContext({
+        error: { ...rendered, stack },
+        argv: deps.argv,
+        node: process.version,
+        os: `${process.platform} ${release()}`,
+        packages: deps.packageVersions(),
+        now: deps.now(),
       });
+      deps.writeErr(md);
     }
     process.exitCode = 1;
   }
@@ -221,6 +253,10 @@ export function buildProgram(deps: ProgramDeps): Command {
     .option("--private-key <hex>", "signer key (or env ZEROG_PRIVATE_KEY)")
     .option("--json", "machine-readable JSON output")
     .option("--foundry", "force-show the optional Foundry plugin namespace")
+    .option(
+      "--copy-issue-context",
+      "on error, print a redacted markdown report to stderr — paste into a new GitHub issue"
+    )
     // Ensure subcommands inherit exit-override so commander throws rather than
     // calling process.exit — required for requiredOption validation in tests.
     .exitOverride();
