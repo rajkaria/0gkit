@@ -37,3 +37,8 @@ export {
   type Estimate,
   type DryRunResult,
 } from "./estimate.js";
+export {
+  define0GConfig,
+  type DefineConfigOptions,
+  type DefinedConfig,
+} from "./define-config.js";
