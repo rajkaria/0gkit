@@ -74,3 +74,9 @@ keccak digest, so they verify identically on-chain. See
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.
+
+## What next?
+
+1. **Integrate** — wire `verifyEnvelope` into your own server's request middleware to gate trust on TEE-attested receipts.
+2. **Extend** — swap the demo key for your provider's real coordinator key; persist verified envelopes to 0G Storage as a forensic trail.
+3. **Read more** — see the [signed envelopes concept doc](https://docs.0gkit.com/concepts/signed-envelopes) for the full attestation flow.

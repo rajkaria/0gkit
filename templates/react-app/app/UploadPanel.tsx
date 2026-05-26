@@ -2,11 +2,16 @@
 
 import { useState } from "react";
 import { useUpload } from "@foundryprotocol/0gkit-react";
+import { printFirstSuccess } from "@foundryprotocol/0gkit-core";
+import { config } from "../0g.config.js";
 
-const NETWORK = (process.env.NEXT_PUBLIC_ZEROG_NETWORK ?? "galileo") as
-  | "galileo"
-  | "aristotle";
-const DEMO_KEY = process.env.NEXT_PUBLIC_DEMO_PRIVATE_KEY;
+const env = config.client(process.env as Record<string, string | undefined>);
+// useUpload SDK currently accepts only "galileo" | "aristotle"; "local" is
+// surfaced through unchanged so users hit a clear SDK error rather than a
+// silent retarget to mainnet.
+const NETWORK = env.NEXT_PUBLIC_ZEROG_NETWORK as "galileo" | "aristotle";
+const DEMO_KEY = env.NEXT_PUBLIC_DEMO_PRIVATE_KEY;
+let bannerEmitted = false;
 
 export function UploadPanel() {
   const [file, setFile] = useState<File | null>(null);
@@ -23,7 +28,15 @@ export function UploadPanel() {
     const bytes = new Uint8Array(await file.arrayBuffer());
     // The runner both updates reactive state AND returns/rejects, so we can
     // await it directly. Swallow the rejection — `up.error` renders it.
-    await up.upload(bytes).catch(() => {});
+    const result = await up.upload(bytes).catch(() => undefined);
+    if (result && !bannerEmitted) {
+      bannerEmitted = true;
+      printFirstSuccess({
+        op: "storage.upload",
+        id: result.root,
+        note: `network=${NETWORK}`,
+      });
+    }
   }
 
   const disabled = !file || up.loading || !DEMO_KEY;

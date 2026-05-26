@@ -75,3 +75,9 @@ npm run build && npm start
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.
+
+## What next?
+
+1. **Deploy** — `vercel deploy`. Drop `NEXT_PUBLIC_DEMO_PRIVATE_KEY` in production — proxy uploads through a server route instead.
+2. **Extend** — add `useInference` for a chat UI and `useEvent` for a live event feed; replace the demo key with wallet-signed uploads via `0gkit-wallet-react`.
+3. **Migrate to mainnet** — `NEXT_PUBLIC_ZEROG_NETWORK=aristotle`, rebuild.

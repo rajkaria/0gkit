@@ -16,8 +16,14 @@
  */
 import { create0gMcpServer } from "@foundryprotocol/0gkit-mcp";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { printFirstSuccess } from "@foundryprotocol/0gkit-core";
+import { config } from "../0g.config.js";
 
 async function main(): Promise<void> {
+  // Validate env up-front via the typed config so a misconfigured runtime
+  // surfaces a clear ConfigError before the MCP transport opens.
+  const env = config.server();
+
   // Foundry is opt-in and absent unless ZEROG_FOUNDRY=1 is set. Pass
   // `{ foundryPlugin: null }` to create0gMcpServer() to force-disable it.
   const server = await create0gMcpServer();
@@ -25,6 +31,17 @@ async function main(): Promise<void> {
   await server.connect(transport);
 
   // stdout is the MCP wire; log status to stderr so it doesn't corrupt it.
+  // printFirstSuccess writes via console.log by default — route it to stderr
+  // so the wire stays clean for protocol traffic.
+  const stderrSink = (line: string) => console.error(line);
+  printFirstSuccess(
+    {
+      op: "mcp.connect",
+      id: "stdio",
+      note: `network=${env.ZEROG_NETWORK}`,
+    },
+    stderrSink
+  );
   console.error(
     "0gkit MCP server connected over stdio. " +
       "Tools: og_storage_put, og_storage_get, og_storage_exists, og_infer, " +

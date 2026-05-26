@@ -69,3 +69,9 @@ returns `{ output, receipt }`. A drop-in OpenAI shim is also available via
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.
+
+## What next?
+
+1. **Deploy as a cron** — wrap `main()` in a Vercel Cron route; persist the result to KV or 0G Storage.
+2. **Extend to streaming** — swap `compute.inference` for `compute.inferenceStream` and pipe tokens to the client.
+3. **Migrate to mainnet** — `ZEROG_NETWORK=aristotle`, top up the broker, re-run.

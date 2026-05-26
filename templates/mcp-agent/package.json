@@ -5,14 +5,17 @@
   "type": "module",
   "description": "Wire the neutral @foundryprotocol/0gkit-mcp server into an agent runtime (Claude Desktop, Cursor, programmatic).",
   "scripts": {
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "engines": {
     "node": ">=20.10"
   },
   "dependencies": {
+    "@foundryprotocol/0gkit-core": "^1.0.0",
     "@foundryprotocol/0gkit-mcp": "^1.0.0",
-    "@modelcontextprotocol/sdk": "^1.0.4"
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
