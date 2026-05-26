@@ -19,9 +19,13 @@ Confirm the exporter endpoint + headers (e.g. `OTEL_EXPORTER_OTLP_HEADERS`) are 
 ## Example
 
 ```ts
-// SP11 — wire instrument0g
 import { instrument0g } from "@foundryprotocol/0gkit-observability";
-instrument0g({ exporter: "otlp", endpoint: process.env.OTEL_URL });
+
+await instrument0g({
+  serviceName: "my-app",
+  exporter: { kind: "otlp", endpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT! },
+});
+// If the OTLP endpoint is unreachable on first flush, the SDK throws OBSERVABILITY_EXPORTER_FAILED.
 ```
 
 ## Reference

@@ -22,14 +22,15 @@ npx @foundryprotocol/0gkit-cli doctor
 
 These apply to every command and are inherited by subcommands.
 
-| Flag                  | Env                 | Default    | Meaning                                           |
-| --------------------- | ------------------- | ---------- | ------------------------------------------------- |
-| `--network <name>`    | `ZEROG_NETWORK`     | `galileo`  | `aristotle` \| `galileo` \| `local`.              |
-| `--rpc <url>`         | `ZEROG_RPC_URL`     | preset RPC | Override the network RPC URL.                     |
-| `--private-key <hex>` | `ZEROG_PRIVATE_KEY` | _(none)_   | Signer key (funds storage tx).                    |
-| `--json`              | —                   | off        | Machine-readable JSON output.                     |
-| `--foundry`           | —                   | off        | Force-show the optional Foundry plugin namespace. |
-| `--version`           | —                   | —          | Prints the installed CLI version.                 |
+| Flag                   | Env                 | Default    | Meaning                                                        |
+| ---------------------- | ------------------- | ---------- | -------------------------------------------------------------- |
+| `--network <name>`     | `ZEROG_NETWORK`     | `galileo`  | `aristotle` \| `galileo` \| `local`.                           |
+| `--rpc <url>`          | `ZEROG_RPC_URL`     | preset RPC | Override the network RPC URL.                                  |
+| `--private-key <hex>`  | `ZEROG_PRIVATE_KEY` | _(none)_   | Signer key (funds storage tx).                                 |
+| `--json`               | —                   | off        | Machine-readable JSON output.                                  |
+| `--foundry`            | —                   | off        | Force-show the optional Foundry plugin namespace.              |
+| `--copy-issue-context` | —                   | off        | On error, also print a redacted markdown report to **stderr**. |
+| `--version`            | —                   | —          | Prints the installed CLI version.                              |
 
 Precedence: **flag > env > preset default**. Additional env vars:
 `ZEROG_BROKER_KEY`, `ZEROG_PROVIDER` (for `infer`).
@@ -42,6 +43,26 @@ Precedence: **flag > env > preset default**. Additional env vars:
 - **Exit code `0`** on success. **Exit code `1`** when a command throws
   (any `ZeroGError`), when `0g doctor` has a failing required check, or when
   `0g attest verify` does not verify.
+
+## Debugging: `--copy-issue-context`
+
+Any `0g` command accepts `--copy-issue-context`. When the command throws a `ZeroGError`, the normal error output still goes to stdout; in addition, a markdown report is written to **stderr**, suitable for pasting straight into a new GitHub issue.
+
+The report contains:
+
+- Error `code`, `message`, `hint`, and `helpUrl`.
+- The CLI invocation, with `--private-key` redacted and URL userinfo stripped from `--rpc`.
+- Node.js version, OS, and a timestamp.
+- Versions of all installed `@foundryprotocol/0gkit-*` packages.
+- The top 10 frames of the stack.
+
+```bash
+# Run normally — error to stdout, report to stderr.
+0g storage put ./big.bin --copy-issue-context
+
+# Capture only the report:
+0g storage put ./big.bin --copy-issue-context 2> issue.md
+```
 
 ## `0g init [name]`
 

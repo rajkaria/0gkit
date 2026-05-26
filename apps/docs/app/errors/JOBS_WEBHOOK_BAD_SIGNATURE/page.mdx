@@ -19,8 +19,10 @@ Confirm both sides are using the same secret + canonical-JSON serialization. The
 ## Example
 
 ```ts
-import { verifyWebhookSignature } from "@foundryprotocol/0gkit-jobs"; // SP10
-const ok = verifyWebhookSignature(body, secret, sig);
+import { jobs } from "@foundryprotocol/0gkit-jobs";
+
+const ok = jobs.verifyWebhook(rawBody, headerSig, secret);
+if (!ok) throw new Error("JOBS_WEBHOOK_BAD_SIGNATURE");
 ```
 
 ## Reference

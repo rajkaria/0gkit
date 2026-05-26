@@ -138,9 +138,7 @@ describe("runCommand --copy-issue-context", () => {
     const deps = fakeDeps({
       writeErr: (s: string) => errLines.push(s),
       argv: ["storage", "put", "./x.bin", "--private-key", "0xdeadbeef"],
-      packageVersions: () => [
-        { name: "@foundryprotocol/0gkit-cli", version: "1.3.0" },
-      ],
+      packageVersions: () => [{ name: "@foundryprotocol/0gkit-cli", version: "1.3.0" }],
       now: () => new Date("2026-05-26T05:00:00.000Z"),
     });
     const cmd = new Command();

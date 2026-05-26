@@ -19,14 +19,19 @@ Inspect the job's `error` field for the original stack. Fix the handler bug (or 
 ## Example
 
 ```ts
-// SP10 — define with retries
-jobs.define(
-  "upload",
-  async (input) => {
-    /* ... */
+import { jobs } from "@foundryprotocol/0gkit-jobs";
+import { z } from "zod";
+
+const broken = jobs.define({
+  name: "broken",
+  input: z.object({}),
+  output: z.object({}),
+  maxAttempts: 3,
+  handler: async () => {
+    throw new Error("boom");
   },
-  { retries: 3 }
-);
+});
+// After maxAttempts exhausted, the runner records JOBS_HANDLER_THREW on the row.
 ```
 
 ## Reference

@@ -19,8 +19,12 @@ Verify the backend is healthy. For Redis, ping with `redis-cli`. For sqlite, che
 ## Example
 
 ```ts
-// Pre-SP10 stub — surface for forward-compat
-import { JobRunner } from "@foundryprotocol/0gkit-jobs"; // ships in SP10
+import { JobRunner } from "@foundryprotocol/0gkit-jobs";
+import { SqliteBackend } from "@foundryprotocol/0gkit-jobs/backends/sqlite";
+
+const runner = new JobRunner({ backend: new SqliteBackend({ path: ".jobs.db" }) });
+await runner.start();
+// If the sqlite file lives on an unwritable disk this throws JOBS_BACKEND_UNREACHABLE.
 ```
 
 ## Reference
