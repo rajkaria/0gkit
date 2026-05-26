@@ -78,15 +78,6 @@ pnpm test
 Six tests cover the wire-format codec at 100% lines / ≥ 80% branches. No
 network needed.
 
-## Next steps
-
-- Add per-room channels by emitting `MessagePosted(author, root, ts, room)`
-  and filtering `useEvent` by `args.room`.
-- Move the upload from server-side to client-side using a wallet-react hook
-  once you don't need a privileged server key.
-- Migrate long uploads onto `@foundryprotocol/0gkit-jobs` (SP10) when it
-  ships.
-
 ## Deploy on Vercel
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frajkaria%2F0gkit%2Ftree%2Fmain%2Ftemplates%2Fchat&project-name=0gkit-chat&env=NETWORK%2CPRIVATE_KEY&envDescription=See%20docs.0gkit.com%20env%20vars&envLink=https%3A%2F%2Fdocs.0gkit.com%2Fgetting-started%2Fenv-vars)
@@ -97,5 +88,5 @@ env vars, and deploy in under 60 seconds on Fluid Compute.
 ## What next?
 
 1. **Deploy** — `vercel deploy`. Configure `PRIVATE_KEY` + `NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS` in the Vercel dashboard.
-2. **Extend** — per-room channels: keyed by a room id in the `MessagePosted` event topic; client-side signing via `0gkit-wallet-react` for true user identity.
+2. **Extend** — per-room channels by emitting `MessagePosted(author, root, ts, room)` and filtering `useEvent` by `args.room`; client-side signing via `0gkit-wallet-react` once you don't need a privileged server key; long uploads on `@foundryprotocol/0gkit-jobs`.
 3. **Migrate to mainnet** — deploy `MessageRegistry` to aristotle, paste its address into both env files, redeploy.
