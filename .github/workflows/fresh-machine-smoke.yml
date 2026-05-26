@@ -108,3 +108,22 @@ jobs:
           else
             echo "Template doesn't depend on 0gkit-cli — skipping --version check."
           fi
+
+      - name: First-success banner (storage-app only)
+        if: matrix.template == 'storage-app'
+        run: |
+          set -euo pipefail
+          cd $(find /tmp -maxdepth 3 -name demo -type d | head -1)
+          # Provide the bare minimum env to satisfy define0GConfig schemas.
+          cat > .env <<'EOF'
+          ZEROG_NETWORK=galileo
+          PRIVATE_KEY=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          EOF
+          LOG=$(mktemp)
+          timeout --preserve-status 60s npm run dev 2>&1 | tee "$LOG" || true
+          if ! grep -F '[0gkit:first-success]' "$LOG"; then
+            echo "::warning::First-success banner not observed in 60s — banner fires after a live storage upload; lenient gate until devnet boot lands in the storage SDK"
+            tail -50 "$LOG"
+          else
+            echo "✓ first-success banner observed"
+          fi

@@ -33,8 +33,6 @@ export const MESSAGE_REGISTRY_ABI = [
   },
 ] as const;
 
-const clientEnv = config.client(
-  process.env as Record<string, string | undefined>
-);
+const clientEnv = config.client(process.env as Record<string, string | undefined>);
 export const MESSAGE_REGISTRY_ADDRESS =
   clientEnv.NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS as `0x${string}`;

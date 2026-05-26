@@ -5,6 +5,7 @@
 **Goal:** Ship `define0GConfig` (typed, zod-validated env reader) in `0gkit-core`, adopt it across all 9 templates with auto-detect of local devnet + first-success banner + "What next?" README, and gate the banner in `fresh-machine-smoke` CI.
 
 **Architecture:**
+
 1. **`0gkit-core` gains three small additions:** `define0GConfig({ server, client, edge })` returns a typed parser per slot using zod; `detectLocalDevnet({ rpcUrl })` probes a chainId; `printFirstSuccess({ op, id })` renders a boxed terminal banner with marker `[0gkit:first-success]` so CI grep is reliable.
 2. **Every template** ships `0g.config.ts` (or `src/config.ts` for non-Node-CLI shapes) that calls `define0GConfig(...)`, a refreshed `.env.example` derived from that schema, an auto-devnet bootstrapping snippet in the entry file, a `printFirstSuccess(...)` call on the first 0G op, and a "What next?" README block with three concrete next steps.
 3. **`fresh-machine-smoke.yml`** runs `npm run dev` (with a 60s timeout and dummy env) for `storage-app` + `chat` and grep-asserts `[0gkit:first-success]` appears.
@@ -12,6 +13,7 @@
 **Tech Stack:** TypeScript ESM, zod ^3.23.x, vitest, tsup, Node ≥20, viem for the chainId probe. All Node built-ins for ANSI box drawing.
 
 **Decisions captured (per roadmap):**
+
 - D59 — `define0GConfig` lives in `0gkit-core`; no new package.
 - D71 (new) — First-success banner is opt-in via `printFirstSuccess()` helper (a single function call, not auto-wrap). Marker token `[0gkit:first-success]` is part of the public contract so CI / log scrapers can pin to it.
 - D72 (new) — `detectLocalDevnet()` is a pure chainId probe (no doctor shell-out). Templates call it on boot; if local responds with the local preset's chainId they use `network: "local"`; otherwise fall back to `network: "galileo"` with a `console.warn` line.
@@ -22,6 +24,7 @@
 ## File Structure
 
 **New files:**
+
 - `packages/0gkit-core/src/define-config.ts` — `define0GConfig` + types.
 - `packages/0gkit-core/src/detect-devnet.ts` — `detectLocalDevnet`.
 - `packages/0gkit-core/src/first-success.ts` — `printFirstSuccess`.
@@ -40,6 +43,7 @@
 - `.changeset/sp16-define0gconfig-golden-path.md`
 
 **Modified files:**
+
 - `packages/0gkit-core/src/index.ts` — re-export new APIs.
 - `packages/0gkit-core/package.json` — add `zod` dep.
 - `packages/0gkit-core/tsup.config.ts` — ensure zod stays external (or bundled — zod has no node deps so either works; default tsup behavior leaves deps external).
@@ -54,6 +58,7 @@
 ## Task 1: `define0GConfig` core API (TDD)
 
 **Files:**
+
 - Create: `packages/0gkit-core/src/define-config.ts`
 - Create: `packages/0gkit-core/src/__tests__/define-config.test.ts`
 - Modify: `packages/0gkit-core/package.json` (add zod)
@@ -63,6 +68,7 @@
 In `packages/0gkit-core/package.json`, add `"zod": "^3.23.0"` to `dependencies` (above `"viem"`). Keep the alphabetical order of devDependencies untouched.
 
 Run from repo root:
+
 ```bash
 pnpm install
 ```
@@ -214,7 +220,9 @@ export interface DefinedConfig<O extends DefineConfigOptions> {
   envExample: () => string;
 }
 
-type SchemaOf<S> = S extends ZodRawShape ? z.infer<z.ZodObject<S>> : Record<string, never>;
+type SchemaOf<S> = S extends ZodRawShape
+  ? z.infer<z.ZodObject<S>>
+  : Record<string, never>;
 
 const NEXT_PUBLIC_PREFIX = "NEXT_PUBLIC_";
 
@@ -247,7 +255,8 @@ function exampleValue(schema: ZodTypeAny): string {
   const def = schema._def as { defaultValue?: () => unknown };
   if (typeof def.defaultValue === "function") {
     const v = def.defaultValue();
-    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v);
+    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean")
+      return String(v);
   }
   return "";
 }
@@ -264,7 +273,9 @@ function envExampleFor(shape: ZodRawShape): string {
   return lines.join("\n").trimEnd() + "\n";
 }
 
-export function define0GConfig<O extends DefineConfigOptions>(opts: O): DefinedConfig<O> {
+export function define0GConfig<O extends DefineConfigOptions>(
+  opts: O
+): DefinedConfig<O> {
   if (opts.client) {
     for (const key of Object.keys(opts.client)) {
       if (!key.startsWith(NEXT_PUBLIC_PREFIX)) {
@@ -285,9 +296,13 @@ export function define0GConfig<O extends DefineConfigOptions>(opts: O): DefinedC
     edge: edgeParse as DefinedConfig<O>["edge"],
     envExample: () => {
       const parts: string[] = [];
-      if (opts.server) parts.push("# --- server (Node only) ---\n" + envExampleFor(opts.server));
+      if (opts.server)
+        parts.push("# --- server (Node only) ---\n" + envExampleFor(opts.server));
       if (opts.client)
-        parts.push("# --- client (browser-safe, NEXT_PUBLIC_*) ---\n" + envExampleFor(opts.client));
+        parts.push(
+          "# --- client (browser-safe, NEXT_PUBLIC_*) ---\n" +
+            envExampleFor(opts.client)
+        );
       if (opts.edge) parts.push("# --- edge runtime ---\n" + envExampleFor(opts.edge));
       return parts.join("\n");
     },
@@ -328,6 +343,7 @@ git commit -m "feat(core): define0GConfig — typed env reader with server/clien
 ## Task 2: `detectLocalDevnet` helper (TDD)
 
 **Files:**
+
 - Create: `packages/0gkit-core/src/detect-devnet.ts`
 - Create: `packages/0gkit-core/src/__tests__/detect-devnet.test.ts`
 - Modify: `packages/0gkit-core/src/index.ts`
@@ -361,7 +377,9 @@ describe("detectLocalDevnet", () => {
   });
 
   it("returns false when the probe throws (RPC unreachable)", async () => {
-    const fakeClient = { getChainId: vi.fn().mockRejectedValue(new Error("ECONNREFUSED")) };
+    const fakeClient = {
+      getChainId: vi.fn().mockRejectedValue(new Error("ECONNREFUSED")),
+    };
     const ok = await detectLocalDevnet({
       rpcUrl: "http://localhost:8545",
       probeClient: () => fakeClient,
@@ -372,7 +390,9 @@ describe("detectLocalDevnet", () => {
   it("times out after the requested deadline and returns false", async () => {
     const slow = {
       getChainId: () =>
-        new Promise<number>((resolve) => setTimeout(() => resolve(local.chainId), 5000)),
+        new Promise<number>((resolve) =>
+          setTimeout(() => resolve(local.chainId), 5000)
+        ),
     };
     const start = Date.now();
     const ok = await detectLocalDevnet({
@@ -469,6 +489,7 @@ git commit -m "feat(core): detectLocalDevnet — pure chainId probe for template
 ## Task 3: `printFirstSuccess` banner (TDD)
 
 **Files:**
+
 - Create: `packages/0gkit-core/src/first-success.ts`
 - Create: `packages/0gkit-core/src/__tests__/first-success.test.ts`
 - Modify: `packages/0gkit-core/src/index.ts`
@@ -484,7 +505,9 @@ import { printFirstSuccess, FIRST_SUCCESS_MARKER } from "../index.js";
 describe("printFirstSuccess", () => {
   it("prints a banner with the marker token, op, and id", () => {
     const out: string[] = [];
-    printFirstSuccess({ op: "storage.upload", id: "0xabc123" }, (line) => out.push(line));
+    printFirstSuccess({ op: "storage.upload", id: "0xabc123" }, (line) =>
+      out.push(line)
+    );
     const blob = out.join("\n");
     expect(blob).toContain(FIRST_SUCCESS_MARKER);
     expect(blob).toContain("storage.upload");
@@ -493,7 +516,9 @@ describe("printFirstSuccess", () => {
 
   it("draws a unicode box around the content", () => {
     const out: string[] = [];
-    printFirstSuccess({ op: "compute.inference", id: "tx-1" }, (line) => out.push(line));
+    printFirstSuccess({ op: "compute.inference", id: "tx-1" }, (line) =>
+      out.push(line)
+    );
     expect(out.some((l) => l.includes("┌") && l.includes("┐"))).toBe(true);
     expect(out.some((l) => l.includes("└") && l.includes("┘"))).toBe(true);
   });
@@ -542,8 +567,12 @@ export function printFirstSuccess(
   const idLine = `id: ${args.id}`;
   const noteLine = args.note ? args.note : "";
   const width =
-    Math.max(heading.length, idLine.length, noteLine.length, "First 0G action successful".length) +
-    2;
+    Math.max(
+      heading.length,
+      idLine.length,
+      noteLine.length,
+      "First 0G action successful".length
+    ) + 2;
 
   const top = "┌" + "─".repeat(width) + "┐";
   const bot = "└" + "─".repeat(width) + "┘";
@@ -563,7 +592,11 @@ export function printFirstSuccess(
 Append:
 
 ```ts
-export { printFirstSuccess, FIRST_SUCCESS_MARKER, type FirstSuccessArgs } from "./first-success.js";
+export {
+  printFirstSuccess,
+  FIRST_SUCCESS_MARKER,
+  type FirstSuccessArgs,
+} from "./first-success.js";
 ```
 
 - [ ] **Step 5: Run tests + full core suite, verify pass**
@@ -588,6 +621,7 @@ git commit -m "feat(core): printFirstSuccess banner helper for template golden p
 ## Task 4: storage-app template migration
 
 **Files:**
+
 - Create: `templates/storage-app/0g.config.ts`
 - Modify: `templates/storage-app/src/index.ts`
 - Modify: `templates/storage-app/.env.example`
@@ -649,7 +683,9 @@ export const config = define0GConfig({
     PRIVATE_KEY: z
       .string()
       .min(64)
-      .describe("Signs the upload funding tx. For local devnet use the anvil dev mnemonic."),
+      .describe(
+        "Signs the upload funding tx. For local devnet use the anvil dev mnemonic."
+      ),
   },
 });
 ```
@@ -659,6 +695,7 @@ export const config = define0GConfig({
 Confirm `templates/storage-app/package.json` already lists `@foundryprotocol/0gkit-core`. Add `"zod": "^3.23.0"` to `dependencies`.
 
 Run from repo root:
+
 ```bash
 pnpm install
 ```
@@ -725,7 +762,11 @@ async function main(): Promise<void> {
     console.error(`FAILED: ${result.reason}`);
     process.exit(1);
   }
-  printFirstSuccess({ op: "storage.upload", id: result.root, note: `network=${network}` });
+  printFirstSuccess({
+    op: "storage.upload",
+    id: result.root,
+    note: `network=${network}`,
+  });
 }
 
 main().catch((err: unknown) => {
@@ -754,7 +795,6 @@ Expected: all green (existing flow tests + new config test).
 At the end of `templates/storage-app/README.md`, append:
 
 ```markdown
-
 ## What next?
 
 1. **Deploy** — `vercel deploy` (uses `0g.config.ts` for env), or wrap the script in a Node server.
@@ -774,6 +814,7 @@ git commit -m "feat(template/storage-app): adopt define0GConfig + auto-devnet + 
 ## Task 5: chat template migration (Next.js, server + client slots)
 
 **Files:**
+
 - Create: `templates/chat/0g.config.ts`
 - Modify: `templates/chat/app/api/post/route.ts` (or whichever route writes to storage)
 - Modify: `templates/chat/app/providers.tsx` or `lib/contract.ts` for the client slot
@@ -837,7 +878,9 @@ export const config = define0GConfig({
     PRIVATE_KEY: z
       .string()
       .min(64)
-      .describe("Server key — funds storage uploads and on-chain MessagePosted writes."),
+      .describe(
+        "Server key — funds storage uploads and on-chain MessagePosted writes."
+      ),
   },
   client: {
     NEXT_PUBLIC_ZEROG_NETWORK: z
@@ -861,7 +904,8 @@ Wherever `templates/chat/lib/contract.ts` reads `process.env.NEXT_PUBLIC_MESSAGE
 ```ts
 import { config } from "../0g.config.js";
 const env = config.client(process.env as Record<string, string | undefined>);
-export const MESSAGE_REGISTRY_ADDRESS = env.NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS as `0x${string}`;
+export const MESSAGE_REGISTRY_ADDRESS =
+  env.NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS as `0x${string}`;
 ```
 
 In the API route (`app/api/post/route.ts`), at module top, after on-success of the first storage upload, call:
@@ -907,7 +951,6 @@ NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS=0x0000000000000000000000000000000000000000
 Append to `templates/chat/README.md`:
 
 ```markdown
-
 ## What next?
 
 1. **Deploy** — `vercel deploy`. Configure `PRIVATE_KEY` + `NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS` in the Vercel dashboard.
@@ -935,6 +978,7 @@ git commit -m "feat(template/chat): adopt define0GConfig with server + client sl
 ## Task 6: ai-agent template migration
 
 **Files:**
+
 - Create: `templates/ai-agent/0g.config.ts`
 - Modify: `templates/ai-agent/src/index.ts`
 - Modify: `templates/ai-agent/.env.example`
@@ -1052,7 +1096,6 @@ MODEL=
 - [ ] **Step 6: README "What next?"**
 
 ```markdown
-
 ## What next?
 
 1. **Deploy** — wrap `runAgent` in a Vercel Function or Cron route; persist results to KV.
@@ -1086,7 +1129,12 @@ export const config = define0GConfig({
   server: {
     ZEROG_NETWORK: z.enum(["galileo", "aristotle", "local"]).default("galileo"),
     PRIVATE_KEY: z.string().min(64).describe("Signs attested API responses."),
-    PORT: z.coerce.number().int().positive().default(8787).describe("HTTP port for the Hono server."),
+    PORT: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(8787)
+      .describe("HTTP port for the Hono server."),
   },
 });
 ```
@@ -1094,7 +1142,11 @@ export const config = define0GConfig({
 **Entry wiring (`templates/tee-attested-api/src/index.ts`):** Use `config.server()` for `PRIVATE_KEY` and `PORT`. Inside the first request handler that emits `X-0G-Attestation`, after the response is built, call:
 
 ```ts
-printFirstSuccess({ op: "tee.attest", id: attestation.signature, note: `port=${env.PORT}` });
+printFirstSuccess({
+  op: "tee.attest",
+  id: attestation.signature,
+  note: `port=${env.PORT}`,
+});
 ```
 
 Only fire once per process — guard with a module-level `let banner_emitted = false`.
@@ -1128,7 +1180,6 @@ describe("tee-attested-api 0g.config", () => {
 **README "What next?":**
 
 ```markdown
-
 ## What next?
 
 1. **Deploy** — `vercel deploy` or `fly launch`. Hono runs natively on Fluid Compute.
@@ -1172,7 +1223,6 @@ NFT_ADDRESS=
 **README "What next?":**
 
 ```markdown
-
 ## What next?
 
 1. **Deploy contract** — `forge create contracts/StorageNFT.sol:StorageNFT --rpc-url ...`; paste address into `.env`.
@@ -1183,10 +1233,13 @@ NFT_ADDRESS=
 - [ ] **Step 1–3 (each subtemplate): config test → fails → schema → passes**
 
 For tee-attested-api:
+
 ```bash
 cd templates/tee-attested-api && pnpm test config && cd ../..
 ```
+
 For nft-with-storage:
+
 ```bash
 cd templates/nft-with-storage && pnpm test config && cd ../..
 ```
@@ -1223,9 +1276,18 @@ import { z } from "zod";
 export const config = define0GConfig({
   server: {
     ZEROG_NETWORK: z.enum(["galileo", "aristotle", "local"]).default("galileo"),
-    BROKER_KEY: z.string().min(64).describe("Funded 0G broker private key for inference."),
-    PROVIDER: z.string().optional().describe("Pin a provider address; blank = auto-discover."),
-    MODEL: z.string().optional().describe("Pin a model name; blank = provider default."),
+    BROKER_KEY: z
+      .string()
+      .min(64)
+      .describe("Funded 0G broker private key for inference."),
+    PROVIDER: z
+      .string()
+      .optional()
+      .describe("Pin a provider address; blank = auto-discover."),
+    MODEL: z
+      .string()
+      .optional()
+      .describe("Pin a model name; blank = provider default."),
     PROMPT: z
       .string()
       .default("In one sentence, what is the 0G network?")
@@ -1329,6 +1391,7 @@ git commit -m "feat(templates): adopt define0GConfig across inference-app + atte
 ## Task 9: Docs update — templates page + 0gkit-core exports
 
 **Files:**
+
 - Modify: `apps/docs/app/templates/page.mdx`
 - Modify: `apps/docs/app/packages/0gkit-core/page.mdx`
 
@@ -1362,6 +1425,7 @@ git commit -m "docs: templates 'under 5 minutes' table + 0gkit-core exports (def
 ## Task 10: CI workflow extension + changeset + final pre-flight
 
 **Files:**
+
 - Modify: `.github/workflows/fresh-machine-smoke.yml`
 - Create: `.changeset/sp16-define0gconfig-golden-path.md`
 
@@ -1377,28 +1441,28 @@ In `.github/workflows/fresh-machine-smoke.yml`, after the existing `scaffold-and
 Concrete YAML to append after the existing template assertions:
 
 ```yaml
-      - name: first-success banner (storage-app + chat)
-        if: matrix.template == 'storage-app' || matrix.template == 'chat'
-        run: |
-          set -euo pipefail
-          cd "$WORK/demo"
-          # Provide the bare minimum env to satisfy define0GConfig schemas
-          # — these are dummy values that let the boot path run.
-          cat > .env <<'EOF'
-          ZEROG_NETWORK=galileo
-          PRIVATE_KEY=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-          NEXT_PUBLIC_ZEROG_NETWORK=galileo
-          NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS=0x0000000000000000000000000000000000000000
-          EOF
-          npm install --no-audit --no-fund --legacy-peer-deps
-          LOG=$(mktemp)
-          timeout --preserve-status 60s npm run dev 2>&1 | tee "$LOG" || true
-          if ! grep -F '[0gkit:first-success]' "$LOG"; then
-            echo "::error::First-success banner did not appear in dev output for ${{ matrix.template }}"
-            tail -50 "$LOG"
-            exit 1
-          fi
-          echo "✓ first-success banner observed"
+- name: first-success banner (storage-app + chat)
+  if: matrix.template == 'storage-app' || matrix.template == 'chat'
+  run: |
+    set -euo pipefail
+    cd "$WORK/demo"
+    # Provide the bare minimum env to satisfy define0GConfig schemas
+    # — these are dummy values that let the boot path run.
+    cat > .env <<'EOF'
+    ZEROG_NETWORK=galileo
+    PRIVATE_KEY=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    NEXT_PUBLIC_ZEROG_NETWORK=galileo
+    NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS=0x0000000000000000000000000000000000000000
+    EOF
+    npm install --no-audit --no-fund --legacy-peer-deps
+    LOG=$(mktemp)
+    timeout --preserve-status 60s npm run dev 2>&1 | tee "$LOG" || true
+    if ! grep -F '[0gkit:first-success]' "$LOG"; then
+      echo "::error::First-success banner did not appear in dev output for ${{ matrix.template }}"
+      tail -50 "$LOG"
+      exit 1
+    fi
+    echo "✓ first-success banner observed"
 ```
 
 Caveat: the chat template's `npm run dev` is `next dev` — it boots but doesn't fire a 0G op without user interaction. For chat, the banner test asserts the dev server boots and the demo home page renders; either accept that and only run banner-grep on storage-app, or add a tiny boot-time `printFirstSuccess` call gated behind `process.env.OGKIT_SMOKE === "1"` in chat. **Recommendation: only run banner-grep on storage-app for the initial CI gate; expand to chat in a follow-up after the boot-time hook is wired**. Adjust the `if:` to `matrix.template == 'storage-app'` only.
@@ -1416,7 +1480,7 @@ Create `.changeset/sp16-define0gconfig-golden-path.md`:
 
 SP16: golden path + typed config
 
-- New `define0GConfig({ server, client, edge })` typed env reader with zod validation. Server, browser-public (NEXT_PUBLIC_*), and edge-runtime slots. Generates an `.env.example` from the schema.
+- New `define0GConfig({ server, client, edge })` typed env reader with zod validation. Server, browser-public (NEXT*PUBLIC*\*), and edge-runtime slots. Generates an `.env.example` from the schema.
 - New `detectLocalDevnet({ rpcUrl })` — pure chainId probe; templates auto-fall-back to `network=local` when the local devnet is reachable.
 - New `printFirstSuccess({ op, id })` banner helper with `FIRST_SUCCESS_MARKER = "[0gkit:first-success]"` (public contract for log scrapers).
 - All 9 templates migrated: every template ships `0g.config.ts`, `.env.example` derived from the schema, auto-devnet detection on boot, a first-success banner on the first 0G op, and a "What next?" section in the README.
@@ -1464,6 +1528,7 @@ EOF
 ```
 
 After CI green:
+
 ```bash
 gh pr merge --squash --delete-branch
 ```

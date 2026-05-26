@@ -4,7 +4,9 @@ import { printFirstSuccess, FIRST_SUCCESS_MARKER } from "../index.js";
 describe("printFirstSuccess", () => {
   it("prints a banner with the marker token, op, and id", () => {
     const out: string[] = [];
-    printFirstSuccess({ op: "storage.upload", id: "0xabc123" }, (line) => out.push(line));
+    printFirstSuccess({ op: "storage.upload", id: "0xabc123" }, (line) =>
+      out.push(line)
+    );
     const blob = out.join("\n");
     expect(blob).toContain(FIRST_SUCCESS_MARKER);
     expect(blob).toContain("storage.upload");
@@ -13,7 +15,9 @@ describe("printFirstSuccess", () => {
 
   it("draws a unicode box around the content", () => {
     const out: string[] = [];
-    printFirstSuccess({ op: "compute.inference", id: "tx-1" }, (line) => out.push(line));
+    printFirstSuccess({ op: "compute.inference", id: "tx-1" }, (line) =>
+      out.push(line)
+    );
     expect(out.some((l) => l.includes("┌") && l.includes("┐"))).toBe(true);
     expect(out.some((l) => l.includes("└") && l.includes("┘"))).toBe(true);
   });
@@ -33,13 +37,17 @@ describe("printFirstSuccess", () => {
 
   it("renders the optional note line when provided", () => {
     const out: string[] = [];
-    printFirstSuccess({ op: "x", id: "y", note: "saved 12 gas" }, (line) => out.push(line));
+    printFirstSuccess({ op: "x", id: "y", note: "saved 12 gas" }, (line) =>
+      out.push(line)
+    );
     expect(out.some((l) => l.includes("saved 12 gas"))).toBe(true);
   });
 
   it("all banner lines have equal visual width", () => {
     const out: string[] = [];
-    printFirstSuccess({ op: "compute.inference", id: "tx-1", note: "ok" }, (line) => out.push(line));
+    printFirstSuccess({ op: "compute.inference", id: "tx-1", note: "ok" }, (line) =>
+      out.push(line)
+    );
     const widths = new Set(out.map((l) => [...l].length));
     expect(widths.size).toBe(1);
   });

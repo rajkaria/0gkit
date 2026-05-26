@@ -19,8 +19,12 @@ export function printFirstSuccess(
   const idLine = `id: ${id}`;
   const noteLine = note;
   const width =
-    Math.max(heading.length, idLine.length, noteLine.length, "First 0G action successful".length) +
-    2;
+    Math.max(
+      heading.length,
+      idLine.length,
+      noteLine.length,
+      "First 0G action successful".length
+    ) + 2;
 
   const top = "┌" + "─".repeat(width) + "┐";
   const bot = "└" + "─".repeat(width) + "┘";

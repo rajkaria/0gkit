@@ -12,14 +12,8 @@ export const config = define0GConfig({
       .url()
       .optional()
       .describe("Override the preset EVM JSON-RPC URL."),
-    ZEROG_PRIVATE_KEY: z
-      .string()
-      .optional()
-      .describe("Signer for og_storage_put."),
-    ZEROG_BROKER_KEY: z
-      .string()
-      .optional()
-      .describe("Broker for og_infer."),
+    ZEROG_PRIVATE_KEY: z.string().optional().describe("Signer for og_storage_put."),
+    ZEROG_BROKER_KEY: z.string().optional().describe("Broker for og_infer."),
     ZEROG_PROVIDER: z
       .string()
       .optional()

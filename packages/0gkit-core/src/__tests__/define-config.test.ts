@@ -108,7 +108,9 @@ describe("define0GConfig", () => {
   });
 
   it("falls back to process.env when called with no argument", () => {
-    const cfg = define0GConfig({ server: { ZEROG_NETWORK: z.enum(["galileo", "aristotle", "local"]) } });
+    const cfg = define0GConfig({
+      server: { ZEROG_NETWORK: z.enum(["galileo", "aristotle", "local"]) },
+    });
     const prev = process.env.ZEROG_NETWORK;
     process.env.ZEROG_NETWORK = "aristotle";
     try {

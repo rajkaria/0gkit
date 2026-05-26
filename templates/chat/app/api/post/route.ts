@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Storage } from "@foundryprotocol/0gkit-storage";
 import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 import { createTypedContract } from "@foundryprotocol/0gkit-contracts";
-import {
-  detectLocalDevnet,
-  printFirstSuccess,
-} from "@foundryprotocol/0gkit-core";
+import { detectLocalDevnet, printFirstSuccess } from "@foundryprotocol/0gkit-core";
 import { encodeMessage } from "@/lib/message";
 import { MESSAGE_REGISTRY_ABI, MESSAGE_REGISTRY_ADDRESS } from "@/lib/contract";
 import { config } from "../../../0g.config.js";

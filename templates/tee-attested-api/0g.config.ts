@@ -7,10 +7,7 @@ export const config = define0GConfig({
       .enum(["galileo", "aristotle", "local"])
       .default("galileo")
       .describe("0G network for compute calls."),
-    PRIVATE_KEY: z
-      .string()
-      .min(64)
-      .describe("Signs attested API responses."),
+    PRIVATE_KEY: z.string().min(64).describe("Signs attested API responses."),
     PORT: z.coerce
       .number()
       .int()
