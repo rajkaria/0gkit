@@ -42,3 +42,4 @@ export {
   type DefineConfigOptions,
   type DefinedConfig,
 } from "./define-config.js";
+export { detectLocalDevnet, type DetectLocalDevnetOptions } from "./detect-devnet.js";
