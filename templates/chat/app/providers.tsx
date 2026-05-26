@@ -2,11 +2,11 @@
 import { useEffect, useMemo } from "react";
 import { Indexer } from "@foundryprotocol/0gkit-indexer";
 import { ZeroGIndexerProvider } from "@foundryprotocol/0gkit-react";
+import { config } from "../0g.config.js";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const network =
-    (process.env.NEXT_PUBLIC_ZEROG_NETWORK as "galileo" | "aristotle" | undefined) ??
-    "galileo";
+  const env = config.client(process.env as Record<string, string | undefined>);
+  const network = env.NEXT_PUBLIC_ZEROG_NETWORK;
 
   const indexer = useMemo(
     () => new Indexer({ network, pollIntervalMs: 2000 }),

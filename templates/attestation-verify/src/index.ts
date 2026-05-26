@@ -18,14 +18,13 @@ import {
   reportEnvelope,
   type AttestationEnvelope,
 } from "@foundryprotocol/0gkit-attestation";
-import { ZeroGError } from "@foundryprotocol/0gkit-core";
-
-// A well-known Anvil/Hardhat test key. NEVER use this for anything real.
-const DEMO_PRIVATE_KEY =
-  process.env.DEMO_PRIVATE_KEY ??
-  "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+import { ZeroGError, printFirstSuccess } from "@foundryprotocol/0gkit-core";
+import { config } from "../0g.config.js";
 
 async function main(): Promise<void> {
+  const env = config.server();
+  // A well-known Anvil/Hardhat test key. NEVER use this for anything real.
+  const DEMO_PRIVATE_KEY = env.DEMO_PRIVATE_KEY;
   // The address that "the TEE coordinator" would have. We derive it from the
   // demo key so the expected-signer check is provably correct.
   const coordinator = privateKeyToAccount(DEMO_PRIVATE_KEY as `0x${string}`).address;
@@ -77,12 +76,21 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   console.log("\nAttestation verification works as expected.");
+  printFirstSuccess({
+    op: "attestation.verify",
+    id: signed.signature.slice(0, 18),
+  });
 }
 
 main().catch((err: unknown) => {
   if (err instanceof ZeroGError) {
     console.error(`\n${err.name}: ${err.message}`);
-    console.error(`Hint: ${err.hint}`);
+    if ("hint" in err && typeof err.hint === "string") {
+      console.error(`Hint: ${err.hint}`);
+    }
+    if ("helpUrl" in err && typeof err.helpUrl === "string") {
+      console.error(`Help: ${err.helpUrl}`);
+    }
   } else {
     console.error(err);
   }

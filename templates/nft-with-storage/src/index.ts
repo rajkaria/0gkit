@@ -10,9 +10,15 @@
 import { readFile } from "node:fs/promises";
 import { Storage } from "@foundryprotocol/0gkit-storage";
 import { createTypedContract } from "@foundryprotocol/0gkit-contracts";
-import { fromEnv } from "@foundryprotocol/0gkit-wallet";
-import { ZeroGError, type Receipt } from "@foundryprotocol/0gkit-core";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+import {
+  ZeroGError,
+  detectLocalDevnet,
+  printFirstSuccess,
+  type Receipt,
+} from "@foundryprotocol/0gkit-core";
 import { runMintFlow } from "./mint-flow.js";
+import { config } from "../0g.config.js";
 
 const STORAGE_NFT_ABI = [
   {
@@ -34,15 +40,23 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  const signer = await fromEnv();
-  const network = (process.env.ZEROG_NETWORK ?? "galileo") as "galileo" | "aristotle";
-  const nftAddress = process.env.NFT_ADDRESS as `0x${string}` | undefined;
-  if (!nftAddress) {
-    console.error("Set NFT_ADDRESS in .env after running the deploy script.");
-    process.exit(2);
+  const env = config.server();
+  let network: "galileo" | "aristotle" | "local" = env.ZEROG_NETWORK;
+  if (network === "galileo" && (await detectLocalDevnet())) {
+    console.warn("[0gkit] Local devnet detected — using network=local.");
+    network = "local";
   }
 
-  const storage = new Storage({ network, signer });
+  const signer = await fromPrivateKey(env.PRIVATE_KEY);
+  const nftAddress = env.NFT_ADDRESS as `0x${string}`;
+
+  // Storage's config accepts "aristotle" | "galileo". When the typed config
+  // resolves to "local", we still pass it through so users get a clear error
+  // from Storage rather than a silent fallback to mainnet.
+  const storage = new Storage({
+    network: network as "galileo" | "aristotle",
+    signer,
+  });
   const contract = createTypedContract({
     abi: STORAGE_NFT_ABI,
     address: nftAddress,
@@ -84,6 +98,12 @@ async function main(): Promise<void> {
   console.log(`  media    : 0g-storage://${result.mediaRoot}`);
   console.log(`  metadata : 0g-storage://${result.metadataRoot}`);
   console.log(`  tx       : ${result.mintTx}`);
+
+  printFirstSuccess({
+    op: "nft.mint",
+    id: result.mintTx,
+    note: `network=${network}`,
+  });
 }
 
 main().catch((err: unknown) => {

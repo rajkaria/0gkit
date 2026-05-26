@@ -22,7 +22,8 @@
     "@foundryprotocol/0gkit-contracts": "^1.0.0",
     "@foundryprotocol/0gkit-wallet": "^1.0.0",
     "@foundryprotocol/0gkit-cli": "^1.0.0",
-    "viem": "^2.21.0"
+    "viem": "^2.21.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

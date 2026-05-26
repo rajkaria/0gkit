@@ -1,3 +1,5 @@
+import { config } from "../0g.config.js";
+
 /**
  * Minimal ABI for the on-chain message registry. Two pieces:
  *
@@ -31,6 +33,6 @@ export const MESSAGE_REGISTRY_ABI = [
   },
 ] as const;
 
-export const MESSAGE_REGISTRY_ADDRESS = (process.env
-  .NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS ??
-  "0x0000000000000000000000000000000000000000") as `0x${string}`;
+const clientEnv = config.client(process.env as Record<string, string | undefined>);
+export const MESSAGE_REGISTRY_ADDRESS =
+  clientEnv.NEXT_PUBLIC_MESSAGE_REGISTRY_ADDRESS as `0x${string}`;

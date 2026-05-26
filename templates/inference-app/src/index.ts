@@ -6,16 +6,12 @@
  * 3. Run an OpenAI-compatible chat completion and print the answer.
  */
 import { Compute } from "@foundryprotocol/0gkit-compute";
-import { ZeroGError } from "@foundryprotocol/0gkit-core";
-
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) {
-    console.error(`Missing ${name}. Copy .env.example to .env and fill it in.`);
-    process.exit(1);
-  }
-  return v;
-}
+import {
+  ZeroGError,
+  detectLocalDevnet,
+  printFirstSuccess,
+} from "@foundryprotocol/0gkit-core";
+import { config } from "../0g.config.js";
 
 /** Best-effort extraction of a provider address from a listService() entry. */
 function pickProviderAddress(entry: unknown): string | undefined {
@@ -30,16 +26,28 @@ function pickProviderAddress(entry: unknown): string | undefined {
 }
 
 async function main(): Promise<void> {
-  const brokerKey = requireEnv("BROKER_KEY");
-  const network = (process.env.ZEROG_NETWORK ?? "galileo") as "galileo" | "aristotle";
-  const model = process.env.MODEL || undefined;
-  const prompt = process.env.PROMPT || "In one sentence, what is the 0G network?";
+  const env = config.server();
+  let network: "galileo" | "aristotle" | "local" = env.ZEROG_NETWORK;
+  if (network === "galileo" && (await detectLocalDevnet())) {
+    console.warn("[0gkit] Local devnet detected — using network=local.");
+    network = "local";
+  }
 
-  let provider = process.env.PROVIDER || undefined;
+  const brokerKey = env.BROKER_KEY;
+  const model = env.MODEL;
+  const prompt = env.PROMPT;
+
+  let provider = env.PROVIDER;
 
   if (!provider) {
     console.log("No PROVIDER set — discovering one from the 0G network…");
-    const discovery = new Compute({ network, brokerKey });
+    // Compute SDK currently accepts only "aristotle" | "galileo"; "local" is
+    // surfaced through unchanged so users hit a clear SDK error rather than a
+    // silent retarget to mainnet.
+    const discovery = new Compute({
+      network: network as "galileo" | "aristotle",
+      brokerKey,
+    });
     const services = await discovery.listProviders();
     for (const s of services) {
       const addr = pickProviderAddress(s);
@@ -55,7 +63,12 @@ async function main(): Promise<void> {
     console.log(`  Using provider ${provider}`);
   }
 
-  const compute = new Compute({ network, brokerKey, provider, model });
+  const compute = new Compute({
+    network: network as "galileo" | "aristotle",
+    brokerKey,
+    provider,
+    model,
+  });
 
   console.log(`Asking the 0G provider: "${prompt}"`);
   const { output, receipt } = await compute.inference({
@@ -69,6 +82,12 @@ async function main(): Promise<void> {
     `latency ${receipt.latencyMs}ms` +
       (receipt.txHash ? `  settlement tx ${receipt.txHash}` : "")
   );
+
+  printFirstSuccess({
+    op: "compute.inference",
+    id: receipt.txHash ?? "ok",
+    note: `network=${network}`,
+  });
 }
 
 main().catch((err: unknown) => {

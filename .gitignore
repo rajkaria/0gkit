@@ -24,3 +24,6 @@ apps/docs/public/pagefind/
 
 # Local perf-benchmark artifacts (CI writes its own copy as an artifact)
 bench/
+
+# SP16 — template pnpm-lock files are intentionally untracked (D24: templates/* not in workspace)
+templates/*/pnpm-lock.yaml

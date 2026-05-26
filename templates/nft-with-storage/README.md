@@ -88,3 +88,9 @@ inline storage fakes. No live chain or storage required. ≥ 80% lines.
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.
+
+## What next?
+
+1. **Deploy contract** — `forge create contracts/StorageNFT.sol:StorageNFT --rpc-url ...`; paste address into `.env`.
+2. **Extend** — add ERC-2981 royalties; build a marketplace UI reading mint events via `0gkit-indexer`.
+3. **Migrate to mainnet** — redeploy `StorageNFT` to aristotle; rebuild typed clients with `0g contracts generate`.

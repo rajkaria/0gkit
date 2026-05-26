@@ -123,3 +123,9 @@ funds with the `og_chain_faucet` tool or <https://faucet.0g.ai>.
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.
+
+## What next?
+
+1. **Wire to a real agent** — point Claude Desktop or Cursor at this `npm start` command (see the copy-paste config above).
+2. **Extend** — register custom tools by adding handlers in your own MCP server next to `create0gMcpServer()`; enable the opt-in Foundry plugin with `ZEROG_FOUNDRY=1`.
+3. **Run as a service** — host this binary on a Vercel Function or fly machine, then bridge stdio over WebSocket/HTTP using `@modelcontextprotocol/sdk` transports.

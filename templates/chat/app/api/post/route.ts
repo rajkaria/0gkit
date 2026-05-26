@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Storage } from "@foundryprotocol/0gkit-storage";
-import { fromEnv } from "@foundryprotocol/0gkit-wallet";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 import { createTypedContract } from "@foundryprotocol/0gkit-contracts";
+import { detectLocalDevnet, printFirstSuccess } from "@foundryprotocol/0gkit-core";
 import { encodeMessage } from "@/lib/message";
 import { MESSAGE_REGISTRY_ABI, MESSAGE_REGISTRY_ADDRESS } from "@/lib/contract";
+import { config } from "../../../0g.config.js";
 
 export const dynamic = "force-dynamic";
 
-function network(): "galileo" | "aristotle" {
-  return (
-    (process.env.ZEROG_NETWORK as "galileo" | "aristotle" | undefined) ?? "galileo"
-  );
+let bannerEmitted = false;
+
+async function resolveNetwork(): Promise<"galileo" | "aristotle" | "local"> {
+  const env = config.server();
+  let network: "galileo" | "aristotle" | "local" = env.ZEROG_NETWORK;
+  if (network === "galileo" && (await detectLocalDevnet())) {
+    console.warn("[0gkit] Local devnet detected — using network=local.");
+    network = "local";
+  }
+  return network;
+}
+
+async function buildSigner() {
+  const env = config.server();
+  return fromPrivateKey(env.PRIVATE_KEY);
 }
 
 export async function GET(req: NextRequest) {
@@ -19,8 +32,15 @@ export async function GET(req: NextRequest) {
   if (!root) {
     return NextResponse.json({ error: "missing root" }, { status: 400 });
   }
-  const signer = await fromEnv();
-  const storage = new Storage({ network: network(), signer });
+  const network = await resolveNetwork();
+  const signer = await buildSigner();
+  const storage = new Storage({
+    // Storage SDK currently accepts only "galileo" | "aristotle"; "local" is
+    // surfaced through unchanged so users hit a clear SDK error rather than a
+    // silent retarget to mainnet.
+    network: network as "galileo" | "aristotle",
+    signer,
+  });
   try {
     const bytes = await storage.download(root);
     return new NextResponse(bytes, {
@@ -38,8 +58,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing body" }, { status: 400 });
   }
 
-  const signer = await fromEnv();
-  const storage = new Storage({ network: network(), signer });
+  const network = await resolveNetwork();
+  const signer = await buildSigner();
+  const storage = new Storage({
+    network: network as "galileo" | "aristotle",
+    signer,
+  });
   const author = signer.address;
   const ts = Date.now();
   const bytes = encodeMessage({ author, ts, body });
@@ -61,11 +85,19 @@ export async function POST(req: NextRequest) {
     address: MESSAGE_REGISTRY_ADDRESS,
     abi: MESSAGE_REGISTRY_ABI,
     signer,
-    network: network(),
+    network,
   });
 
   try {
     const receipt = await contract.write.post([root as `0x${string}`, BigInt(ts)]);
+    if (!bannerEmitted) {
+      bannerEmitted = true;
+      printFirstSuccess({
+        op: "chat.post",
+        id: root,
+        note: `network=${network}`,
+      });
+    }
     return NextResponse.json({
       ok: true,
       root,

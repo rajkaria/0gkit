@@ -138,3 +138,9 @@ JSON, provider failure) and assert OTel spans via an in-memory exporter — at
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.
+
+## What next?
+
+1. **Deploy** — `vercel deploy` or `fly launch`. Hono runs natively on Fluid Compute.
+2. **Extend** — add per-route attestation enforcement; persist attested receipts to `0gkit-storage`.
+3. **Migrate to mainnet** — `ZEROG_NETWORK=aristotle`, ensure the TEE provider sidecar is configured for mainnet endpoints.

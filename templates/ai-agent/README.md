@@ -44,7 +44,7 @@ runAgent(prompt) ──┐
 
 ```bash
 cp .env.example .env
-# PRIVATE_KEY needs a 0G Compute prepaid balance.
+# BROKER_KEY needs a 0G Compute prepaid balance.
 
 pnpm install
 pnpm dev "What is 17 + 25? Use the add tool."
@@ -152,19 +152,15 @@ steps, abort on bad attestation, abort on unknown tool, non-JSON fallback)
 plus an end-to-end retry-exhaustion path that exercises the JobRunner +
 StepJob integration. ≥ 80% lines / ≥ 70% branches.
 
-## Next steps
+## What next?
 
-- Swap `MemoryBackend` for `SqliteBackend` so a worker crash mid-loop
-  resumes on restart.
-- Replace the toy `add` tool with something real — a 0G Storage retrieval,
-  a contract read, an HTTP call to your own API.
-- Wire `verifyEnvelope` against your provider's actual attestation source.
-- Persist every step's transcript to 0G Storage to leave a forensic trail
-  of the agent's reasoning.
+1. **Deploy** — wrap `runAgent` in a Vercel Function or Cron route; persist results to KV.
+2. **Extend** — swap `MemoryBackend` to `SqliteBackend` for crash-safe agent state (one-line change in `0gkit-jobs`); add custom tools in `src/tools.ts`.
+3. **Migrate to mainnet** — `ZEROG_NETWORK=aristotle`, top up the broker, rerun. See the [compute concept page](https://docs.0gkit.com/concepts/durable-jobs).
 
 ## Deploy on Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frajkaria%2F0gkit%2Ftree%2Fmain%2Ftemplates%2Fai-agent&project-name=0gkit-ai-agent&env=NETWORK%2CPRIVATE_KEY&envDescription=See%20docs.0gkit.com%20env%20vars&envLink=https%3A%2F%2Fdocs.0gkit.com%2Fgetting-started%2Fenv-vars)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frajkaria%2F0gkit%2Ftree%2Fmain%2Ftemplates%2Fai-agent&project-name=0gkit-ai-agent&env=ZEROG_NETWORK%2CBROKER_KEY&envDescription=See%20docs.0gkit.com%20env%20vars&envLink=https%3A%2F%2Fdocs.0gkit.com%2Fgetting-started%2Fenv-vars)
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.

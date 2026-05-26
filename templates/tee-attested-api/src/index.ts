@@ -16,10 +16,17 @@
  */
 import { serve } from "@hono/node-server";
 import { Compute } from "@foundryprotocol/0gkit-compute";
-import { fromEnv } from "@foundryprotocol/0gkit-wallet";
-import { ZeroGError } from "@foundryprotocol/0gkit-core";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+import {
+  ZeroGError,
+  detectLocalDevnet,
+  printFirstSuccess,
+} from "@foundryprotocol/0gkit-core";
 import { instrument0g } from "@foundryprotocol/0gkit-observability";
 import { buildApp } from "./app.js";
+import { config } from "../0g.config.js";
+
+let bannerEmitted = false;
 
 async function main(): Promise<void> {
   // Wire OpenTelemetry FIRST so the access-log spans + every 0gkit primitive
@@ -41,14 +48,27 @@ async function main(): Promise<void> {
       : { kind: "noop" },
   });
 
-  const signer = await fromEnv();
-  const network = (process.env.ZEROG_NETWORK ?? "galileo") as "galileo" | "aristotle";
-  const compute = new Compute({ network, signer });
+  const env = config.server();
+  let network: "galileo" | "aristotle" | "local" = env.ZEROG_NETWORK;
+  if (network === "galileo" && (await detectLocalDevnet())) {
+    console.warn("[0gkit] Local devnet detected — using network=local.");
+    network = "local";
+  }
+
+  const signer = await fromPrivateKey(env.PRIVATE_KEY);
+  // Compute SDK currently accepts only "aristotle" | "galileo"; "local" is
+  // surfaced through unchanged so users hit a clear SDK error rather than a
+  // silent retarget to mainnet.
+  const compute = new Compute({
+    network: network as "galileo" | "aristotle",
+    signer,
+  });
 
   // STUB attestation source. Replace with your provider's real envelope feed.
   const { fixtureAttestation } =
     await import("@foundryprotocol/0gkit-testing/fixtures");
-  let cachedAttestation: unknown = await fixtureAttestation();
+  let cachedAttestation: Awaited<ReturnType<typeof fixtureAttestation>> =
+    await fixtureAttestation();
   setInterval(async () => {
     try {
       cachedAttestation = await fixtureAttestation({ timestamp: Date.now() });
@@ -61,12 +81,26 @@ async function main(): Promise<void> {
 
   const app = buildApp({
     compute,
-    getAttestation: async () => cachedAttestation,
+    // First-success banner: fires once on the first request that pulls an
+    // attestation envelope through the middleware. Uses the envelope's
+    // `signature` as a deterministic id (truncated to keep the banner narrow).
+    getAttestation: async () => {
+      const att = cachedAttestation;
+      if (!bannerEmitted) {
+        bannerEmitted = true;
+        const id = att.signature.slice(0, 18);
+        printFirstSuccess({
+          op: "tee.attest",
+          id,
+          note: `port=${env.PORT}`,
+        });
+      }
+      return att;
+    },
   });
 
-  const port = Number(process.env.PORT ?? 8787);
-  serve({ fetch: app.fetch, port });
-  console.log(`tee-attested-api listening on http://localhost:${port}`);
+  serve({ fetch: app.fetch, port: env.PORT });
+  console.log(`tee-attested-api listening on http://localhost:${env.PORT}`);
   console.log(`  Every response carries an X-0G-Attestation header.`);
   console.log(`  Access logs ship as OTel spans (one per request).`);
   if (!process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {

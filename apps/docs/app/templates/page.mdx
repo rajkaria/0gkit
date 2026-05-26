@@ -27,6 +27,25 @@ cd my-app && pnpm install
 > `README.md`, `.gitignore`). Use that for a bare start; use a template below
 > for a focused, surface-specific example.
 
+## Under 5 minutes — time to first success
+
+Every template ships a `0g.config.ts` (typed env via
+[`define0GConfig`](/packages/core)) and prints the first-success banner
+`[0gkit:first-success]` on its first 0G op so you know it worked. Approximate
+local time from `npm create` to that banner:
+
+| Template             | Primary primitive           | Time-to-first-success |
+| -------------------- | --------------------------- | --------------------- |
+| `storage-app`        | Storage upload + dedup      | ~45s                  |
+| `inference-app`      | Compute inference           | ~45s                  |
+| `attestation-verify` | Attestation (pure crypto)   | ~30s                  |
+| `mcp-agent`          | MCP server (stdio)          | ~30s                  |
+| `nft-with-storage`   | Storage + contract mint     | ~60s                  |
+| `ai-agent`           | Compute + durable jobs      | ~60s                  |
+| `tee-attested-api`   | Hono + TEE attestation      | ~60s                  |
+| `chat`               | Next.js + Storage + indexer | ~90s                  |
+| `react-app`          | Next.js + 0gkit-react hooks | ~90s                  |
+
 ---
 
 ## The five canonical archetypes (SP8)

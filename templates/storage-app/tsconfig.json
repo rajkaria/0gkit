@@ -13,5 +13,5 @@
     "noEmit": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["0g.config.ts", "src/**/*.ts"]
 }

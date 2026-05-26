@@ -138,6 +138,62 @@ function digestJson(value: unknown): Hex; // keccak256 of the canonical JSON
 `digestJson` is the cross-package, on-chain digest anchor used by DA and
 Attestation.
 
+### `define0GConfig({ server?, client?, edge? })`
+
+```ts
+import { define0GConfig } from "@foundryprotocol/0gkit-core";
+import { z } from "zod";
+
+export const config = define0GConfig({
+  server: {
+    ZEROG_NETWORK: z.enum(["galileo", "aristotle", "local"]).default("galileo"),
+    PRIVATE_KEY: z.string().min(64).describe("Funds 0G transactions."),
+  },
+  client: {
+    NEXT_PUBLIC_ZEROG_NETWORK: z.string().default("galileo"),
+  },
+});
+
+const env = config.server(); // throws ConfigError on missing / malformed env
+console.log(config.envExample()); // emits a stringified .env.example
+```
+
+Typed env reader with three slots — `server` (Node-only, full `process.env`),
+`client` (browser-safe, prefix-enforced `NEXT_PUBLIC_*`), `edge` (no
+process.env fallback). Validation failures throw `ConfigError`. Every 0gkit
+template ships a `0g.config.ts` that calls this.
+
+### `detectLocalDevnet({ rpcUrl?, timeoutMs? })`
+
+```ts
+import { detectLocalDevnet } from "@foundryprotocol/0gkit-core";
+
+if (await detectLocalDevnet()) {
+  // local Anvil/0G devnet is reachable — switch to network="local"
+}
+```
+
+Pure viem `getChainId` probe; default `rpcUrl="http://127.0.0.1:8545"`,
+default `timeoutMs=1000`. Returns `true` only when the chainId matches the
+`local` preset (31337). No shell-out to `0g doctor` (D72).
+
+### `printFirstSuccess({ op, id, note? })` / `FIRST_SUCCESS_MARKER`
+
+```ts
+import { printFirstSuccess, FIRST_SUCCESS_MARKER } from "@foundryprotocol/0gkit-core";
+
+printFirstSuccess({
+  op: "storage.upload",
+  id: result.root,
+  note: "network=galileo",
+});
+// → boxed banner that includes "[0gkit:first-success]"
+```
+
+Emits a unicode-boxed success banner. `FIRST_SUCCESS_MARKER` is the public
+contract token (`"[0gkit:first-success]"`) that log scrapers / CI gates can
+pin to. Callers gate idempotency themselves (the helper does not).
+
 ## Examples
 
 ### Minimal — resolve a network and read the chain id
@@ -196,17 +252,25 @@ started](/getting-started), then explore [chain](/packages/chain) /
 
 ## Exports
 
+- `define0GConfig`
+- `detectLocalDevnet`
 - `ERROR_CODES`
 - `ERROR_HELP_BASE`
 - `errorNamespace`
+- `FIRST_SUCCESS_MARKER`
 - `formatEstimate`
 - `formatNative`
 - `helpUrlFor`
 - `isErrorCode`
+- `printFirstSuccess`
 - `type CreateClientOptions`
+- `type DefineConfigOptions`
+- `type DefinedConfig`
+- `type DetectLocalDevnetOptions`
 - `type DryRunResult`
 - `type ErrorCode`
 - `type Estimate`
+- `type FirstSuccessArgs`
 - `type NetworkName`
 - `type SignTypedDataArgs`
 - `type SignableTx`
