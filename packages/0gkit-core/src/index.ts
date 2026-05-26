@@ -43,3 +43,8 @@ export {
   type DefinedConfig,
 } from "./define-config.js";
 export { detectLocalDevnet, type DetectLocalDevnetOptions } from "./detect-devnet.js";
+export {
+  printFirstSuccess,
+  FIRST_SUCCESS_MARKER,
+  type FirstSuccessArgs,
+} from "./first-success.js";
