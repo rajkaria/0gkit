@@ -8,31 +8,50 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Storage } from "@foundryprotocol/0gkit-storage";
-import { fromEnv } from "@foundryprotocol/0gkit-wallet";
-import { ZeroGError, formatEstimate } from "@foundryprotocol/0gkit-core";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+import {
+  ZeroGError,
+  formatEstimate,
+  detectLocalDevnet,
+  printFirstSuccess,
+} from "@foundryprotocol/0gkit-core";
 import { runStorageFlow } from "./storage-flow.js";
+import { config } from "../0g.config.js";
 
 async function main(): Promise<void> {
-  const signer = await fromEnv();
-  const network = (process.env.ZEROG_NETWORK ?? "galileo") as "galileo" | "aristotle";
-  const storage = new Storage({ network, signer });
+  const env = config.server();
+  let network: "galileo" | "aristotle" | "local" = env.ZEROG_NETWORK;
+  if (network === "galileo" && (await detectLocalDevnet())) {
+    console.warn("[0gkit] Local devnet detected — using network=local.");
+    network = "local";
+  }
+
+  const signer = await fromPrivateKey(env.PRIVATE_KEY);
+  // Storage's config accepts "aristotle" | "galileo". When the typed config
+  // resolves to "local", we still pass it through so users get a clear error
+  // from Storage rather than a silent fallback to mainnet.
+  const storage = new Storage({
+    network: network as "galileo" | "aristotle",
+    signer,
+  });
 
   const samplePath = fileURLToPath(new URL("./index.ts", import.meta.url));
   const bytes = new Uint8Array(await readFile(samplePath));
 
   const result = await runStorageFlow(
     { bytes, label: samplePath },
-    {
-      storage,
-      log: (m) => console.log(m),
-      formatEstimate,
-    }
+    { storage, log: (m) => console.log(m), formatEstimate }
   );
 
   if (!result.ok) {
     console.error(`FAILED: ${result.reason}`);
     process.exit(1);
   }
+  printFirstSuccess({
+    op: "storage.upload",
+    id: result.root,
+    note: `network=${network}`,
+  });
 }
 
 main().catch((err: unknown) => {
@@ -41,8 +60,11 @@ main().catch((err: unknown) => {
     if ("hint" in err && typeof err.hint === "string") {
       console.error(`Hint: ${err.hint}`);
     }
-  } else {
-    console.error(err);
+    if ("helpUrl" in err && typeof err.helpUrl === "string") {
+      console.error(`Help: ${err.helpUrl}`);
+    }
+    process.exit(1);
   }
+  console.error(err);
   process.exit(1);
 });

@@ -87,3 +87,9 @@ The tests use an in-process fake `Storage` (sha256 keys, in-memory blob store) �
 
 Vercel will fork the template into a new repository, prompt for the listed
 env vars, and deploy in under 60 seconds on Fluid Compute.
+
+## What next?
+
+1. **Deploy** — `vercel deploy` (uses `0g.config.ts` for env), or wrap the script in a Node server.
+2. **Extend** — fetch the uploaded root with `storage.download(root)` and stream to a client; add a manifest contract via `0gkit-contracts`.
+3. **Migrate to mainnet** — set `ZEROG_NETWORK=aristotle`, fund the key, re-run. Re-read [the migration guide](https://docs.0gkit.com/migrate-from-official-sdks).
