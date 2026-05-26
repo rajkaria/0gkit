@@ -11,7 +11,7 @@ export const config = define0GConfig({
       .string()
       .min(64)
       .describe(
-        "Signs the upload funding tx. For local devnet use the anvil dev mnemonic."
+        "Signs the upload funding tx. For local devnet use a pre-funded anvil account's private key (0x-prefixed 64-hex)."
       ),
   },
 });
