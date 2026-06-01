@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-attestation",
-  "version": "1.3.0",
+  "version": "1.5.0",
   "description": "Neutral 0G TEE attestation — parse, sign, recover, verify, report. Pure crypto on @foundryprotocol/0gkit-core + viem.",
   "license": "MIT",
   "homepage": "https://0gkit.com",

@@ -1,5 +1,14 @@
 # @foundryprotocol/0gkit-indexer
 
+## 1.5.0
+
+### Patch Changes
+
+- Updated dependencies [006e514]
+- Updated dependencies [f59b752]
+  - @foundryprotocol/0gkit-core@1.5.0
+  - @foundryprotocol/0gkit-contracts@1.5.0
+
 ## 1.3.0
 
 ### Patch Changes
