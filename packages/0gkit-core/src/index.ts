@@ -48,3 +48,13 @@ export {
   FIRST_SUCCESS_MARKER,
   type FirstSuccessArgs,
 } from "./first-success.js";
+export {
+  suggestOwnership,
+  suggestSeverity,
+  buildDefectReport,
+  type DefectOwnership,
+  type DefectSeverity,
+  type DefectReportError,
+  type DefectReportEnv,
+  type DefectReportInput,
+} from "./defect-report.js";

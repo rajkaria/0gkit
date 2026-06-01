@@ -7,6 +7,7 @@ export interface GlobalFlags {
   json?: boolean;
   foundry?: boolean;
   copyIssueContext?: boolean;
+  defectReport?: boolean;
 }
 
 export interface CliContext {
@@ -16,6 +17,7 @@ export interface CliContext {
   json: boolean;
   foundry: boolean;
   copyIssueContext: boolean;
+  defectReport: boolean;
 }
 
 const KNOWN: readonly NetworkName[] = ["aristotle", "galileo", "local"];
@@ -38,5 +40,6 @@ export function resolveContext(
     json: flags.json === true,
     foundry: flags.foundry === true,
     copyIssueContext: flags.copyIssueContext === true,
+    defectReport: flags.defectReport === true,
   };
 }

@@ -194,6 +194,37 @@ Emits a unicode-boxed success banner. `FIRST_SUCCESS_MARKER` is the public
 contract token (`"[0gkit:first-success]"`) that log scrapers / CI gates can
 pin to. Callers gate idempotency themselves (the helper does not).
 
+### `buildDefectReport(input)` / `suggestOwnership(code)` / `suggestSeverity(code)`
+
+```ts
+import { buildDefectReport, ZeroGError } from "@foundryprotocol/0gkit-core";
+
+try {
+  await storage.upload(bytes);
+} catch (err) {
+  if (err instanceof ZeroGError) {
+    console.error(
+      buildDefectReport({
+        error: err,
+        product: "Foundry Protocol",
+        env: { wallet: "MetaMask", chainId: 16602, network: "galileo" },
+      })
+    );
+  }
+}
+```
+
+Renders a ready-to-file QA defect report in the bilingual template used by the
+[0G ecosystem app-test program](https://github.com/lvxuan149/0g-apac-app-test).
+Every `ZeroGError` already carries a `code` + `helpUrl`, so the report
+auto-fills **ownership** (infra-class codes → `0G Infra`, integration/config
+codes → `Hackathon项目`), a **suggested severity**, the **environment** line,
+the **actual result**, and a **root-cause** hint — leaving only repro steps,
+expected result, and screenshot for the tester. `suggestOwnership` /
+`suggestSeverity` expose the routing + severity heuristics on their own.
+Framework-agnostic: call it from a browser dApp's error boundary or a CLI catch
+block. The `0g` CLI wires it behind `--defect-report`.
+
 ## Examples
 
 ### Minimal — resolve a network and read the chain id
@@ -252,6 +283,7 @@ started](/getting-started), then explore [chain](/packages/chain) /
 
 ## Exports
 
+- `buildDefectReport`
 - `define0GConfig`
 - `detectLocalDevnet`
 - `ERROR_CODES`
@@ -263,7 +295,14 @@ started](/getting-started), then explore [chain](/packages/chain) /
 - `helpUrlFor`
 - `isErrorCode`
 - `printFirstSuccess`
+- `suggestOwnership`
+- `suggestSeverity`
 - `type CreateClientOptions`
+- `type DefectOwnership`
+- `type DefectReportEnv`
+- `type DefectReportError`
+- `type DefectReportInput`
+- `type DefectSeverity`
 - `type DefineConfigOptions`
 - `type DefinedConfig`
 - `type DetectLocalDevnetOptions`
