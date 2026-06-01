@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { Command } from "commander";
-import { ZeroGError } from "@foundryprotocol/0gkit-core";
+import { ZeroGError, getNetwork } from "@foundryprotocol/0gkit-core";
 import { buildProgram, runCommand, type ProgramDeps } from "../program.js";
 
 function fakeDeps(over: Partial<ProgramDeps> = {}): ProgramDeps {
@@ -169,6 +169,52 @@ describe("runCommand --copy-issue-context", () => {
     });
     const cmd = new Command();
     cmd.option("--copy-issue-context", "");
+    cmd.parse([], { from: "user" });
+
+    await runCommand(deps, cmd, async () => {
+      throw new ZeroGError("STORAGE_QUOTA_EXCEEDED", "Boom.", "Fix it.");
+    });
+
+    expect(errLines.join("\n")).toBe("");
+    process.exitCode = 0;
+  });
+});
+
+describe("runCommand --defect-report", () => {
+  it("emits a QA defect report to stderr with auto-routing + suggested severity", async () => {
+    const errLines: string[] = [];
+    const deps = fakeDeps({
+      writeErr: (s: string) => errLines.push(s),
+      getNetwork,
+    });
+    const cmd = new Command();
+    cmd.option("--defect-report", "");
+    cmd.option("--network <name>", "");
+    cmd.parse(["--defect-report", "--network", "galileo"], { from: "user" });
+
+    await runCommand(deps, cmd, async () => {
+      throw new ZeroGError(
+        "CHAIN_RPC_UNREACHABLE",
+        "RPC unreachable.",
+        "Check the network."
+      );
+    });
+
+    const blob = errLines.join("\n");
+    expect(blob).toContain("### 0gkit defect report");
+    expect(blob).toContain("归属（Ownership）：0G Infra");
+    expect(blob).toContain("严重度（Severity）：P1");
+    expect(blob).toContain("Chain ID 16602");
+    expect(blob).toContain("网络/Network galileo");
+    expect(blob).toContain("CHAIN_RPC_UNREACHABLE");
+    process.exitCode = 0;
+  });
+
+  it("does NOT emit the defect report when the flag is absent", async () => {
+    const errLines: string[] = [];
+    const deps = fakeDeps({ writeErr: (s: string) => errLines.push(s) });
+    const cmd = new Command();
+    cmd.option("--defect-report", "");
     cmd.parse([], { from: "user" });
 
     await runCommand(deps, cmd, async () => {

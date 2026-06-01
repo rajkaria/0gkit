@@ -1,5 +1,10 @@
 import { Command } from "commander";
-import { ZeroGError, helpUrlFor } from "@foundryprotocol/0gkit-core";
+import {
+  ZeroGError,
+  helpUrlFor,
+  buildDefectReport,
+  type ErrorCode,
+} from "@foundryprotocol/0gkit-core";
 import type { createClient, getNetwork } from "@foundryprotocol/0gkit-core";
 import type {
   faucet,
@@ -238,6 +243,24 @@ export async function runCommand(
       });
       deps.writeErr(md);
     }
+    if (context.defectReport) {
+      let chainId: number | undefined;
+      try {
+        chainId = deps.getNetwork(context.network).chainId;
+      } catch {
+        chainId = undefined;
+      }
+      const { release } = await import("node:os");
+      const md = buildDefectReport({
+        error: { ...rendered, code: rendered.code as ErrorCode },
+        env: {
+          network: context.network,
+          chainId,
+          runtime: `node ${process.version} / ${process.platform} ${release()}`,
+        },
+      });
+      deps.writeErr(md);
+    }
     process.exitCode = 1;
   }
 }
@@ -256,6 +279,10 @@ export function buildProgram(deps: ProgramDeps): Command {
     .option(
       "--copy-issue-context",
       "on error, print a redacted markdown report to stderr — paste into a new GitHub issue"
+    )
+    .option(
+      "--defect-report",
+      "on error, print a QA defect report to stderr in the 0G app-test template (auto-routed + severity-suggested)"
     )
     // Ensure subcommands inherit exit-override so commander throws rather than
     // calling process.exit — required for requiredOption validation in tests.
