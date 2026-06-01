@@ -1,5 +1,25 @@
 # @foundryprotocol/0gkit-core
 
+## 1.5.0
+
+### Minor Changes
+
+- 006e514: Defect intelligence: turn any `ZeroGError` into a ready-to-file QA defect report.
+  - New `buildDefectReport(input)` in `0gkit-core` — renders the bilingual defect template used by the 0G ecosystem app-test program (github.com/lvxuan149/0g-apac-app-test). Auto-fills ownership, suggested severity, environment, actual result, and root-cause from the error; leaves repro/expected/screenshot for the human tester.
+  - New `suggestOwnership(code)` — routes infra-class codes (chain/storage/compute/DA/attestation/indexer) to `0G Infra`, integration/config codes to `Hackathon项目`.
+  - New `suggestSeverity(code)` — P1 for blockers, P3 for caller-fixable config, P2 otherwise (always rendered as a confirm-against-impact suggestion).
+  - Framework-agnostic (no deps) so a browser dApp's error boundary and the CLI emit the same report.
+  - CLI: new `--defect-report` global flag emits the report to stderr on error (mirrors `--copy-issue-context`; keeps `--json` stdout clean).
+
+- f59b752: SP16: golden path + typed config
+  - New `define0GConfig({ server, client, edge })` typed env reader with zod validation. Server, browser-public (`NEXT_PUBLIC_*`), and edge-runtime slots. Generates an `.env.example` from the schema via `config.envExample()`.
+  - New `detectLocalDevnet({ rpcUrl })` — pure chainId probe; templates auto-fall-back to `network=local` when the local devnet is reachable.
+  - New `printFirstSuccess({ op, id })` banner helper with `FIRST_SUCCESS_MARKER = "[0gkit:first-success]"` (public contract token for log scrapers).
+  - All 9 templates migrated: every template ships `0g.config.ts`, `.env.example` derived from the schema, auto-devnet detection on boot, a first-success banner on the first 0G op, and a "What next?" README section.
+  - CI: `fresh-machine-smoke.yml` greps `npm run dev` output for the banner on storage-app.
+
+  Decisions: D71 (banner contract token), D72 (chainId-probe detection), D73 (zod in core).
+
 ## 1.3.0
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @foundryprotocol/0gkit-mcp
 
+## 1.5.0
+
+### Patch Changes
+
+- Updated dependencies [006e514]
+- Updated dependencies [f59b752]
+  - @foundryprotocol/0gkit-core@1.5.0
+  - @foundryprotocol/0gkit-attestation@1.5.0
+  - @foundryprotocol/0gkit-chain@1.5.0
+  - @foundryprotocol/0gkit-compute@1.5.0
+  - @foundryprotocol/0gkit-da@1.5.0
+  - @foundryprotocol/0gkit-storage@1.5.0
+
 ## 1.3.0
 
 ### Patch Changes
