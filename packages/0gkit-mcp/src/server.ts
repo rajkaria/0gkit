@@ -8,8 +8,27 @@ import {
 import { TOOLS, makeHandlers, defaultDeps, type McpDeps } from "./tools.js";
 import { loadFoundryPlugin, type FoundryPlugin } from "./foundry-plugin.js";
 import type { ToolCallResult } from "./context.js";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-export const VERSION = "0.1.0";
+function readPackageVersion(): string {
+  try {
+    const packageJsonPath = join(
+      dirname(fileURLToPath(import.meta.url)),
+      "..",
+      "package.json"
+    );
+    const pkg = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+      version?: string;
+    };
+    return pkg.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
+export const VERSION = readPackageVersion();
 
 export interface ZeroGMcpOptions {
   /** Dependency override (testing). Defaults to the real `@foundryprotocol/0gkit-*` packages. */

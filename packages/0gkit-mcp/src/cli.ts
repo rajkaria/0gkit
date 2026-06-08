@@ -25,7 +25,31 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { create0gMcpServer, VERSION } from "./server.js";
 import { loadFoundryPlugin } from "./foundry-plugin.js";
 
+function printHelp(): void {
+  process.stdout.write(`0g-mcp — Neutral 0G MCP server
+
+Usage:
+  0g-mcp [options]
+
+Options:
+  -h, --help       Show this help message
+  -V, --version    Show package version
+
+Run without flags to start the stdio MCP server.
+`);
+}
+
 async function main(): Promise<void> {
+  const [arg] = process.argv.slice(2);
+  if (arg === "--help" || arg === "-h") {
+    printHelp();
+    return;
+  }
+  if (arg === "--version" || arg === "-V") {
+    process.stdout.write(`${VERSION}\n`);
+    return;
+  }
+
   const foundry = await loadFoundryPlugin();
   const server = await create0gMcpServer({ foundryPlugin: foundry });
   const transport = new StdioServerTransport();
