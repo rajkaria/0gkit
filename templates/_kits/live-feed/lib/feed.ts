@@ -98,9 +98,7 @@ export interface FeedCursor {
    *   - isReorg=true:  posts that were just rolled back (drop from the UI)
    * @returns unsubscribe function
    */
-  subscribe(
-    onBatch: (posts: FeedPost[], isReorg: boolean) => void
-  ): () => void;
+  subscribe(onBatch: (posts: FeedPost[], isReorg: boolean) => void): () => void;
 
   /** Returns all current (non-orphaned) posts in ascending order. */
   list(): Promise<FeedPost[]>;

@@ -13,7 +13,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createFeed, type FeedStorage, type FeedCursor, type FeedPost } from "../feed.js";
+import {
+  createFeed,
+  type FeedStorage,
+  type FeedCursor,
+  type FeedPost,
+} from "../feed.js";
 
 // ---------------------------------------------------------------------------
 // Mock FeedStorage
@@ -60,9 +65,7 @@ function mockCursor(): FeedCursor & {
       for (const fn of _listeners) fn([post], false);
     },
 
-    subscribe(
-      onBatch: (posts: FeedPost[], isReorg: boolean) => void
-    ): () => void {
+    subscribe(onBatch: (posts: FeedPost[], isReorg: boolean) => void): () => void {
       _listeners.push(onBatch);
       return () => {
         const idx = _listeners.indexOf(onBatch);
@@ -78,12 +81,12 @@ function mockCursor(): FeedCursor & {
     simulateReorg(rollbackToBlockNumber: bigint): void {
       // Remove entries whose blockNumber is GREATER than rollbackToBlockNumber
       const before = _entries.length;
-      const invalidated = _entries.filter(
-        (e) => e.blockNumber > rollbackToBlockNumber
+      const invalidated = _entries.filter((e) => e.blockNumber > rollbackToBlockNumber);
+      _entries.splice(
+        0,
+        _entries.length,
+        ..._entries.filter((e) => e.blockNumber <= rollbackToBlockNumber)
       );
-      _entries.splice(0, _entries.length, ..._entries.filter(
-        (e) => e.blockNumber <= rollbackToBlockNumber
-      ));
       if (invalidated.length > 0) {
         // Notify listeners with isReorg=true so the stream can drop orphans
         for (const fn of _listeners) fn(invalidated, true);
@@ -152,8 +155,8 @@ describe("createFeed", () => {
     // Pre-populate cursor directly so we don't need the full post() round-trip
     const now = BigInt(100);
     cursor._entries.push(
-      { root: "r1", content: "first",  author: "alice", ts: 1000, blockNumber: now },
-      { root: "r2", content: "second", author: "bob",   ts: 2000, blockNumber: now + 1n },
+      { root: "r1", content: "first", author: "alice", ts: 1000, blockNumber: now },
+      { root: "r2", content: "second", author: "bob", ts: 2000, blockNumber: now + 1n }
     );
 
     const feed = createFeed({ storage, cursor });
@@ -214,7 +217,7 @@ describe("createFeed", () => {
     });
 
     // Post two entries at different block numbers
-    await feed.post({ content: "canonical post",  author: "alice" });
+    await feed.post({ content: "canonical post", author: "alice" });
     // We can't directly set blockNumber in post(); simulate by directly inserting
     // a high-block entry into the cursor (simulating something already indexed)
     cursor._entries[cursor._entries.length - 1]!.blockNumber = 5n;
@@ -234,9 +237,9 @@ describe("createFeed", () => {
   it("stream() does NOT include orphaned posts in subsequent list() results after reorg", async () => {
     const feed = createFeed({ storage, cursor });
 
-    await feed.post({ content: "safe",    author: "alice" });
+    await feed.post({ content: "safe", author: "alice" });
     cursor._entries[cursor._entries.length - 1]!.blockNumber = 3n;
-    await feed.post({ content: "orphan",  author: "bob" });
+    await feed.post({ content: "orphan", author: "bob" });
     cursor._entries[cursor._entries.length - 1]!.blockNumber = 8n;
 
     // Simulate reorg before block 8

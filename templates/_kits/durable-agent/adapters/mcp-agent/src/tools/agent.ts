@@ -196,7 +196,9 @@ async function getJobRunner(): Promise<JobRunner> {
 
   const privateKey = process.env.OG_PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error("Missing OG_PRIVATE_KEY — required to build the 0gkit-jobs signer.");
+    throw new Error(
+      "Missing OG_PRIVATE_KEY — required to build the 0gkit-jobs signer."
+    );
   }
   const signer = await fromPrivateKey(privateKey);
 
@@ -211,7 +213,6 @@ async function getJobRunner(): Promise<JobRunner> {
 // ---------------------------------------------------------------------------
 
 export function registerAgentTools(server: McpServerLike): void {
-
   // -------------------------------------------------------------------------
   // agent_run — enqueue a new agent run via 0gkit-jobs
   // -------------------------------------------------------------------------
@@ -228,7 +229,8 @@ export function registerAgentTools(server: McpServerLike): void {
       properties: {
         input: {
           type: "object",
-          description: "Optional input payload passed to each step (e.g. { prompt: '...' })",
+          description:
+            "Optional input payload passed to each step (e.g. { prompt: '...' })",
         },
       },
       required: [],

@@ -141,8 +141,12 @@ function makeOtelTracer(): StepTracer {
     startSpan(name: string) {
       const span = tracer.startSpan(name);
       return {
-        end() { span.end(); },
-        setError(e: unknown) { span.recordException(e as Error); },
+        end() {
+          span.end();
+        },
+        setError(e: unknown) {
+          span.recordException(e as Error);
+        },
       };
     },
   };
@@ -203,7 +207,9 @@ async function getJobRunner(): Promise<JobRunner> {
 
   const privateKey = process.env.OG_PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error("Missing OG_PRIVATE_KEY — required to build the 0gkit-jobs signer.");
+    throw new Error(
+      "Missing OG_PRIVATE_KEY — required to build the 0gkit-jobs signer."
+    );
   }
   const signer = await fromPrivateKey(privateKey);
 
@@ -225,7 +231,9 @@ export function buildAgentRouter(): Hono {
     let body: { input?: Record<string, unknown> } = {};
     try {
       body = (await c.req.json()) as { input?: Record<string, unknown> };
-    } catch { /* empty body */ }
+    } catch {
+      /* empty body */
+    }
 
     const input = body.input ?? {};
     const jobId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

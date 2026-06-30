@@ -50,9 +50,9 @@ const FEED_EVENTS_ABI = [
     name: "PostPublished",
     type: "event",
     inputs: [
-      { name: "root",      type: "bytes32", indexed: true  },
-      { name: "author",    type: "address", indexed: true  },
-      { name: "content",   type: "string",  indexed: false },
+      { name: "root", type: "bytes32", indexed: true },
+      { name: "author", type: "address", indexed: true },
+      { name: "content", type: "string", indexed: false },
       { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
@@ -83,7 +83,8 @@ function getStorage(): Storage {
 
 class InProcessFeedCursor implements FeedCursor {
   private readonly _posts: FeedPost[] = [];
-  private readonly _listeners: Array<(posts: FeedPost[], isReorg: boolean) => void> = [];
+  private readonly _listeners: Array<(posts: FeedPost[], isReorg: boolean) => void> =
+    [];
 
   async append(post: FeedPost): Promise<void> {
     this._posts.push(post);
@@ -124,8 +125,12 @@ const _cursor = new InProcessFeedCursor();
 function buildFeedStorageAdapter(): FeedStorage {
   const og = getStorage();
   return {
-    async upload(data: Uint8Array) { return og.upload(data); },
-    async download(root: string) { return og.download(root); },
+    async upload(data: Uint8Array) {
+      return og.upload(data);
+    },
+    async download(root: string) {
+      return og.download(root);
+    },
   };
 }
 
@@ -137,7 +142,9 @@ let _indexerStarted = false;
 
 function maybeStartIndexer(): boolean {
   if (_indexerStarted) return true;
-  const contractAddress = process.env.OG_FEED_CONTRACT_ADDRESS as `0x${string}` | undefined;
+  const contractAddress = process.env.OG_FEED_CONTRACT_ADDRESS as
+    | `0x${string}`
+    | undefined;
   const rpcUrl = process.env.OG_RPC_URL;
   if (!contractAddress || !rpcUrl) return false;
 
@@ -207,7 +214,11 @@ _cursor.subscribe((posts: FeedPost[], isReorg: boolean) => {
   for (const post of posts) {
     const payload = `data: ${JSON.stringify({ type: isReorg ? "orphan" : "post", post })}\n\n`;
     for (const fn of _sseClients) {
-      try { fn(payload); } catch { _sseClients.delete(fn); }
+      try {
+        fn(payload);
+      } catch {
+        _sseClients.delete(fn);
+      }
     }
   }
 });
@@ -224,8 +235,11 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
       start(controller) {
         const enc = new TextEncoder();
         const send = (data: string) => {
-          try { controller.enqueue(enc.encode(data)); }
-          catch { _sseClients.delete(send); }
+          try {
+            controller.enqueue(enc.encode(data));
+          } catch {
+            _sseClients.delete(send);
+          }
         };
         _sseClients.add(send);
 
@@ -271,15 +285,24 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     let body: unknown;
-    try { body = await request.json(); }
-    catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
 
     const { content, author } = body as { content?: unknown; author?: unknown };
     if (typeof content !== "string" || !content.trim()) {
-      return NextResponse.json({ error: '"content" must be a non-empty string' }, { status: 400 });
+      return NextResponse.json(
+        { error: '"content" must be a non-empty string' },
+        { status: 400 }
+      );
     }
     if (typeof author !== "string" || !author.trim()) {
-      return NextResponse.json({ error: '"author" must be a non-empty string' }, { status: 400 });
+      return NextResponse.json(
+        { error: '"author" must be a non-empty string' },
+        { status: 400 }
+      );
     }
 
     const feed = getFeed();

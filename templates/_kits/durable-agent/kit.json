@@ -3,7 +3,13 @@
   "title": "Durable Agent",
   "domain": "agent-infra",
   "summary": "Resumable multi-step agent loop on 0gkit-jobs — step ledger persisted to 0G Storage prevents re-running completed steps on restart, every executed step is traced via OpenTelemetry. Optional sealed-inference step is capability-guarded (runtime check, not a hard dep).",
-  "compatibleBases": ["react-app", "chat", "tee-attested-api", "mcp-agent", "storage-app"],
+  "compatibleBases": [
+    "react-app",
+    "chat",
+    "tee-attested-api",
+    "mcp-agent",
+    "storage-app"
+  ],
   "tiers": {
     "lib": ["agent.ts", "steps.ts"],
     "adapters": {

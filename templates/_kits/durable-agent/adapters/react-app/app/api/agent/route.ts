@@ -214,7 +214,9 @@ async function getJobRunner(): Promise<JobRunner> {
 
   const privateKey = process.env.OG_PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error("Missing OG_PRIVATE_KEY — required to build the 0gkit-jobs signer.");
+    throw new Error(
+      "Missing OG_PRIVATE_KEY — required to build the 0gkit-jobs signer."
+    );
   }
   const signer = await fromPrivateKey(privateKey);
 

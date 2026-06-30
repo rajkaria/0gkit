@@ -18,10 +18,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import {
-  useLiveFeed,
-  type FeedPost,
-} from "../hooks/useLiveFeed.js";
+import { useLiveFeed, type FeedPost } from "../hooks/useLiveFeed.js";
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -51,13 +48,7 @@ function ReorgBadge({ active }: { active: boolean | null }) {
   );
 }
 
-function PostCard({
-  post,
-  isOrphaned,
-}: {
-  post: FeedPost;
-  isOrphaned: boolean;
-}) {
+function PostCard({ post, isOrphaned }: { post: FeedPost; isOrphaned: boolean }) {
   const date = new Date(post.ts).toLocaleString();
   const cardStyle: React.CSSProperties = {
     border: `1px solid ${isOrphaned ? "#fca5a5" : "#e5e7eb"}`,
@@ -104,7 +95,11 @@ function PostCard({
         <span>{date}</span>
         <span
           title="0G Storage root"
-          style={{ fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis" }}
+          style={{
+            fontFamily: "monospace",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
         >
           root: {post.root.slice(0, 16)}…
         </span>
@@ -271,9 +266,7 @@ export function FeedStream({
           </button>
         </div>
         {postError && (
-          <p style={{ color: "#dc2626", fontSize: "0.8rem", margin: 0 }}>
-            {postError}
-          </p>
+          <p style={{ color: "#dc2626", fontSize: "0.8rem", margin: 0 }}>{postError}</p>
         )}
       </form>
 

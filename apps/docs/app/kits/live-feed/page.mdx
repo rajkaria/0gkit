@@ -1,0 +1,83 @@
+---
+title: "live-feed kit"
+---
+
+# live-feed
+
+> **Reorg-safe live social feed on 0G Storage + 0gkit-indexer.** Posts are
+> content-addressed blobs in 0G Storage. Ordering and reorg-drop come from
+> the Indexer tracking on-chain `PostPublished` events when
+> `OG_FEED_CONTRACT_ADDRESS` is set. Without a contract address the adapter
+> runs in **storage-only mode** — posts are stored and streamed but reorg-drop
+> is not active.
+
+## What it does
+
+The `live-feed` kit adds a live post feed to your 0G app. On each
+`POST /api/feed` call the kit:
+
+1. Serialises the post payload (`{ content, author, ts }`) to JSON and uploads
+   it to **0G Storage** via `@foundryprotocol/0gkit-storage`.
+   The immutable content-addressed `root` is the permanent post identifier.
+2. Appends a `FeedPost` cursor entry (root + denormalized content + author +
+   block number) to the in-process `FeedCursor`.
+3. The `FeedCursor` fires all `subscribe()` listeners with the new post.
+
+**Reorg-safety (requires `OG_FEED_CONTRACT_ADDRESS`):**
+When a deployed `FeedEvents` contract address is provided, the adapter wires
+`@foundryprotocol/0gkit-indexer` to subscribe to `PostPublished` on-chain
+events. The Indexer's `onReorg` callback fires the cursor's reorg signal
+(`isReorg=true`) for any posts whose backing events were rolled back. The UI
+hook (`useLiveFeed`) and the `FeedStream` component remove those posts from
+the displayed feed. Without the contract address the adapter omits the Indexer
+subscription — posts are stored and delivered but reorg-drop is inactive.
+
+**Streaming:**
+`GET /api/feed` (SSE) calls `feed.stream(cb)`, which immediately flushes
+all existing posts (`isOrphan=false`) then streams new arrivals in real time.
+The React `useLiveFeed` hook and `FeedStream` component consume this stream.
+
+## Compatible bases
+
+`react-app` · `chat`
+
+## Apply
+
+```bash
+# scaffold-time
+npm create 0gkit-app -- --kits live-feed
+
+# add to an existing project
+0g add live-feed
+```
+
+## Environment variables
+
+| Variable                   | Example                            | Notes                                                                                                         |
+| -------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `OG_PRIVATE_KEY`           | `0x...`                            | Required — signs 0G Storage transactions (post uploads)                                                       |
+| `OG_RPC_URL`               | `https://evmrpc-testnet.0g.ai`     | Required — 0G chain RPC endpoint for Storage and Indexer                                                      |
+| `OG_FEED_CONTRACT_ADDRESS` | `0xYourDeployedFeedEventsContract` | **Required for reorg-safety.** Deployed `FeedEvents` contract. Without it, adapter runs in storage-only mode. |
+| `OG_FEED_NAMESPACE`        | `live-feed`                        | Storage namespace prefix for feed blobs (default: `live-feed`)                                                |
+
+## Tiers
+
+- **lib** — `lib/feed.ts` (portable `createFeed`, `FeedStorage`, `FeedCursor`,
+  `FeedPost`, `PostInput` interfaces + implementation). No package imports —
+  all deps injected by adapters.
+- **adapters** — `app/api/feed/route.ts` (Next.js / chat): wires
+  `@foundryprotocol/0gkit-storage` as `FeedStorage` and an in-process cursor
+  as `FeedCursor`; optionally wires `@foundryprotocol/0gkit-indexer` when
+  `OG_FEED_CONTRACT_ADDRESS` is set.
+- **ui** — `hooks/useLiveFeed.ts` (SSE stream hook), `components/FeedStream.tsx`
+  (live post list with reorg-drop), `app/feed/page.tsx` (demo page).
+
+## Honesty note
+
+The portable lib's reorg-drop guarantee is proven by unit tests: when the
+injected `FeedCursor` fires its `subscribe` callback with `isReorg=true`, those
+posts are surfaced as orphans and the caller removes them — they are never
+delivered as live items. In the real adapter, this reorg signal flows from
+the Indexer's `onReorg` callback. **This reorg-safety is only active when
+`OG_FEED_CONTRACT_ADDRESS` is set and the `FeedEvents` contract is deployed.**
+Without it, the adapter is storage-only and no reorg signal is emitted.

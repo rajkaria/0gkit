@@ -67,9 +67,9 @@ const FEED_EVENTS_ABI = [
     name: "PostPublished",
     type: "event",
     inputs: [
-      { name: "root",      type: "bytes32", indexed: true  },
-      { name: "author",    type: "address", indexed: true  },
-      { name: "content",   type: "string",  indexed: false },
+      { name: "root", type: "bytes32", indexed: true },
+      { name: "author", type: "address", indexed: true },
+      { name: "content", type: "string", indexed: false },
       { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
@@ -107,7 +107,8 @@ function getStorage(): Storage {
 
 class InProcessFeedCursor implements FeedCursor {
   private readonly _posts: FeedPost[] = [];
-  private readonly _listeners: Array<(posts: FeedPost[], isReorg: boolean) => void> = [];
+  private readonly _listeners: Array<(posts: FeedPost[], isReorg: boolean) => void> =
+    [];
 
   async append(post: FeedPost): Promise<void> {
     this._posts.push(post);
@@ -167,7 +168,9 @@ let _indexerStarted = false;
 
 function maybeStartIndexer(): boolean {
   if (_indexerStarted) return true;
-  const contractAddress = process.env.OG_FEED_CONTRACT_ADDRESS as `0x${string}` | undefined;
+  const contractAddress = process.env.OG_FEED_CONTRACT_ADDRESS as
+    | `0x${string}`
+    | undefined;
   const rpcUrl = process.env.OG_RPC_URL;
   if (!contractAddress || !rpcUrl) return false; // storage-only mode
 
@@ -251,7 +254,11 @@ _cursor.subscribe((posts: FeedPost[], isReorg: boolean) => {
   for (const post of posts) {
     const payload = `data: ${JSON.stringify({ type: isReorg ? "orphan" : "post", post })}\n\n`;
     for (const fn of _sseClients) {
-      try { fn(payload); } catch { _sseClients.delete(fn); }
+      try {
+        fn(payload);
+      } catch {
+        _sseClients.delete(fn);
+      }
     }
   }
 });

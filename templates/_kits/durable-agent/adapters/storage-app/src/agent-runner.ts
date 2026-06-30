@@ -133,7 +133,9 @@ function makeStorageBackend(jobId: string, rootHint?: string): AgentJobsBackend 
   if (rootHint) rootRegistry.set(ledgerKey, rootHint);
 
   return {
-    getLedgerKey(): string { return ledgerKey; },
+    getLedgerKey(): string {
+      return ledgerKey;
+    },
 
     async getCompletedSteps(): Promise<Set<string>> {
       const root = rootRegistry.get(ledgerKey);
@@ -191,7 +193,9 @@ export async function runDurableAgent(
 
   const privateKey = process.env.OG_PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error("Missing OG_PRIVATE_KEY — required to build the 0gkit-jobs signer.");
+    throw new Error(
+      "Missing OG_PRIVATE_KEY — required to build the 0gkit-jobs signer."
+    );
   }
   const signer = await fromPrivateKey(privateKey);
 
@@ -244,8 +248,8 @@ export async function runDurableAgent(
     throw new Error(`Agent run failed: ${record.error ?? "unknown error"}`);
   }
 
-  const completedSteps = (record.result as { completedSteps: string[] } | undefined)
-    ?.completedSteps ?? [];
+  const completedSteps =
+    (record.result as { completedSteps: string[] } | undefined)?.completedSteps ?? [];
 
   return {
     jobId,

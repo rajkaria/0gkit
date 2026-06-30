@@ -10,11 +10,7 @@
       "react-app": ["app/api/feed/route.ts"],
       "chat": ["app/api/feed/route.ts"]
     },
-    "ui": [
-      "hooks/useLiveFeed.ts",
-      "components/FeedStream.tsx",
-      "app/feed/page.tsx"
-    ]
+    "ui": ["hooks/useLiveFeed.ts", "components/FeedStream.tsx", "app/feed/page.tsx"]
   },
   "requires": [],
   "env": [
