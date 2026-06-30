@@ -75,6 +75,7 @@ Lazy `0gkit-testing` import via computed specifier (D39). pnpm + turbo. Changese
 ## File structure
 
 **Created**
+
 ```
 packages/0gkit-testing/src/conformance/
   index.ts                 # runConformance(), SuiteName, SuiteResult
@@ -90,6 +91,7 @@ packages/0gkit-cli/src/__tests__/test-command.test.ts
 ```
 
 **Modified**
+
 ```
 packages/0gkit-testing/src/index.ts              # export conformance surface
 packages/0gkit-cli/src/commands/doctor.ts        # Check.fixCmd + --fix flag + fixers
@@ -129,6 +131,7 @@ T1 conformance suites (storage/compute/da/wallet) ──┐
 ### T1 — conformance suites in `0gkit-testing`
 
 - [ ] **Failing test** — `packages/0gkit-testing/src/conformance/__tests__/conformance.test.ts`:
+
 ```ts
 import { describe, it, expect } from "vitest";
 import { storageSuite } from "../storage.js";
@@ -144,8 +147,10 @@ describe("storageSuite", () => {
   });
 });
 ```
+
 - [ ] **Run** — `pnpm --filter @foundryprotocol/0gkit-testing test` → red.
 - [ ] **Implement** — `src/conformance/storage.ts`:
+
 ```ts
 import type { SuiteResult, SuiteDeps } from "./index.js";
 
@@ -155,8 +160,7 @@ export async function storageSuite(deps: SuiteDeps): Promise<SuiteResult> {
   const storage = deps.makeStorage();
   const { root } = await storage.upload(ONE_KB);
   const back = await storage.download(root);
-  const equal =
-    back.length === ONE_KB.length && back.every((b, i) => b === ONE_KB[i]);
+  const equal = back.length === ONE_KB.length && back.every((b, i) => b === ONE_KB[i]);
   return {
     name: "storage",
     ok: equal,
@@ -166,10 +170,12 @@ export async function storageSuite(deps: SuiteDeps): Promise<SuiteResult> {
   };
 }
 ```
-  Then `compute.ts` (4-token prompt → assert non-empty `output`), `da.ts`
-  (`publish` → `verify(payload, digest) === true`), `wallet.ts` (sign a test
-  envelope via `testWallet()` → `recoverAddress` matches the signer). Each is a
-  pure function over an injected factory so no suite dials a real network.
+
+Then `compute.ts` (4-token prompt → assert non-empty `output`), `da.ts`
+(`publish` → `verify(payload, digest) === true`), `wallet.ts` (sign a test
+envelope via `testWallet()` → `recoverAddress` matches the signer). Each is a
+pure function over an injected factory so no suite dials a real network.
+
 - [ ] **Run** → green. **Commit**: `feat(testing): storage/compute/da/wallet conformance suites`.
 
 ### T2 — `runConformance()` orchestrator + exports
@@ -177,6 +183,7 @@ export async function storageSuite(deps: SuiteDeps): Promise<SuiteResult> {
 - [ ] **Failing test** — `conformance.test.ts`: `runConformance({ suites: ["storage","da"], deps })` returns two `SuiteResult`s in order; an unknown suite name throws a typed `ConfigError`; `runConformance()` with no `suites` runs all four.
 - [ ] **Run** → red.
 - [ ] **Implement** — `src/conformance/index.ts`:
+
 ```ts
 import { ConfigError } from "@foundryprotocol/0gkit-core";
 import { storageSuite } from "./storage.js";
@@ -187,23 +194,38 @@ import { walletSuite } from "./wallet.js";
 export const SUITE_NAMES = ["storage", "compute", "da", "wallet"] as const;
 export type SuiteName = (typeof SUITE_NAMES)[number];
 
-export interface SuiteResult { name: string; ok: boolean; detail: string }
+export interface SuiteResult {
+  name: string;
+  ok: boolean;
+  detail: string;
+}
 export interface SuiteDeps {
-  makeStorage: () => { upload: (b: Uint8Array) => Promise<{ root: string }>;
-                       download: (r: string) => Promise<Uint8Array> };
-  makeCompute: () => { inference: (a: { messages: { role: string; content: string }[] })
-                       => Promise<{ output: string }> };
-  makeDA: () => { publish: (b: Uint8Array) => Promise<{ digest: string }>;
-                  verify: (b: Uint8Array, d: string) => boolean };
+  makeStorage: () => {
+    upload: (b: Uint8Array) => Promise<{ root: string }>;
+    download: (r: string) => Promise<Uint8Array>;
+  };
+  makeCompute: () => {
+    inference: (a: {
+      messages: { role: string; content: string }[];
+    }) => Promise<{ output: string }>;
+  };
+  makeDA: () => {
+    publish: (b: Uint8Array) => Promise<{ digest: string }>;
+    verify: (b: Uint8Array, d: string) => boolean;
+  };
   testWallet: () => { address: string; sign: (digest: string) => Promise<string> };
 }
 
 const RUNNERS: Record<SuiteName, (d: SuiteDeps) => Promise<SuiteResult>> = {
-  storage: storageSuite, compute: computeSuite, da: daSuite, wallet: walletSuite,
+  storage: storageSuite,
+  compute: computeSuite,
+  da: daSuite,
+  wallet: walletSuite,
 };
 
 export async function runConformance(opts: {
-  suites?: SuiteName[]; deps: SuiteDeps;
+  suites?: SuiteName[];
+  deps: SuiteDeps;
 }): Promise<SuiteResult[]> {
   const suites = opts.suites ?? [...SUITE_NAMES];
   for (const s of suites) {
@@ -216,7 +238,9 @@ export async function runConformance(opts: {
   return Promise.all(suites.map((s) => RUNNERS[s](opts.deps)));
 }
 ```
-  Add to `src/index.ts`: `export { runConformance, SUITE_NAMES, type SuiteName, type SuiteResult, type SuiteDeps } from "./conformance/index.js";`
+
+Add to `src/index.ts`: `export { runConformance, SUITE_NAMES, type SuiteName, type SuiteResult, type SuiteDeps } from "./conformance/index.js";`
+
 - [ ] **Run** → green. **Commit**: `feat(testing): runConformance() orchestrator + exports`.
 
 ### T3 — `0g test` command (lazy-imports `0gkit-testing`, D39)
@@ -224,6 +248,7 @@ export async function runConformance(opts: {
 - [ ] **Failing test** — `packages/0gkit-cli/src/__tests__/test-command.test.ts`: `0g test --suite=storage,da --local` calls an injected `runConformance` once with `{ suites:["storage","da"] }`; default (`0g test`) runs all four; `--galileo` is the default network path; a failing suite sets `process.exitCode = 1`.
 - [ ] **Run** → red.
 - [ ] **Implement** — `packages/0gkit-cli/src/commands/test.ts`:
+
 ```ts
 import type { Command } from "commander";
 import { ConfigError } from "@foundryprotocol/0gkit-core";
@@ -239,13 +264,14 @@ export function registerTest(program: Command, deps: ProgramDeps): void {
     .option("--kits", "also run each applied kit's conformance check")
     .action(async function (this: Command) {
       const opts = this.opts() as {
-        suite?: string; local?: boolean; galileo?: boolean; kits?: boolean;
+        suite?: string;
+        local?: boolean;
+        galileo?: boolean;
+        kits?: boolean;
       };
       await runCommand(deps, this, async (ctx) => {
         // D39: computed specifier keeps `0gkit-testing` out of cold-start.
-        const mod = await import(
-          /* @vite-ignore */ "@foundryprotocol/0gkit-testing"
-        );
+        const mod = await import(/* @vite-ignore */ "@foundryprotocol/0gkit-testing");
         const suites = opts.suite
           ? opts.suite.split(",").map((s) => s.trim())
           : undefined;
@@ -255,9 +281,7 @@ export function registerTest(program: Command, deps: ProgramDeps): void {
         });
         const failed = results.filter((r: { ok: boolean }) => !r.ok);
         if (failed.length) process.exitCode = 1;
-        const kitNotes = opts.kits
-          ? await deps.runKitConformance(deps.cwd())
-          : [];
+        const kitNotes = opts.kits ? await deps.runKitConformance(deps.cwd()) : [];
         return {
           human: [
             `0g test — network ${opts.local ? "local" : ctx.network}`,
@@ -276,7 +300,9 @@ export function registerTest(program: Command, deps: ProgramDeps): void {
     });
 }
 ```
-  Wire `conformanceDeps`, `runKitConformance`, and `registerTest(program, deps)` into `program.ts` (default `conformanceDeps` builds real `Storage`/`Compute`/`DA` factories; `local` swaps RPC to `http://127.0.0.1:8545`). Register after `registerCost`. `ConfigError` import keeps the unknown-suite path typed.
+
+Wire `conformanceDeps`, `runKitConformance`, and `registerTest(program, deps)` into `program.ts` (default `conformanceDeps` builds real `Storage`/`Compute`/`DA` factories; `local` swaps RPC to `http://127.0.0.1:8545`). Register after `registerCost`. `ConfigError` import keeps the unknown-suite path typed.
+
 - [ ] **Run** → green. **Commit**: `feat(cli): 0g test conformance runner (lazy-imports 0gkit-testing, D39)`.
 
 ### T4 — doctor fixers (`.env` / stale pins / RPC fallback)
@@ -284,17 +310,21 @@ export function registerTest(program: Command, deps: ProgramDeps): void {
 - [ ] **Failing test** — `packages/0gkit-cli/src/__tests__/doctor-fix.test.ts`: `genEnvFromConfig` writes `.env.example` + `.env.local` from an injected `define0GConfig` and is idempotent (re-run writes identical bytes); `bumpStalePins` returns the `npm install` line only for pins below the latest registry version; `rpcFallbackCmd("galileo")` returns the exact `0g dev` command string.
 - [ ] **Run** → red.
 - [ ] **Implement** — `packages/0gkit-cli/src/commands/doctor-fix.ts`:
+
 ```ts
 export interface DoctorFixDeps {
-  fs: { exists: (p: string) => Promise<boolean>;
-        writeFile: (p: string, d: string) => Promise<void> };
+  fs: {
+    exists: (p: string) => Promise<boolean>;
+    writeFile: (p: string, d: string) => Promise<void>;
+  };
   loadProjectConfig: (cwd: string) => Promise<{ envExample: () => string } | null>;
   readProjectPins: (cwd: string) => Promise<Record<string, string>>;
   latestVersion: (pkg: string) => Promise<string>;
 }
 
 export async function genEnvFromConfig(
-  cwd: string, deps: DoctorFixDeps
+  cwd: string,
+  deps: DoctorFixDeps
 ): Promise<string | null> {
   const cfg = await deps.loadProjectConfig(cwd);
   if (!cfg) return null;
@@ -306,7 +336,8 @@ export async function genEnvFromConfig(
 }
 
 export async function bumpStalePins(
-  cwd: string, deps: DoctorFixDeps
+  cwd: string,
+  deps: DoctorFixDeps
 ): Promise<string | null> {
   const pins = await deps.readProjectPins(cwd);
   const stale: string[] = [];
@@ -322,6 +353,7 @@ export function rpcFallbackCmd(network: string): string {
   return `0g dev   # then re-run with --network local (galileo ${network} RPC unreachable)`;
 }
 ```
+
 - [ ] **Run** → green. **Commit**: `feat(cli): doctor fixers — .env gen, stale-pin bump, rpc fallback`.
 
 ### T5 — `0g test --kits` synergy (K0)

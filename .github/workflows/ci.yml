@@ -73,6 +73,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # create-0gkit-app re-exports create-0g-app's source, which imports the
+      # kits engine — its type declarations must exist before the DTS build.
+      - run: pnpm --filter @foundryprotocol/0gkit-kits build
+
       - run: pnpm --filter create-0gkit-app build
 
       # Smoke the binary: should write package.json + .env.example into a

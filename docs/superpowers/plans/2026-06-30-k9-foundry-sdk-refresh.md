@@ -34,7 +34,7 @@ that wraps the official 0G SDKs directly. After K9, `@foundryprotocol/sdk@1.1.0`
 
 > **Direction note:** this is the **`@foundryprotocol/sdk` app consuming neutral
 > `0gkit-*` packages** — the allowed direction. Neutrality (no `0gkit-*` → Foundry
-> dep) is *not* affected by K9; K9 only adds Foundry → `0gkit-*` dependencies.
+> dep) is _not_ affected by K9; K9 only adds Foundry → `0gkit-*` dependencies.
 > **A storage-adapter draft from a prior session transcript can be lifted as the
 > T2 starting point** (verify it against the current `0gkit-storage` surface
 > before trusting it).
@@ -73,6 +73,7 @@ deps. Changesets (or the repo's existing version flow).
 ## File structure
 
 **Modified** (all under `/Users/rajkaria/Projects/Foundryprotocol/packages/sdk/`)
+
 ```
 package.json                       # deps: 0gkit-storage + 0gkit-attestation ^1.x;
                                    #       drop 0g-storage-ts-sdk + ethers peerDeps; version 1.1.0
@@ -119,11 +120,16 @@ T1 add 0gkit deps, drop old peerDeps ──┐
 - [ ] **Failing test** — `packages/sdk/src/__tests__/storage.test.ts`: with an injected `0gkit-storage` `Storage` whose `upload` returns `{ root: "0xroot", tx: { txHash: "0xtx" } }`, `new StorageClient(cfg).uploadJson({ a: 1 }, { signer })` returns `{ rootHash: "0xroot", txHash: "0xtx", size: <bytes> }`; `downloadJson(root)` round-trips an object; the existing `StorageClient` type signatures are unchanged (compile-time assertion).
 - [ ] **Run** — `pnpm --filter @foundryprotocol/sdk test` → red.
 - [ ] **Implement** — rewrite `src/storage.ts` so `StorageClient` constructs a `0gkit-storage` `Storage` internally and maps:
+
 ```ts
 import { Storage } from "@foundryprotocol/0gkit-storage";
 import type { Hex } from "viem";
 
-export interface UploadResult { rootHash: Hex; txHash: Hex; size: number }
+export interface UploadResult {
+  rootHash: Hex;
+  txHash: Hex;
+  size: number;
+}
 
 export class StorageClient {
   private readonly storage: Storage;
@@ -159,7 +165,9 @@ export class StorageClient {
   }
 }
 ```
-  Keep `StorageError` exported (re-throw `0gkit-storage` errors wrapped to preserve the type). **Lift the prior-session storage-adapter draft here** — but re-verify each method name against the current `0gkit-storage` `Storage` surface (`upload`/`download`/`exists`) before trusting it.
+
+Keep `StorageError` exported (re-throw `0gkit-storage` errors wrapped to preserve the type). **Lift the prior-session storage-adapter draft here** — but re-verify each method name against the current `0gkit-storage` `Storage` surface (`upload`/`download`/`exists`) before trusting it.
+
 - [ ] **Run** → green. **Commit**: `refactor(sdk): StorageClient is a thin adapter over 0gkit-storage (API preserved)`.
 
 ### T3 — `attestation.ts` → re-export `0gkit-attestation` + throw-on-mismatch
@@ -167,18 +175,27 @@ export class StorageClient {
 - [ ] **Failing test** — `packages/sdk/src/__tests__/attestation.test.ts`: a valid signed envelope verifies; a tampered digest causes the SDK's `verifyEnvelope` wrapper to **throw** (not return `{ ok: false }`) — preserving Foundry's throw-on-mismatch contract; `AttestationEnvelope`/`SignedEnvelope` types still export.
 - [ ] **Run** → red.
 - [ ] **Implement** — `src/attestation.ts` re-exports `parseEnvelope`/`reportEnvelope`/types from `@foundryprotocol/0gkit-attestation`, and wraps its `verifyEnvelope`:
+
 ```ts
 import { verifyEnvelope as coreVerify } from "@foundryprotocol/0gkit-attestation";
-export async function verifyEnvelope(signed: SignedEnvelope, signer: string): Promise<true> {
+export async function verifyEnvelope(
+  signed: SignedEnvelope,
+  signer: string
+): Promise<true> {
   const result = await coreVerify(signed as never, signer);
   if (!result.ok)
     throw new AttestationError(
-      `Attestation verification failed: ${result.checks.filter((c) => !c.ok).map((c) => c.name).join(", ")}`
+      `Attestation verification failed: ${result.checks
+        .filter((c) => !c.ok)
+        .map((c) => c.name)
+        .join(", ")}`
     );
   return true; // Foundry callers rely on throw-on-mismatch
 }
 ```
-  Keep the `AttestationEnvelope`/`SignedEnvelope` type re-exports so `index.ts` is unchanged.
+
+Keep the `AttestationEnvelope`/`SignedEnvelope` type re-exports so `index.ts` is unchanged.
+
 - [ ] **Run** → green. **Commit**: `refactor(sdk): attestation.ts re-exports 0gkit-attestation; keeps throw-on-mismatch`.
 
 ### T4 — `da.ts` verify-only + `inference.ts` untouched

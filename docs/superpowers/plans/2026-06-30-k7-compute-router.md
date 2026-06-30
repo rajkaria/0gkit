@@ -25,8 +25,10 @@ back — so app code stops hard-coding a provider address. After K7:
 import { Compute } from "@foundryprotocol/0gkit-compute";
 
 const compute = new Compute({ network: "galileo", brokerKey });
-const r = await compute.router({ model: "llama-3.1-8b",
-                                 messages: [{ role: "user", content: "hi" }] });
+const r = await compute.router({
+  model: "llama-3.1-8b",
+  messages: [{ role: "user", content: "hi" }],
+});
 // provider chosen behind the scenes, with retries + fallback
 ```
 
@@ -41,7 +43,7 @@ calls compute (`sealed-inference`, `ai-oracle`, `prediction-market`,
 > **RESEARCH GATE (block 1 day, T0):** 0G's "Router" is the abstraction layer
 > above per-provider selection. **Confirm the public Router API surface with the
 > 0G compute / serving docs before writing the adapter.** Until verified, the
-> router selects among providers returned by the *already-shipped*
+> router selects among providers returned by the _already-shipped_
 > `Compute.listProviders()` (which calls `broker.inference.listService()`,
 > [packages/0gkit-compute/src/compute.ts](../../../packages/0gkit-compute/src/compute.ts)) —
 > a real, honest fallback that needs no unverified endpoint. **Honesty rule:** if
@@ -78,6 +80,7 @@ TypeScript (ESM, `"import"`-only per D68), tsup, vitest. pnpm + turbo. Changeset
 ## File structure
 
 **Created**
+
 ```
 packages/0gkit-compute/src/router-select.ts          # selectProviders() pure strategy
 packages/0gkit-compute/src/__tests__/router.test.ts
@@ -87,6 +90,7 @@ docs/research/2026-06-30-0g-router-api.md             # T0 research-gate finding
 ```
 
 **Modified**
+
 ```
 packages/0gkit-compute/src/compute.ts                # router() + direct() alias
 packages/0gkit-compute/src/index.ts                  # export RouterArgs/RouterResult types
@@ -124,20 +128,21 @@ T1 selectProviders() pure strategy ──┐
 ### T0 — research gate: confirm the 0G Router API
 
 - [ ] **Research** — read the 0G compute / serving docs + the broker SDK surface.
-  Answer in `docs/research/2026-06-30-0g-router-api.md`: (a) is there a public
-  Router endpoint distinct from per-provider `listService()`? (b) its request
-  shape? (c) does it return a provider to call, or proxy the call itself? Cite
-  every source URL (honesty rule: cite or mark unverified).
+      Answer in `docs/research/2026-06-30-0g-router-api.md`: (a) is there a public
+      Router endpoint distinct from per-provider `listService()`? (b) its request
+      shape? (c) does it return a provider to call, or proxy the call itself? Cite
+      every source URL (honesty rule: cite or mark unverified).
 - [ ] **Decide** — if a Router endpoint is **verified**: the adapter calls it. If
-  **not verified**: `router()` selects among `listProviders()` results
-  (real today) and the docs label it "client-side routing over the provider list
-  until 0G ships a server Router." Either way the public `router()` surface below
-  is identical — only the internal resolver differs.
+      **not verified**: `router()` selects among `listProviders()` results
+      (real today) and the docs label it "client-side routing over the provider list
+      until 0G ships a server Router." Either way the public `router()` surface below
+      is identical — only the internal resolver differs.
 - [ ] **Commit**: `docs(research): 0G Router API gate — verified|fallback findings`.
 
 ### T1 — `selectProviders()` pure strategy
 
 - [ ] **Failing test** — `packages/0gkit-compute/src/__tests__/router-select.test.ts`:
+
 ```ts
 import { describe, it, expect } from "vitest";
 import { selectProviders } from "../router-select.js";
@@ -154,7 +159,10 @@ describe("selectProviders", () => {
     expect(ordered.map((p) => p.provider)).toEqual(["0xA", "0xC", "0xB"]);
   });
   it("honours an explicit `prefer` address as the head", () => {
-    const ordered = selectProviders(providers, { model: "llama-3.1-8b", prefer: "0xC" });
+    const ordered = selectProviders(providers, {
+      model: "llama-3.1-8b",
+      prefer: "0xC",
+    });
     expect(ordered[0].provider).toBe("0xC");
   });
   it("returns all candidates when no model matches (so fallback still tries)", () => {
@@ -163,11 +171,15 @@ describe("selectProviders", () => {
   });
 });
 ```
+
 - [ ] **Run** — `pnpm --filter @foundryprotocol/0gkit-compute test` → red.
 - [ ] **Implement** — `packages/0gkit-compute/src/router-select.ts`:
+
 ```ts
 export interface ProviderInfo {
-  provider: string; model: string; endpoint?: string;
+  provider: string;
+  model: string;
+  endpoint?: string;
 }
 export function selectProviders(
   providers: ProviderInfo[],
@@ -184,6 +196,7 @@ export function selectProviders(
   return ordered;
 }
 ```
+
 - [ ] **Run** → green. **Commit**: `feat(compute): selectProviders() router strategy`.
 
 ### T2 — `Compute.router()`
@@ -191,6 +204,7 @@ export function selectProviders(
 - [ ] **Failing test** — `packages/0gkit-compute/src/__tests__/router.test.ts`: with an injected `listProviders` returning three providers and an `inference` that throws on the first candidate but succeeds on the second, `router({ model, messages })` resolves with the second provider's output (proves retry+fallback); with one provider, `router()` calls it directly; a request with zero reachable providers throws a typed `NetworkError`.
 - [ ] **Run** → red.
 - [ ] **Implement** — add to `Compute` in `compute.ts`:
+
 ```ts
 async router(args: {
   model: string;
@@ -226,7 +240,9 @@ async router(args: {
   throw lastErr;
 }
 ```
-  Import `selectProviders`, `ProviderInfo`, and `NetworkError` (already imported in `compute.ts`). Map `listProviders()`'s untyped `unknown[]` onto `ProviderInfo` defensively.
+
+Import `selectProviders`, `ProviderInfo`, and `NetworkError` (already imported in `compute.ts`). Map `listProviders()`'s untyped `unknown[]` onto `ProviderInfo` defensively.
+
 - [ ] **Run** → green. **Commit**: `feat(compute): Compute.router() — model-first selection + retry/fallback`.
 
 ### T3 — `Compute.direct()` back-compat alias

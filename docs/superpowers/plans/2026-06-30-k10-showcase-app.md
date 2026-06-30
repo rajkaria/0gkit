@@ -70,6 +70,7 @@ Next.js (react-app base), published `@foundryprotocol/0gkit-*@^1.x`, the K2
 ## File structure
 
 **Created** (showcase app — its own dir, NOT a workspace package)
+
 ```
 showcase/0gkit-status/
   package.json               # published @foundryprotocol/0gkit-*@^1.x deps (no workspace:*)
@@ -83,6 +84,7 @@ showcase/0gkit-status/
 ```
 
 **Modified** (on the 0gkit repo)
+
 ```
 apps/landing/components/TrustSignals.tsx   # link the live showcase
 apps/docs/app/kits/page.mdx                # "Built with Kits: 0gkit-status" callout
@@ -112,14 +114,17 @@ PR4  T4 deploy to apps.0gkit.com + landing TrustSignals link + docs callout
 
 - [ ] **Decide** — `0gkit-status` (assumed) vs `0gkit-prompt-receipts`. Record the choice + one-line rationale in `showcase/0gkit-status/README.md`. Honesty: `0gkit-status` reads **real galileo** data; if a panel can't fetch live, it shows "no live data" — never fabricated numbers.
 - [ ] **Scaffold** — run, from a clean dir outside the workspace:
+
 ```bash
 npm create 0gkit-app@latest 0gkit-status -- \
   --template react-app --kits agent-memory,live-feed
 ```
-  Confirm the scaffold installs **published** `@foundryprotocol/0gkit-*@^1.x`
-  (grep `package.json` for any `workspace:*` — there must be none, per D24).
+
+Confirm the scaffold installs **published** `@foundryprotocol/0gkit-*@^1.x`
+(grep `package.json` for any `workspace:*` — there must be none, per D24).
+
 - [ ] **Verify** — `npm run dev` boots; the `live-feed` + `agent-memory` kit files
-  are present (`lib/`, `app/api/feed/route.ts`).
+      are present (`lib/`, `app/api/feed/route.ts`).
 - [ ] **Commit** (PR1): `feat(showcase): scaffold 0gkit-status by composing agent-memory + live-feed kits`.
 
 ### PR2 — T2: MVP (live feed + router compute + memory pins)
@@ -138,27 +143,27 @@ npm create 0gkit-app@latest 0gkit-status -- \
 ### PR4 — T4: deploy + landing link + docs callout
 
 - [ ] **Deploy** — Vercel project for `showcase/0gkit-status`, custom domain
-  `apps.0gkit.com`. Set env from `.env.example`. Verify the live URL renders real
-  galileo data.
+      `apps.0gkit.com`. Set env from `.env.example`. Verify the live URL renders real
+      galileo data.
 - [ ] **Implement** — on the 0gkit repo: add the live link to
-  `apps/landing/components/TrustSignals.tsx` ("Built with 0gkit Kits — live"),
-  and a callout in `apps/docs/app/kits/page.mdx` ("0gkit-status is built by
-  composing the `agent-memory` + `live-feed` kits — see it live").
+      `apps/landing/components/TrustSignals.tsx` ("Built with 0gkit Kits — live"),
+      and a callout in `apps/docs/app/kits/page.mdx` ("0gkit-status is built by
+      composing the `agent-memory` + `live-feed` kits — see it live").
 - [ ] **Run** — landing `pnpm build` + `pnpm docs:check` green; the deployed URL is
-  reachable (smoke-check the home route).
+      reachable (smoke-check the home route).
 - [ ] **Commit** (PR4): `feat(landing): link the live 0gkit-status showcase; docs callout`.
 
 ### T5 — changeset (docs/landing) + decisions
 
 - [ ] **Implement** — `.changeset/k10-showcase.md`: landing + docs only (the
-  showcase app is **not** a published package, so no package version bump). If the
-  landing app is versioned in the changeset graph, mark it patch.
+      showcase app is **not** a published package, so no package version bump). If the
+      landing app is versioned in the changeset graph, mark it patch.
 - [ ] **Implement** — `docs/DECISIONS.md` D91–D92:
   - **D91** — The showcase consumes **published** `@foundryprotocol/0gkit-*@^1.x`
     and is **not** in the workspace (mirrors D24) — it must break exactly like a
     real user's app if a published package or kit regresses.
   - **D92** — The showcase is **composed from Kits** (`0g add agent-memory
-    live-feed`), uses `Compute.router()` (K7) and `0g test` (K5) as its CI gate —
+live-feed`), uses `Compute.router()` (K7) and `0g test` (K5) as its CI gate —
     it is the epic's end-to-end dogfood + GTM proof. `0gkit-status` reads real
     galileo data and shows "no live data" rather than fabricating (honesty rule).
 - [ ] **Commit**: `chore(k10): changeset + D91–D92`.

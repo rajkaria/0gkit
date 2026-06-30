@@ -70,6 +70,7 @@ Changesets.
 ## File structure
 
 **Created**
+
 ```
 packages/0gkit-contracts/src/explorer.ts             # fetchExplorerAbi(address, network, { fetch })
 packages/0gkit-contracts/src/__tests__/explorer.test.ts
@@ -77,6 +78,7 @@ packages/0gkit-cli/src/__tests__/contracts-import.test.ts
 ```
 
 **Modified**
+
 ```
 packages/0gkit-contracts/src/index.ts                # export fetchExplorerAbi
 packages/0gkit-cli/src/commands/contracts.ts         # `import <address>` + `--abi` subcommand
@@ -108,6 +110,7 @@ T1 fetchExplorerAbi() (chainscan) ──┐
 ### T1 — `fetchExplorerAbi(address, network)`
 
 - [ ] **Failing test** — `packages/0gkit-contracts/src/__tests__/explorer.test.ts`:
+
 ```ts
 import { describe, it, expect, vi } from "vitest";
 import { fetchExplorerAbi } from "../explorer.js";
@@ -116,19 +119,24 @@ describe("fetchExplorerAbi", () => {
   it("hits the galileo chainscan ABI endpoint and parses the ABI", async () => {
     const abi = [{ type: "function", name: "balanceOf", inputs: [], outputs: [] }];
     const fetchImpl = vi.fn(async () => ({
-      ok: true, status: 200,
+      ok: true,
+      status: 200,
       json: async () => ({ status: "1", result: JSON.stringify(abi) }),
     }));
-    const out = await fetchExplorerAbi("0xAbC", "galileo", { fetch: fetchImpl as never });
+    const out = await fetchExplorerAbi("0xAbC", "galileo", {
+      fetch: fetchImpl as never,
+    });
     expect(fetchImpl).toHaveBeenCalledWith(
-      expect.stringContaining("chainscan-galileo.0g.ai"), expect.anything()
+      expect.stringContaining("chainscan-galileo.0g.ai"),
+      expect.anything()
     );
     expect(out).toEqual(abi);
   });
 
   it("throws a typed error when the contract is not verified", async () => {
     const fetchImpl = vi.fn(async () => ({
-      ok: true, status: 200,
+      ok: true,
+      status: 200,
       json: async () => ({ status: "0", result: "Contract source code not verified" }),
     }));
     await expect(
@@ -137,12 +145,16 @@ describe("fetchExplorerAbi", () => {
   });
 });
 ```
+
 - [ ] **Run** — `pnpm --filter @foundryprotocol/0gkit-contracts test` → red.
 - [ ] **Implement** — `packages/0gkit-contracts/src/explorer.ts`:
+
 ```ts
 import { ConfigError, getNetwork, type NetworkName } from "@foundryprotocol/0gkit-core";
 
-export interface FetchAbiOptions { fetch?: typeof fetch }
+export interface FetchAbiOptions {
+  fetch?: typeof fetch;
+}
 
 export async function fetchExplorerAbi(
   address: string,
@@ -179,7 +191,9 @@ export async function fetchExplorerAbi(
   }
 }
 ```
-  Export `fetchExplorerAbi` from `src/index.ts`. (`0gkit-contracts` already depends on `0gkit-core` — neutrality intact.)
+
+Export `fetchExplorerAbi` from `src/index.ts`. (`0gkit-contracts` already depends on `0gkit-core` — neutrality intact.)
+
 - [ ] **Run** → green. **Commit**: `feat(contracts): fetchExplorerAbi(address, network) — chainscan verified-ABI fetch`.
 
 ### T2 — `0g contracts import` wiring (address → fetch → codegen | `--abi`)
@@ -187,10 +201,13 @@ export async function fetchExplorerAbi(
 - [ ] **Failing test** — `packages/0gkit-cli/src/__tests__/contracts-import.test.ts`: `0g contracts import 0xAbC --name MyToken` calls the injected `fetchExplorerAbi("0xAbC","galileo")`, writes the fetched ABI to a temp file, then calls `contracts.generate({ abiPath, outDir: "./0gkit/contracts", name: "MyToken" })`; `0g contracts import --abi ./x.json --name MyToken` skips the fetch and calls `generate` directly; passing neither address nor `--abi` errors early.
 - [ ] **Run** → red.
 - [ ] **Implement** — add to `registerContracts` in `contracts.ts`:
+
 ```ts
 contracts
   .command("import [address]")
-  .description("Fetch a verified ABI from the chain explorer and codegen a typed client")
+  .description(
+    "Fetch a verified ABI from the chain explorer and codegen a typed client"
+  )
   .option("--abi <path>", "use an off-chain artifact JSON instead of fetching")
   .option("--name <name>", "contract name (and output filename)")
   .option("--out <dir>", "output directory", "./0gkit/contracts")
@@ -208,12 +225,16 @@ contracts
         abiPath = await deps.contracts.writeTempAbi(abi);
       }
       const result = await deps.contracts.generate({
-        abiPath, outDir: opts.out, name: opts.name,
+        abiPath,
+        outDir: opts.out,
+        name: opts.name,
       });
       return {
         human: [
           `✓ imported ${result.name} → ${result.outputPath}`,
-          address ? `  source: ${ctx.network} explorer (${address})` : `  source: ${opts.abi}`,
+          address
+            ? `  source: ${ctx.network} explorer (${address})`
+            : `  source: ${opts.abi}`,
           `  ${result.bytesWritten} bytes`,
         ],
         json: { ...result, address: address ?? null, network: ctx.network },
@@ -221,7 +242,9 @@ contracts
     });
   });
 ```
-  Add `fetchExplorerAbi` + a `writeTempAbi(abi)` helper to `ProgramDeps.contracts`; default `fetchExplorerAbi` calls the `0gkit-contracts` export; `writeTempAbi` writes JSON to a temp path via `deps.fs`. `ConfigError` already imported in `contracts.ts`.
+
+Add `fetchExplorerAbi` + a `writeTempAbi(abi)` helper to `ProgramDeps.contracts`; default `fetchExplorerAbi` calls the `0gkit-contracts` export; `writeTempAbi` writes JSON to a temp path via `deps.fs`. `ConfigError` already imported in `contracts.ts`.
+
 - [ ] **Run** → green. **Commit**: `feat(cli): 0g contracts import <address|--abi> → typed client`.
 
 ### T3 — docs import flow (+ `inft-studio` reference, K0 synergy)
