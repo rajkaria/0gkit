@@ -1,0 +1,160 @@
+---
+title: "@foundryprotocol/0gkit-kits"
+---
+
+# @foundryprotocol/0gkit-kits
+
+> The kits engine: a neutral, dependency-light core that resolves, composes, and
+> applies **kits** — drop-in, multi-framework feature overlays for 0G apps.
+
+## What it does
+
+`0gkit-kits` is the engine behind `npm create 0gkit-app -- --kits <kit>` and
+`0g add <kit>`. It reads each kit's `kit.json` manifest, validates it against
+`KitManifestSchema`, resolves the right files for a given **base** (the target
+template), follows composition (`composes`) and conflict (`conflicts`) rules,
+and writes the overlay into a destination project — merging `package.json` and
+`.env.example` idempotently.
+
+The package depends only on `zod` (manifest validation) and `giget` (overlay
+fetch) plus `node:*`. It never imports another `@foundryprotocol/0gkit-*`
+package or any Foundry app package, so the CLI can load it without paying a
+cold-start penalty and the neutrality boundary stays intact.
+
+## Concepts
+
+- **Kit** — a versioned feature overlay stored as a git overlay under
+  `templates/_kits/<name>/`, described by a `kit.json` manifest.
+- **Base** — the template a kit is applied onto (e.g. `react-app`, `chat`,
+  `storage-app`, `mcp-agent`, `tee-attested-api`). `detectBase` infers it from a
+  project's `package.json`.
+- **3-tier model** — every kit ships a portable `lib` tier (always applied),
+  optional per-framework `adapters/<base>` tiers, and an optional React-only
+  `ui` tier. `resolveTiers` computes which files apply for a base.
+- **Composition** — a kit may `composes` other kits (auto-applied deps-first,
+  deduped, cycle-safe) and declare `conflicts` that make a combination illegal.
+
+## When to use it
+
+- Building the scaffolder / CLI surface that offers and installs kits.
+- Programmatically applying a kit into a project (`applyKit`).
+- Listing or inspecting the available kit registry (`listKits` / `getKit`).
+
+## Install
+
+```bash
+npm install @foundryprotocol/0gkit-kits
+```
+
+## Quick start
+
+```ts
+import { applyKit, listKits, detectBase, KitError } from "@foundryprotocol/0gkit-kits";
+
+const base = detectBase(process.cwd()); // e.g. "react-app"
+const available = listKits({ base }); // kits that contribute files to this base
+
+try {
+  const result = await applyKit({
+    kit: "agent-memory",
+    dest: process.cwd(),
+    base,
+  });
+  console.log(result.applied, result.filesWritten, result.envAdded);
+} catch (err) {
+  if (err instanceof KitError) {
+    // err.code ∈ KIT_NOT_FOUND | KIT_CONFLICT | KIT_MISSING_REQUIRES | KIT_INCOMPATIBLE
+    console.error(err.code, err.message);
+  }
+}
+```
+
+## API reference
+
+### Manifest
+
+- **`KitManifestSchema`** — the zod schema every `kit.json` is parsed through.
+  Materialises defaults for `tiers.lib`, `env`, `dependencies`,
+  `devDependencies`, `requires`, `composes`, and `conflicts`, so the engine
+  always sees a fully-populated manifest.
+- **`KitManifest`** — the inferred TypeScript type of a validated manifest.
+- **`KIT_DOMAINS`** — the closed list of capability domains a kit may declare
+  (`verifiable-ai`, `agent-infra`, `markets`, `assets`, `defi`).
+- **`KitDomain`** — the union type derived from `KIT_DOMAINS`.
+
+### Registry
+
+- **`KITS`** — the build-time registry: an array of every kit manifest,
+  generated from `templates/_kits/*/kit.json` by `scripts/gen-registry.mjs`.
+- **`loadRegistry()`** — returns the embedded `KITS` array.
+- **`getKit(name, registry?)`** — looks up a single manifest by kebab-case name;
+  returns `undefined` when not found.
+- **`listKits({ base?, registry? })`** — lists kits, optionally filtered to those
+  compatible with `base` _and_ contributing at least one file for it.
+- **`resolveTiers(manifest, base)`** — returns the ordered list of overlay files
+  that apply for `base`: the `lib` tier, then the matching `adapters[base]`
+  tier, then the `ui` tier on a React base.
+
+### Bases
+
+- **`REACT_BASES`** — the set of bases that receive the React `ui` tier
+  (`react-app`, `chat`).
+- **`isReactBase(base)`** — whether a base is in `REACT_BASES`.
+- **`detectBase(dir)`** — infers the base of an existing project from its
+  `package.json` dependencies (falls back to `"node"`).
+
+### Apply + compose
+
+- **`applyKit(options)`** — resolves the full composition closure (deps-first,
+  deduped, cycle-safe), checks `conflicts`, then writes every tier's files,
+  merges `package.json`, and appends env vars. Returns an `ApplyResult`.
+- **`ApplyKitOptions`** — `{ kit, dest, base, pm?, dryRun?, deps? }`.
+- **`ApplyResult`** — `{ applied, filesWritten, envAdded, notes, token }`; the
+  `token` is the stable success marker `[0gkit:kit-applied]`.
+- **`ApplyDeps`** — injectable seams (`fetchOverlay`, `registry`) for testing
+  `applyKit` without network or the real registry.
+- **`KitError`** — thrown on an illegal apply; carries a `code` of type
+  **`KitErrorCode`** (`KIT_NOT_FOUND` | `KIT_CONFLICT` | `KIT_MISSING_REQUIRES`
+  | `KIT_INCOMPATIBLE`).
+
+### Overlay fetch
+
+- **`fetchKitOverlay(name, dir, deps?)`** — downloads `templates/_kits/<name>`
+  from the canonical repo at `OGKIT_TEMPLATE_REF` (default `"main"`) via giget.
+- **`FetchKitOverlayDeps`** — injectable `download` seam for unit tests.
+
+### Idempotent merges
+
+- **`mergePackageJson(base, incoming)`** — merges two partial `package.json`
+  objects; existing base keys win on conflict.
+- **`PartialPackageJson`** — the shape `mergePackageJson` operates on.
+- **`appendEnv(current, vars)`** — appends `EnvVar` entries to an `.env.example`
+  string, skipping any key already present (idempotent).
+- **`EnvVar`** — `{ key, example, note? }`.
+
+## Exports
+
+- `KITS`
+- `KIT_DOMAINS`
+- `KitError`
+- `KitManifestSchema`
+- `REACT_BASES`
+- `appendEnv`
+- `applyKit`
+- `detectBase`
+- `fetchKitOverlay`
+- `getKit`
+- `isReactBase`
+- `listKits`
+- `loadRegistry`
+- `mergePackageJson`
+- `resolveTiers`
+- `type ApplyDeps`
+- `type ApplyKitOptions`
+- `type ApplyResult`
+- `type EnvVar`
+- `type FetchKitOverlayDeps`
+- `type KitDomain`
+- `type KitErrorCode`
+- `type KitManifest`
+- `type PartialPackageJson`
