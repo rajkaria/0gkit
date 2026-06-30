@@ -19,8 +19,8 @@ The `prediction-market` kit adds a full prediction market lifecycle to your
 2. **Bet** — participants place YES/NO positions.
 3. **Resolve** — at deadline, the kit calls `resolveOracle` (from the composed
    `ai-oracle` lib) to get a signed, anchored AI verdict.
-4. **Settle** — winners are paid out proportionally. The signed resolution
-   receipt is stored in 0G Storage for auditability (immutable
+4. **Settle** — `resolveMarket` marks the market settled and stores the
+   signed resolution receipt in 0G Storage for auditability (immutable
    content-addressed commitment). Set `OG_ANCHOR_ONCHAIN=1` to also write the
    root on-chain via `Anchor.sol`.
 
@@ -58,7 +58,8 @@ Inherits all `ai-oracle` env vars, plus:
 ## Tiers
 
 - **lib** — `lib/market.ts` (portable `Market`, `Bet`, `Resolution` types,
-  `openMarket` / `placeBet` / `resolveMarket` / `settleMarket` helpers).
+  `openMarket` / `placeBet` / `resolveMarket` helpers; settle is folded into
+  resolve — there is no separate `settleMarket`).
 - **adapters** — one per base (`app/api/markets/route.ts` for Next.js,
   `src/routes/markets.ts` for Express).
 - **ui** — `app/markets/page.tsx` (market list page),
@@ -75,7 +76,8 @@ are merged.
 ## Honesty note
 
 Resolution uses `resolveOracle` from the composed `ai-oracle` lib, which
-produces an **operator-signed receipt** (EIP-191 signed envelope). There is
-no TEE quote verification. The badge is "✓ signature verified". The
-`Attestor` interface is injected so a real TEE-quote verifier can slot in
-later without changing market code.
+produces an **operator-signed receipt**: `digestJson(receipt)` signed via
+EIP-191 personal-sign (`signMessage`); the signer is recovered with
+`recoverSigner`. There is no TEE quote verification. The badge is
+"✓ signature verified". The `Attestor` interface is injected so a real
+TEE-quote verifier can slot in later without changing market code.

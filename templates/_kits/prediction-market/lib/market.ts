@@ -73,7 +73,7 @@ export type OracleResolver = (deps: unknown, question: string) => Promise<Oracle
 // Domain types
 // ---------------------------------------------------------------------------
 
-export type MarketState = "open" | "resolved" | "settled";
+export type MarketState = "open" | "settled";
 
 export interface Market {
   id: string;

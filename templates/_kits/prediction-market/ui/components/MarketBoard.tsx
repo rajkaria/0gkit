@@ -38,7 +38,7 @@ interface MarketResolution {
 interface Market {
   id: string;
   question: string;
-  state: "open" | "resolved" | "settled";
+  state: "open" | "settled";
   closesAt: number;
   createdAt: number;
   resolution?: MarketResolution;
@@ -50,8 +50,7 @@ interface Market {
 
 function stateColor(state: Market["state"]): string {
   if (state === "open") return "#16a34a";
-  if (state === "settled") return "#2563eb";
-  return "#d97706";
+  return "#2563eb"; // settled
 }
 
 function formatDate(ts: number): string {
