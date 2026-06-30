@@ -1,0 +1,177 @@
+---
+title: "Authoring a kit"
+---
+
+# Authoring a kit
+
+This guide explains how to add a new kit to `templates/_kits/` so it can be
+applied via `0g add <kit>` or `npm create 0gkit-app -- --kits <kit>`.
+
+See also: [`docs/kits/AUTHORING.md`](https://github.com/rajkaria/0gkit/blob/main/docs/kits/AUTHORING.md)
+in the repo for the same reference in markdown.
+
+## Directory structure
+
+```
+templates/_kits/<kit-name>/
+  kit.json               ← manifest (required)
+  lib/                   ← portable tier (always applied)
+    my-feature.ts
+  adapters/
+    react-app/           ← files applied only when base = react-app
+      app/api/…
+    chat/
+      app/api/…
+    mcp-agent/
+      src/tools/…
+  ui/                    ← React tier (applied for React-capable bases)
+    components/
+    hooks/
+```
+
+Templates live under `templates/_kits/` — they are **not** listed in
+`pnpm-workspace.yaml` (see D24). The engine fetches them at apply-time via
+`giget`.
+
+## kit.json schema
+
+Every field is validated by `KitManifestSchema` (zod) in
+`packages/0gkit-kits/src/manifest.ts`. A minimal valid `kit.json`:
+
+```json
+{
+  "name": "my-feature",
+  "title": "My Feature",
+  "domain": "agent-infra",
+  "summary": "One-sentence description of what the kit adds.",
+  "compatibleBases": ["react-app", "chat"],
+  "tiers": {
+    "lib": ["lib/my-feature.ts"],
+    "adapters": {
+      "react-app": ["app/api/my-feature/route.ts"]
+    },
+    "ui": ["components/MyFeature.tsx"]
+  },
+  "env": [
+    {
+      "key": "OG_MY_VAR",
+      "example": "my-value",
+      "note": "What this env var controls"
+    }
+  ],
+  "dependencies": {
+    "@foundryprotocol/0gkit-storage": "^1.0.0"
+  },
+  "devDependencies": {},
+  "requires": [],
+  "composes": [],
+  "conflicts": []
+}
+```
+
+### Field reference
+
+| Field             | Type                        | Required | Description                                                                                         |
+| ----------------- | --------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `name`            | kebab-case string           | Yes      | Unique kit identifier — matches the directory name.                                                 |
+| `title`           | string                      | Yes      | Human-readable name shown in `0g kits list`.                                                        |
+| `domain`          | enum                        | Yes      | One of `verifiable-ai`, `agent-infra`, `markets`, `assets`, `defi`.                                 |
+| `summary`         | string                      | Yes      | One-sentence description. Shown in `0g kits info`.                                                  |
+| `compatibleBases` | string[]                    | Yes      | Bases this kit supports (e.g. `react-app`, `chat`, `mcp-agent`, `storage-app`, `tee-attested-api`). |
+| `tiers.lib`       | string[]                    | No       | Lib-tier file paths (relative to `templates/_kits/<kit>/`). Always applied.                         |
+| `tiers.adapters`  | Record\<base, string[]\>    | No       | Adapter files per base. Only the matching base's files are applied.                                 |
+| `tiers.ui`        | string[]                    | No       | UI-tier files. Applied for React-capable bases only.                                                |
+| `env`             | `{ key, example, note? }[]` | No       | Env vars added to `.env.example`. `note` is shown by `0g kits info`.                                |
+| `dependencies`    | Record\<string, string\>    | No       | NPM deps merged into the target project's `package.json`.                                           |
+| `devDependencies` | Record\<string, string\>    | No       | Dev deps merged into the target project's `package.json`.                                           |
+| `requires`        | string[]                    | No       | 0gkit package names the target base must already declare (e.g. `"0gkit-storage"`).                  |
+| `composes`        | string[]                    | No       | Other kit names auto-applied before this kit (deps-first, deduped, cycle-safe).                     |
+| `conflicts`       | string[]                    | No       | Kit names that are illegal to apply together with this kit.                                         |
+
+## 3-tier model
+
+**lib tier** — portable TypeScript with all `@foundryprotocol/*` imports
+injected by the adapter. The lib must compile and pass unit tests without any
+0gkit package installed (inject mocks). This tier is framework-agnostic.
+
+**adapters tier** — one sub-directory per base. Each adapter file wires the
+real 0gkit packages into the lib's injected-deps interface. Only the adapter
+matching the detected base is written to the project.
+
+**ui tier** — React components and hooks. Applied only for bases that include
+React (e.g. `react-app`, `chat`). Must not import from adapters — only from
+lib interfaces.
+
+## Neutrality rule (hard invariant)
+
+No file in `templates/_kits/<kit>/` may import from `@foundryprotocol/*` app
+packages (anything outside `@foundryprotocol/0gkit-*`). 0gkit-\* packages are
+allowed in adapter files — they are injected at apply-time, not at lib level.
+
+This invariant is enforced at CI by `pnpm kits:check` (the `kits:check` script
+in the root `package.json`). A kit that imports an app package will fail CI.
+
+## Passing kits:check
+
+Run locally before opening a PR:
+
+```bash
+pnpm kits:check
+```
+
+This validates:
+
+1. Every `kit.json` parses against `KitManifestSchema`.
+2. Every file listed in the manifest exists on disk.
+3. No kit file imports from `@foundryprotocol/*` app packages (neutrality boundary).
+
+## PR checklist
+
+Before opening a PR that adds or modifies a kit:
+
+- [ ] `kit.json` validates against `KitManifestSchema` (run `pnpm kits:check`).
+- [ ] `name` matches the directory name exactly (kebab-case).
+- [ ] `compatibleBases` lists only bases that have a matching `adapters/<base>/` entry (or lib-only if no adapter needed).
+- [ ] Lib tier has zero hard `@foundryprotocol/*` imports — all deps injected by adapters.
+- [ ] No file imports from Foundry app packages (neutrality rule).
+- [ ] `env` lists every environment variable the kit reads (with `example` and `note`).
+- [ ] `dependencies` lists every runtime npm package the kit's files import.
+- [ ] `composes` is set if this kit depends on another kit being applied first.
+- [ ] A doc page exists at `apps/docs/app/kits/<name>/page.mdx` and is registered in `apps/docs/lib/nav.ts`.
+- [ ] `pnpm kits:check` passes locally.
+- [ ] `pnpm format && pnpm docs:check` passes locally (new doc pages must be nav-registered and prettier-clean).
+
+## Adding a doc page
+
+Every kit must have a doc page at `apps/docs/app/kits/<name>/page.mdx` and a
+nav entry in `apps/docs/lib/nav.ts` under the `"Kits"` section. Without both,
+`pnpm docs:check` will fail.
+
+Follow the shape of existing pages (see [Agent Memory](/kits/agent-memory),
+[AI Oracle](/kits/ai-oracle)) and include:
+
+- A blockquote summary with the honesty caveat if attestation is involved.
+- **What it does** — step-by-step description of real behavior.
+- **Compatible bases**.
+- **Apply** — both scaffold-time (`npm create 0gkit-app -- --kits <kit>`) and
+  post-scaffold (`0g add <kit>`) commands.
+- **Environment variables** — table mirroring `kit.json` `env`.
+- **Tiers** — what each tier file contains.
+- **0gkit packages used**.
+- **Honesty note** — any caveats about attestation, network mode, or
+  execution scope.
+
+## Honesty guidelines
+
+- **Attestation** = a signed receipt. The operator key signs `digestJson(receipt)`
+  via EIP-191 personal-sign; the signer is recovered with `recoverSigner`.
+  There is no TEE quote verification in the current stack. Badge text must
+  be **"✓ signature verified"** — never "TEE attested". Do not name
+  `signEnvelope` or `verifyEnvelope` — those functions do not exist.
+- **Real exports only** — name only exports that exist in the package:
+  `JobRunner`, `jobs.define`, `MemoryBackend`, `Storage.upload`,
+  `Storage.download`, `Compute.inference`, `createTypedContract`, `Erc721Abi`,
+  `INFT_ABI`, `Indexer`, `onReorg`, `digestJson`, `recoverSigner`, `fromPrivateKey`.
+  If unsure, read the package source before documenting.
+- **Execution scope** — if a kit is read-only (e.g. `yield-intel`), state that
+  explicitly and include a non-removable disclaimer component.

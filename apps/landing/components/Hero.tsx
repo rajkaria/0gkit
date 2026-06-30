@@ -109,10 +109,42 @@ export async function Hero() {
           </a>
         </div>
 
+        {/* Kits call-out */}
+        <a
+          href="/kits"
+          className="rise rise-d-5 hover:!text-white"
+          style={{
+            marginTop: "1.6rem",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            fontSize: "0.88rem",
+            color: "var(--color-fg-dim)",
+            textDecoration: "none",
+            padding: "0.4rem 0.9rem",
+            border: "1px solid var(--color-border)",
+            borderRadius: 999,
+            transition: "border-color 150ms, color 150ms",
+          }}
+        >
+          <span aria-hidden>✦</span>
+          New:{" "}
+          <code
+            style={{
+              fontFamily: "var(--font-mono)",
+              color: "var(--color-accent-2)",
+              background: "transparent",
+            }}
+          >
+            0g add &lt;kit&gt;
+          </code>{" "}
+          — drop-in feature kits →
+        </a>
+
         <p
           className="rise rise-d-5"
           style={{
-            marginTop: "1.6rem",
+            marginTop: "0.9rem",
             fontSize: "0.82rem",
             color: "var(--color-fg-muted)",
           }}
