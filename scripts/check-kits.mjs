@@ -11,17 +11,21 @@
 //      temp clone of the base template.
 //   5. If applyKit throws KIT_MISSING_REQUIRES, that is reported as FAIL with a
 //      clear message (kit/base/missing packages) — not silently swallowed.
-//   6. TypeScript parse check on kit overlay files: `tsc --noEmit` against the
-//      base template's tsconfig AFTER applying the kit. (Next.js bases skip tsc
-//      because they require `next build` for type generation — documented below.)
+//   6. TypeScript check on kit overlay files:
+//      - Non-Next.js bases (storage-app, mcp-agent, node): full `tsc --noEmit`
+//        against the base template's tsconfig AFTER applying the kit.
+//      - Next.js bases (react-app, chat): full-project tsc is skipped (requires
+//        `next build` for next-env.d.ts generation). Instead, kit-added adapter
+//        + lib + ui files are type-checked in ISOLATION via runKitIsolatedTsc:
+//        a synthetic tsconfig (bundler moduleResolution) is generated; all
+//        @foundryprotocol/0gkit-* workspace packages are symlinked so type
+//        imports resolve correctly. This ensures API surface bugs (wrong ctor
+//        args, missing methods) are caught before they reach runtime.
 //
 // TSC DEPTH NOTE:
-//   Bases react-app and chat use Next.js (moduleResolution: "bundler", incremental
-//   plugins, next-env.d.ts type generation). Running `tsc --noEmit` standalone on
-//   a fresh temp dir (without `next build` or node_modules) fails with missing
-//   next-env.d.ts and @types/react. We therefore run tsc only on non-Next.js bases
-//   (storage-app, mcp-agent) and log a clear "TSC_SKIPPED (Next.js base)" for the
-//   others. The applyKit structural check still runs for ALL combos.
+//   runKitIsolatedTsc replaces the former TSC_SKIPPED path for Next.js bases.
+//   Full next-app tsc (which requires `next build` for next-env.d.ts) is still
+//   deferred, but the kit-injected files are now type-proven against real types.
 //
 // MISSING-REQUIRES POLICY:
 //   If a kit's `requires` list names a package not present in the base template's
@@ -35,6 +39,7 @@ import {
   readdirSync,
   existsSync,
   readFileSync,
+  writeFileSync,
   mkdtempSync,
   mkdirSync,
   copyFileSync,
@@ -225,17 +230,34 @@ export function scaffoldBase(base, destDir, templatesDir = TEMPLATES_DIR) {
 
 // ---------------------------------------------------------------------------
 // TSC depth check
+//
+// DEPTH GUARANTEE (updated — Fix 2b):
+//   Non-Next.js bases (storage-app, mcp-agent, node):
+//     Full `tsc --noEmit` against the base template's tsconfig after kit apply.
+//   Next.js bases (react-app, chat):
+//     Full `tsc --noEmit` of the ENTIRE project is still skipped (requires
+//     `next build` for next-env.d.ts generation and @types/react resolution).
+//     HOWEVER, kit-added adapter + ui TypeScript files are now type-checked in
+//     isolation via `runKitIsolatedTsc`:
+//       - A fresh temp directory is created with only the applied kit overlay
+//         files (adapter + ui).
+//       - A synthetic tsconfig is written that uses "bundler" moduleResolution
+//         (matches Next.js) and points `paths` at the real workspace package
+//         builds (packages/0gkit-*/dist), so type imports resolve correctly.
+//       - `tsc --noEmit` runs against that synthetic project.
+//     This ensures that API surface mismatches (wrong constructor args, missing
+//     methods, wrong types) are caught at CI time rather than at runtime.
 // ---------------------------------------------------------------------------
 
 const NEXTJS_BASES = new Set(["react-app", "chat"]);
+
+/** Absolute path to the tsc binary in the workspace. */
+const TSC_BIN = join(ROOT, "node_modules", ".bin", "tsc");
 
 /**
  * Runs `tsc --noEmit` in the given directory (must have tsconfig.json).
  * Returns { ok: true } or { ok: false, output }.
  */
-/** Absolute path to the tsc binary in the workspace. */
-const TSC_BIN = join(ROOT, "node_modules", ".bin", "tsc");
-
 export function runTsc(dir) {
   try {
     execSync(`"${TSC_BIN}" --noEmit`, {
@@ -246,6 +268,124 @@ export function runTsc(dir) {
     return { ok: true };
   } catch (e) {
     return { ok: false, output: (e.stdout?.toString() ?? "") + (e.stderr?.toString() ?? "") };
+  }
+}
+
+/**
+ * Type-checks kit-added overlay files (adapter + ui) for a Next.js base in
+ * isolation against a synthetic tsconfig that resolves the real workspace
+ * 0gkit package types.
+ *
+ * This is the type-gate that replaces the former TSC_SKIPPED path for Next.js
+ * bases. It does NOT type-check the full Next.js app (that still requires
+ * `next build`), but it DOES enforce that every file the kit injects compiles
+ * correctly against the real @foundryprotocol/0gkit-* types.
+ *
+ * @param {string} kitDir  - Absolute path to the kit directory (e.g. templates/_kits/agent-memory)
+ * @param {object} manifest - Parsed + validated KitManifest
+ * @param {string} base     - The base name (e.g. "react-app")
+ * @returns {{ ok: boolean, output?: string }}
+ */
+export function runKitIsolatedTsc(kitDir, manifest, base) {
+  // Collect kit overlay files for this base — adapter + lib + ui — all .ts/.tsx
+  const adapterFiles = manifest.tiers.adapters?.[base] ?? [];
+  const libFiles = manifest.tiers.lib ?? [];
+  const uiFiles = manifest.tiers.ui ?? [];
+
+  const filesToCheck = [
+    ...adapterFiles.map((f) => ({ src: join(kitDir, "adapters", base, f), rel: f })),
+    ...libFiles.map((f) => ({ src: join(kitDir, "lib", f.replace(/^lib\//, "")), rel: f })),
+    ...uiFiles.map((f) => ({ src: join(kitDir, "ui", f), rel: f })),
+  ].filter(
+    ({ src }) =>
+      existsSync(src) && (src.endsWith(".ts") || src.endsWith(".tsx"))
+  );
+
+  if (filesToCheck.length === 0) {
+    return { ok: true, skipped: "no TS files in kit overlay for this base" };
+  }
+
+  let tmpDir;
+  try {
+    tmpDir = mkdtempSync(join(tmpdir(), `0gkit-kit-tsc-`));
+
+    // Copy kit files into tmpDir
+    for (const { src, rel } of filesToCheck) {
+      const dest = join(tmpDir, rel);
+      mkdirSync(dirname(dest), { recursive: true });
+      copyFileSync(src, dest);
+    }
+
+    // Symlink all @foundryprotocol/0gkit-* workspace packages so tsc resolves types
+    const nmFoundry = join(tmpDir, "node_modules", "@foundryprotocol");
+    mkdirSync(nmFoundry, { recursive: true });
+    for (const shortName of readdirSync(join(ROOT, "packages"))) {
+      if (!shortName.startsWith("0gkit-")) continue;
+      const workspaceSrc = join(ROOT, "packages", shortName);
+      if (!statSync(workspaceSrc).isDirectory()) continue;
+      const destLink = join(nmFoundry, shortName);
+      if (!existsSync(destLink)) {
+        symlinkSync(workspaceSrc, destLink);
+      }
+    }
+
+    // Also symlink next and react @types so import from "next/server" type-checks.
+    // Pull these from the base template's node_modules — they're already installed there.
+    const baseNm = join(TEMPLATES_DIR, base, "node_modules");
+    const tmpNm = join(tmpDir, "node_modules");
+    mkdirSync(tmpNm, { recursive: true });
+    for (const pkg of ["next", "react", "react-dom"]) {
+      const src = join(baseNm, pkg);
+      const dest = join(tmpNm, pkg);
+      if (existsSync(src) && !existsSync(dest)) symlinkSync(src, dest);
+    }
+    const atypesDir = join(tmpDir, "node_modules", "@types");
+    mkdirSync(atypesDir, { recursive: true });
+    for (const pkg of ["react", "react-dom", "node"]) {
+      const src = join(baseNm, "@types", pkg);
+      const dest = join(atypesDir, pkg);
+      if (existsSync(src) && !existsSync(dest)) symlinkSync(src, dest);
+    }
+
+    // Write a synthetic tsconfig that matches Next.js "bundler" moduleResolution
+    const include = filesToCheck.map(({ rel }) => rel);
+    const tsconfig = {
+      compilerOptions: {
+        target: "ES2022",
+        module: "ESNext",
+        moduleResolution: "bundler",
+        lib: ["ES2022", "DOM"],
+        strict: true,
+        noEmit: true,
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        resolveJsonModule: true,
+        skipLibCheck: true,
+        jsx: "preserve",
+        baseUrl: ".",
+      },
+      include,
+    };
+    writeFileSync(join(tmpDir, "tsconfig.json"), JSON.stringify(tsconfig, null, 2));
+
+    // Run tsc against the isolated kit files
+    try {
+      execSync(`"${TSC_BIN}" --noEmit`, {
+        cwd: tmpDir,
+        stdio: "pipe",
+        timeout: 60_000,
+      });
+      return { ok: true };
+    } catch (e) {
+      return {
+        ok: false,
+        output: (e.stdout?.toString() ?? "") + (e.stderr?.toString() ?? ""),
+      };
+    }
+  } finally {
+    if (tmpDir && existsSync(tmpDir)) {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   }
 }
 
@@ -385,9 +525,25 @@ async function main() {
 
         // TSC check
         if (NEXTJS_BASES.has(base)) {
-          console.log(
-            `${label} ✓ PASS (applyKit ok, wrote ${applyResult.filesWritten.length} file(s); TSC_SKIPPED — Next.js base requires next build)`,
-          );
+          // Full project tsc is skipped (requires `next build` for next-env.d.ts).
+          // Instead, run kit overlay files in isolation against real 0gkit types.
+          const kitTscResult = runKitIsolatedTsc(kitDir, manifest, base);
+          if (kitTscResult.skipped) {
+            console.log(
+              `${label} ✓ PASS (applyKit ok, wrote ${applyResult.filesWritten.length} file(s); kit-isolated tsc: ${kitTscResult.skipped})`,
+            );
+          } else if (kitTscResult.ok) {
+            console.log(
+              `${label} ✓ PASS (applyKit ok, wrote ${applyResult.filesWritten.length} file(s); kit-isolated tsc clean — full project tsc deferred to next build)`,
+            );
+          } else {
+            const snippet = (kitTscResult.output ?? "").split("\n").slice(0, 20).join("\n");
+            const msg = `kit-isolated tsc failed (Next.js base):\n${snippet}`;
+            console.error(`${label} ✗ FAIL: ${msg}`);
+            findings.push({ kit: kitName, base, step: "kit-tsc", error: msg });
+            totalFail++;
+            continue;
+          }
         } else {
           const tscResult = runTsc(tmpDest);
           if (tscResult.ok) {

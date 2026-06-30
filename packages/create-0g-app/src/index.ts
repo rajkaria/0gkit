@@ -301,7 +301,10 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
     }
   }
 
-  // 1.6. apply kits
+  // 2. write .env.example (BEFORE kit apply so applyKit can append kit env keys)
+  writeEnvExample({ network: final.network, dest });
+
+  // 1.6. apply kits — each kit appends its env keys to the already-written .env.example
   const kitsToApply = final.kits ?? [];
   for (const kitName of kitsToApply) {
     log(`→ Applying kit: ${kitName}`);
@@ -319,9 +322,6 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
       err(`(warn) Kit "${kitName}" apply failed: ${(e as Error).message}`);
     }
   }
-
-  // 2. write .env.example
-  writeEnvExample({ network: final.network, dest });
 
   // 3. install
   if (final.install) {

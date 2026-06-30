@@ -31,7 +31,6 @@ export const KITS: KitManifest[] = [
         "hooks/useAgentMemory.ts"
       ]
     },
-    "requires": [],
     "env": [
       {
         "key": "OG_STORAGE_NAMESPACE",
@@ -53,6 +52,7 @@ export const KITS: KitManifest[] = [
       "@foundryprotocol/0gkit-storage": "^1.0.0"
     },
     "devDependencies": {},
+    "requires": [],
     "composes": [],
     "conflicts": []
   }

@@ -23,9 +23,11 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.7.0",
+    "@foundryprotocol/0gkit-kits": "workspace:^",
     "commander": "^14.0.0",
     "execa": "^9.0.0",
-    "giget": "^1.2.0"
+    "giget": "^1.2.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

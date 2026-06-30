@@ -103,9 +103,61 @@ describe("detectBase", () => {
     expect(detectBase(dir)).toBe("node");
   });
 
-  it('prefers "react-app" over "mcp-agent" when both next and @modelcontextprotocol/sdk are present', () => {
+  it('prefers "mcp-agent" over "react-app" when both next and @modelcontextprotocol/sdk are present', () => {
+    // mcp-agent is checked first; if someone somehow has both, mcp-agent wins.
     const dir = makeDir("both");
     writePkg(dir, { next: "14.0.0", "@modelcontextprotocol/sdk": "^1.0.0" });
+    expect(detectBase(dir)).toBe("mcp-agent");
+  });
+
+  // Fix 4 — storage-app and chat detection
+  it('returns "storage-app" when deps include @foundryprotocol/0gkit-storage but not next', () => {
+    const dir = makeDir("storage-app");
+    writePkg(dir, {
+      "@foundryprotocol/0gkit-core": "^1.0.0",
+      "@foundryprotocol/0gkit-storage": "^1.0.0",
+      "@foundryprotocol/0gkit-wallet": "^1.0.0",
+      zod: "^3.23.0",
+    });
+    expect(detectBase(dir)).toBe("storage-app");
+  });
+
+  it('returns "storage-app" when 0gkit-storage is in devDependencies', () => {
+    const dir = makeDir("storage-app-dev");
+    writePkg(dir, {}, { "@foundryprotocol/0gkit-storage": "^1.0.0" });
+    expect(detectBase(dir)).toBe("storage-app");
+  });
+
+  it('returns "chat" when deps include next AND @foundryprotocol/0gkit-indexer', () => {
+    const dir = makeDir("chat");
+    writePkg(dir, {
+      next: "^16.0.0",
+      react: "^19.0.0",
+      "@foundryprotocol/0gkit-core": "^1.0.0",
+      "@foundryprotocol/0gkit-storage": "^1.0.0",
+      "@foundryprotocol/0gkit-indexer": "^1.0.0",
+    });
+    expect(detectBase(dir)).toBe("chat");
+  });
+
+  it('returns "chat" when 0gkit-indexer is in devDependencies (alongside next)', () => {
+    const dir = makeDir("chat-dev");
+    writePkg(dir, { next: "^16.0.0" }, { "@foundryprotocol/0gkit-indexer": "^1.0.0" });
+    expect(detectBase(dir)).toBe("chat");
+  });
+
+  it('returns "react-app" (not "chat") when next is present without @foundryprotocol/0gkit-indexer', () => {
+    const dir = makeDir("react-only");
+    writePkg(dir, { next: "^16.0.0", react: "^19.0.0", zod: "^3.23.0" });
+    expect(detectBase(dir)).toBe("react-app");
+  });
+
+  it('does not return "storage-app" when next is also present (storage-app is a non-Next template)', () => {
+    // If someone has both next and 0gkit-storage, next detection wins (react-app
+    // or chat). The real storage-app template never has next.
+    const dir = makeDir("next-plus-storage");
+    writePkg(dir, { next: "^16.0.0", "@foundryprotocol/0gkit-storage": "^1.0.0" });
+    // next present but no 0gkit-indexer → react-app
     expect(detectBase(dir)).toBe("react-app");
   });
 });

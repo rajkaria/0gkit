@@ -1,10 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { run, type RunDeps } from "../index.js";
 import type { CreateOptions } from "../types.js";
-import type { KitManifest } from "@foundryprotocol/0gkit-kits";
+import type { KitManifest, ApplyResult } from "@foundryprotocol/0gkit-kits";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -343,5 +349,77 @@ describe("run() — interactive path with kits from prompts", () => {
         base: "react-app",
       })
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fix 3 regression: kit env keys must survive into the final .env.example
+// (writeEnvExample must run BEFORE applyKit so the kit's appendEnv appends
+// to the base file rather than being overwritten by a later writeEnvExample)
+// ---------------------------------------------------------------------------
+
+describe("run() — kit env vars survive into .env.example (Fix 3 regression)", () => {
+  it("kit env keys are present in .env.example after scaffolding with --kits", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "cga-kits-env-"));
+
+    // Simulate a real applyKit that appends kit env keys to the .env.example
+    // file that already exists in dest (written by writeEnvExample before the
+    // kit apply loop).
+    const applyKitSpy = vi
+      .fn()
+      .mockImplementation(async ({ dest }: { dest: string }): Promise<ApplyResult> => {
+        const envPath = join(dest, ".env.example");
+        // .env.example must already exist (written by writeEnvExample before us)
+        const existing = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
+        // Append kit-specific env keys (mirrors appendEnv behaviour)
+        const kitEnvLines = [
+          "",
+          "# agent-memory kit",
+          "OG_STORAGE_NAMESPACE=agent-memory",
+          "OG_PRIVATE_KEY=0x...",
+          "OG_RPC_URL=https://evmrpc-testnet.0g.ai",
+        ].join("\n");
+        writeFileSync(envPath, existing + kitEnvLines + "\n");
+        return {
+          applied: ["agent-memory"],
+          filesWritten: ["lib/agent-memory.ts"],
+          envAdded: ["OG_STORAGE_NAMESPACE", "OG_PRIVATE_KEY", "OG_RPC_URL"],
+          notes: [],
+          token: "[0gkit:kit-applied]" as const,
+        };
+      });
+
+    const deps = makeDeps({
+      cwd,
+      applyKit: applyKitSpy,
+      listKits: () => [AGENT_MEMORY_MANIFEST],
+      getKit: (name) => (name === "agent-memory" ? AGENT_MEMORY_MANIFEST : undefined),
+    });
+
+    const code = await run(
+      argv(
+        "my-env-app",
+        "--template",
+        "react-app",
+        "--kits",
+        "agent-memory",
+        "--no-install",
+        "--no-git"
+      ),
+      deps
+    );
+
+    expect(code).toBe(0);
+
+    const envContent = readFileSync(join(cwd, "my-env-app", ".env.example"), "utf8");
+
+    // Base keys from writeEnvExample must be present
+    expect(envContent).toContain("NETWORK=local");
+    expect(envContent).toContain("RPC_URL=");
+
+    // Kit-added keys must also be present (not clobbered by writeEnvExample)
+    expect(envContent).toContain("OG_STORAGE_NAMESPACE=agent-memory");
+    expect(envContent).toContain("OG_PRIVATE_KEY=0x...");
+    expect(envContent).toContain("OG_RPC_URL=");
   });
 });
