@@ -10,3 +10,5 @@ export type { PartialPackageJson, EnvVar } from "./merge.js";
 
 export { fetchKitOverlay } from "./fetch.js";
 export type { FetchKitOverlayDeps } from "./fetch.js";
+
+export { REACT_BASES, isReactBase, detectBase } from "./bases.js";
