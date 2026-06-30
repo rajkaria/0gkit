@@ -7,6 +7,12 @@ supersedes_carryover: foundry-sdk-refresh, showcase-app, jaeger (in-flight PR #4
 
 # Post-v1 0gkit roadmap
 
+> **Re-sequenced 2026-06-30.** SP13–SP16 shipped. SP17–SP23 are **not cancelled** —
+> they are re-prioritized to run *after* the Kits epic (K0–K4). The active execution
+> order now lives in [2026-06-30-kits-epic-roadmap.md](2026-06-30-kits-epic-roadmap.md),
+> where the old SP17–SP23 appear as K5–K11. The per-sprint scope below is unchanged and
+> remains the source for expanding each carryover sprint into a full plan when its turn comes.
+
 Consolidates the four open carryover items (CLAUDE.md) with the 13-item P0/P1/P2 backlog the user submitted on 2026-05-23. Items have been **analysed for value**, **clubbed where they share infra**, and **reordered** by cost-to-value and dependency direction.
 
 ## TL;DR — what changed vs the input list
