@@ -2,4 +2,58 @@
 // Regenerated on every build via the "prebuild" / "pretest" npm script.
 import type { KitManifest } from "./manifest.js";
 
-export const KITS: KitManifest[] = [];
+export const KITS: KitManifest[] = [
+  {
+    "name": "agent-memory",
+    "title": "Agent Memory",
+    "domain": "agent-infra",
+    "summary": "Persistent agent memory on 0G Storage — append-only JSONL blobs per namespace with keyword-indexed recall.",
+    "compatibleBases": [
+      "react-app",
+      "chat",
+      "storage-app",
+      "mcp-agent"
+    ],
+    "tiers": {
+      "lib": [
+        "lib/agent-memory.ts"
+      ],
+      "adapters": {
+        "mcp-agent": [
+          "src/tools/memory.ts"
+        ],
+        "react-app": [
+          "app/api/memory/route.ts"
+        ]
+      },
+      "ui": [
+        "components/MemoryPanel.tsx",
+        "hooks/useAgentMemory.ts"
+      ]
+    },
+    "requires": [
+      "0gkit-storage"
+    ],
+    "env": [
+      {
+        "key": "OG_STORAGE_NAMESPACE",
+        "example": "agent-memory",
+        "note": "Namespace prefix for memory blobs in 0G Storage"
+      },
+      {
+        "key": "OG_PRIVATE_KEY",
+        "example": "0x...",
+        "note": "Private key for signing 0G Storage transactions"
+      },
+      {
+        "key": "OG_RPC_URL",
+        "example": "https://evmrpc-testnet.0g.ai",
+        "note": "0G chain RPC endpoint"
+      }
+    ],
+    "dependencies": {},
+    "devDependencies": {},
+    "composes": [],
+    "conflicts": []
+  }
+];
