@@ -157,6 +157,60 @@ export const KITS: KitManifest[] = [
     conflicts: [],
   },
   {
+    name: "inft-studio",
+    title: "iNFT Studio",
+    domain: "assets",
+    summary:
+      "Mint intelligent NFTs with AI-generated media stored on 0G Storage and attested provenance. Media+metadata uploaded content-addressed; minted via a typed INFT contract (Inft.sol — standard ERC-721 has no mint). Optional signed provenance receipt ties model+prompt to the content hash (✓ signature verified — not TEE-quote).",
+    compatibleBases: ["react-app", "chat"],
+    tiers: {
+      lib: ["lib/inft.ts", "lib/inft-abi.ts"],
+      adapters: {
+        "react-app": ["app/api/inft/route.ts"],
+        chat: ["app/api/inft/route.ts"],
+      },
+      ui: [
+        "components/MintForm.tsx",
+        "components/Gallery.tsx",
+        "components/ProvenanceBadge.tsx",
+        "app/studio/page.tsx",
+      ],
+    },
+    env: [
+      {
+        key: "OG_PRIVATE_KEY",
+        example: "0x...",
+        note: "Operator private key for signing 0G Storage transactions and provenance receipts",
+      },
+      {
+        key: "OG_RPC_URL",
+        example: "https://evmrpc-testnet.0g.ai",
+        note: "0G chain RPC endpoint",
+      },
+      {
+        key: "OG_INFT_ADDRESS",
+        example: "0x...",
+        note: "Deployed Inft.sol contract address — deploy via contracts/script/DeployInft.s.sol",
+      },
+      {
+        key: "OG_COMPUTE_MODEL",
+        example: "neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8",
+        note: "Default AI model for provenance attestation (optional)",
+      },
+    ],
+    dependencies: {
+      "@foundryprotocol/0gkit-storage": "^1.0.0",
+      "@foundryprotocol/0gkit-contracts": "^1.0.0",
+      "@foundryprotocol/0gkit-attestation": "^1.0.0",
+      "@foundryprotocol/0gkit-wallet": "^1.0.0",
+      "@foundryprotocol/0gkit-core": "^1.0.0",
+    },
+    devDependencies: {},
+    requires: [],
+    composes: [],
+    conflicts: [],
+  },
+  {
     name: "live-feed",
     title: "Live Feed",
     domain: "markets",
