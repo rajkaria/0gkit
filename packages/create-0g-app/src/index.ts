@@ -3,6 +3,12 @@ import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
+import {
+  applyKit as realApplyKit,
+  listKits as realListKits,
+  getKit as realGetKit,
+} from "@foundryprotocol/0gkit-kits";
+import type { KitManifest, ApplyKitOptions, ApplyResult } from "@foundryprotocol/0gkit-kits";
 import { renderBanner } from "./banner.js";
 import { writeEnvExample } from "./env.js";
 import { initGitRepo, type InitGitResult } from "./git.js";
@@ -45,6 +51,12 @@ export interface RunDeps {
   }) => Promise<void>;
   initGit?: (opts: { dest: string }) => Promise<InitGitResult>;
   prompts?: (seed: Partial<CreateOptions>) => Promise<CreateOptions | null>;
+  /** Apply a single kit to the scaffolded project directory. Injected for tests. */
+  applyKit?: (opts: ApplyKitOptions) => Promise<ApplyResult>;
+  /** List kits compatible with a given base. Injected for tests. */
+  listKits?: (opts?: { base?: string }) => KitManifest[];
+  /** Look up a kit by name. Injected for tests. */
+  getKit?: (name: string) => KitManifest | undefined;
 }
 
 const defaultFetchTemplate = (opts: { name: TemplateName; dest: string }) =>
@@ -97,6 +109,9 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
   const runInstall = deps.runInstall ?? defaultRunInstall;
   const initGit = deps.initGit ?? defaultInitGit;
   const prompts = deps.prompts ?? interactivePrompts;
+  const applyKitFn = deps.applyKit ?? realApplyKit;
+  const listKitsFn = deps.listKits ?? realListKits;
+  const getKitFn = deps.getKit ?? realGetKit;
 
   const program = new Command(programName)
     .exitOverride()
@@ -114,7 +129,8 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
       `CI workflow files (${CI_OPTIONS.map((c) => c.value).join("|")})`
     )
     .option("--no-install", "Skip dependency install")
-    .option("--no-git", "Skip git init");
+    .option("--no-git", "Skip git init")
+    .option("--kits <names>", "Comma-separated kits to apply (e.g. agent-memory,kit-b)");
 
   let parsed;
   try {
@@ -135,8 +151,14 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
     ci?: string;
     install: boolean;
     git: boolean;
+    kits?: string;
   }>();
   const seedName = args[0] as string | undefined;
+
+  // Parse --kits flag into an array of trimmed, non-empty names.
+  const requestedKits: string[] = opts.kits
+    ? opts.kits.split(",").map((k) => k.trim()).filter(Boolean)
+    : [];
 
   // Validate template flag early so a typo doesn't waste a prompt.
   if (opts.template && !isValidTemplateName(opts.template)) {
@@ -146,6 +168,32 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
       )}`
     );
     return 1;
+  }
+
+  // Validate kits early when both --template and --kits are supplied.
+  // Must run before any scaffolding or prompts.
+  if (requestedKits.length > 0 && opts.template) {
+    const compatibleKits = listKitsFn({ base: opts.template });
+    const compatibleNames = new Set(compatibleKits.map((k) => k.name));
+
+    for (const kitName of requestedKits) {
+      const manifest = getKitFn(kitName);
+      if (!manifest) {
+        err(
+          `Unknown kit: ${kitName}. Valid kits for template "${opts.template}": ${
+            compatibleKits.length > 0 ? compatibleNames.size > 0 ? [...compatibleNames].join(", ") : "(none)" : "(none)"
+          }`
+        );
+        return 1;
+      }
+      if (!compatibleNames.has(kitName)) {
+        err(
+          `Kit "${kitName}" is not compatible with template "${opts.template}". ` +
+          `Compatible kits: ${compatibleKits.length > 0 ? [...compatibleNames].join(", ") : "(none)"}`
+        );
+        return 1;
+      }
+    }
   }
 
   if (opts.network && opts.network !== "local" && opts.network !== "galileo") {
@@ -188,6 +236,7 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
       ci: (opts.ci as CiOption | undefined) ?? "github",
       dest: "",
       example: false,
+      kits: requestedKits.length > 0 ? requestedKits : undefined,
     };
   } else {
     if (seedName) {
@@ -235,6 +284,25 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
       await fetchCiFn({ choice: final.ci, dest });
     } catch (e) {
       err(`(warn) CI scaffold failed: ${(e as Error).message}`);
+    }
+  }
+
+  // 1.6. apply kits
+  const kitsToApply = final.kits ?? [];
+  for (const kitName of kitsToApply) {
+    log(`→ Applying kit: ${kitName}`);
+    try {
+      const result = await applyKitFn({
+        kit: kitName,
+        dest,
+        base: final.template,
+        pm: final.packageManager,
+      });
+      for (const note of result.notes) {
+        log(`  [${kitName}] ${note}`);
+      }
+    } catch (e) {
+      err(`(warn) Kit "${kitName}" apply failed: ${(e as Error).message}`);
     }
   }
 

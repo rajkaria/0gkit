@@ -29,4 +29,6 @@ export interface CreateOptions {
   dest: string;
   /** True if the interactive picker was used (i.e. not all flags supplied). */
   example: boolean;
+  /** Kit names to apply after template scaffold (e.g. ["agent-memory"]). */
+  kits?: string[];
 }
