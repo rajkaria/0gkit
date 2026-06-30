@@ -1,0 +1,107 @@
+---
+title: "yield-intel kit"
+---
+
+# yield-intel
+
+> ⚠ **Demo — not financial advice; no automated execution.**
+> This kit provides AI-generated yield analysis for informational purposes only.
+> It does **not** execute any transactions on your behalf. You are solely
+> responsible for any financial decisions you make. This is a testnet demo
+> running on the Galileo network — mainnet and automated execution are
+> intentionally out of scope.
+
+## What it does
+
+The `yield-intel` kit adds a read-only AI yield analysis dashboard to your 0G
+app. The public API has **no** `execute`, `trade`, `swap`, `send`, or
+`transfer` function — this is an analysis and audit tool, not a trading bot.
+
+On each analysis run the kit:
+
+1. Accepts a list of `Position` objects (protocol, asset, amount, APY) from
+   the caller — read-only input, no on-chain read is performed by the lib.
+2. Calls `@foundryprotocol/0gkit-compute` `Compute.inference` with a structured
+   analysis prompt asking for per-position scores (0–100) and one-sentence
+   rationale. The model is instructed: no trading instructions, no profit
+   guarantees, no risk-free claims.
+3. Parses the JSON response and returns a ranked `AnalysisItem[]` sorted by
+   descending score. On any parse error returns `[]` — never throws.
+4. Optionally logs a decision record: the user describes their **intended**
+   action in free text; `logDecision` signs a `DecisionReceipt` via EIP-191
+   personal-sign and uploads the full record to **0G Storage** as an immutable
+   audit entry. **This does not execute the action.**
+
+The `DemoBanner` component is **non-removable** — it is rendered
+unconditionally at the top of the yield page with fixed copy:
+"Demo — not financial advice; no automated execution."
+
+## Compatible bases
+
+`react-app` · `chat` · `tee-attested-api`
+
+## Apply
+
+```bash
+# scaffold-time
+npm create 0gkit-app -- --kits yield-intel
+
+# add to an existing project
+0g add yield-intel
+```
+
+## Environment variables
+
+| Variable           | Example                                       | Notes                                                                                              |
+| ------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `OG_NETWORK`       | `galileo`                                     | 0G network. **Defaults to `galileo` (testnet).** Mainnet and automated execution are out of scope. |
+| `OG_PRIVATE_KEY`   | `0x...`                                       | Operator key for signing decision receipts and 0G Storage transactions                             |
+| `OG_RPC_URL`       | `https://evmrpc-testnet.0g.ai`                | 0G chain RPC endpoint (Galileo testnet default)                                                    |
+| `OG_COMPUTE_MODEL` | `neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8` | Model for yield analysis inference (optional — uses provider default if omitted)                   |
+
+## Tiers
+
+- **lib** — `lib/yield.ts` (portable `analyze`, `Position`, `AnalysisItem`,
+  `AnalysisDeps` — the only public function; read-only);
+  `lib/decisionLog.ts` (portable `logDecision`, `DecisionInput`,
+  `DecisionRecord`, `DecisionReceipt`, `DecisionLogDeps` — logs a decision
+  record to 0G Storage; does not execute any transaction).
+- **adapters** — `app/api/yield/route.ts` for `react-app` and `chat` bases
+  (POST, runs `analyze` + optional `logDecision`);
+  `src/routes/yield.ts` for `tee-attested-api` (Hono route).
+- **ui** — `components/DemoBanner.tsx` (**non-removable** disclaimer, leads
+  the page), `components/YieldTable.tsx` (ranked analysis table, read-only),
+  `components/DecisionLog.tsx` (log-an-intention form — explicitly says
+  "This logs your decision — it does NOT execute it."), `app/yield/page.tsx`.
+
+## Decision log
+
+`logDecision` (`lib/decisionLog.ts`) records the user's **intended** action with
+an attested receipt:
+
+1. Builds a canonical `DecisionReceipt` (`positionId`, `action`, `rationale`,
+   `score`, `ts`).
+2. Signs it via the injected `Attestor` (EIP-191 personal-sign over
+   `digestJson(receipt)`). Badge: **✓ signature verified** — not TEE-quote.
+3. Encodes the full `DecisionRecord` to JSON and uploads to **0G Storage**
+   (immutable, content-addressed). The `storageRef` is the returned root.
+4. Returns the full record including `storageRef` for offline retrieval and
+   independent verification.
+
+The `action` field is a free-text description of what the user plans to do
+**manually**. This system does not execute it.
+
+## Honesty note
+
+`yield-intel` is deliberately execution-free. The lib test suite contains a
+**negative assertion** (`PUBLIC API SURFACE — execution-free invariant`) that
+fails if any export ever contains `execute`, `trade`, `swap`, `send`, or
+`transfer` — this guard exists for the lifetime of the kit.
+
+The attestation is a **signed receipt** (EIP-191 personal-sign via
+`@foundryprotocol/0gkit-attestation` `signMessage`/`recoverSigner`) — not a
+TEE-quote / enclave attestation. The `Attestor` interface is injected so a
+real TEE-quote verifier can slot in without changing the lib.
+
+`OG_NETWORK` defaults to `galileo` (Galileo testnet). Mainnet usage and
+automated execution are intentionally out of scope for this kit.

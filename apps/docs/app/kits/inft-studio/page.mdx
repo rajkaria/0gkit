@@ -1,0 +1,103 @@
+---
+title: "inft-studio kit"
+---
+
+# inft-studio
+
+> **Mint intelligent NFTs with AI-generated media stored on 0G Storage and
+> attested provenance.** Media and metadata are uploaded content-addressed to
+> 0G Storage; the token is minted via the bundled `Inft.sol` contract
+> (standard ERC-721 has no `mint` — `Inft.sol` adds
+> `mint(address to, bytes32 metadataRoot) → tokenId`). An optional signed
+> provenance receipt ties the model and prompt to the content hash
+> (✓ signature verified — not TEE-quote).
+
+## What it does
+
+The `inft-studio` kit adds an intelligent NFT minting studio to your 0G app.
+On each mint the kit:
+
+1. Uploads the raw media bytes to **0G Storage** via `@foundryprotocol/0gkit-storage`.
+   The returned `root` is the immutable, content-addressed `contentHash`.
+2. Builds enriched metadata JSON (with `mediaRoot: contentHash` embedded),
+   uploads it to 0G Storage → `metadataRoot`.
+3. Optionally attests provenance: the operator key signs
+   `digestJson({ model, prompt, contentHash, ts })` via EIP-191 personal-sign.
+   Badge: **✓ signature verified** — this is an operator-signed receipt,
+   not a hardware TEE quote. A real TEE-quote verifier can slot in via the
+   injected `Attestor` interface without changing calling code.
+4. Mints via `createTypedContract({ address, abi: INFT_ABI, signer }).write.mint`
+   (from `@foundryprotocol/0gkit-contracts`). The `tokenId` is read from the
+   on-chain `Minted` event — **not** from the receipt return value, which only
+   carries `{ txHash, blockNumber, latencyMs }`.
+5. Returns `{ tokenId, tokenUri, contentHash, provenance? }`.
+
+**ERC-721 note:** `Erc721Abi` from `@foundryprotocol/0gkit-contracts` is the
+standard ERC-721 ABI and has **no** `mint` function. The kit ships `INFT_ABI`
+(`lib/inft-abi.ts`) for the mintable `Inft.sol` surface. Use `Erc721Abi` only
+for read operations (`ownerOf`, `tokenURI`, `balanceOf`).
+
+## Compatible bases
+
+`react-app` · `chat`
+
+## Apply
+
+```bash
+# scaffold-time
+npm create 0gkit-app -- --kits inft-studio
+
+# add to an existing project
+0g add inft-studio
+```
+
+## Environment variables
+
+| Variable           | Example                                       | Notes                                                                                        |
+| ------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `OG_PRIVATE_KEY`   | `0x...`                                       | Operator key for signing 0G Storage transactions and provenance receipts                     |
+| `OG_RPC_URL`       | `https://evmrpc-testnet.0g.ai`                | 0G chain RPC endpoint                                                                        |
+| `OG_INFT_ADDRESS`  | `0x...`                                       | Deployed `Inft.sol` contract address — deploy via `contracts/script/DeployInft.s.sol`        |
+| `OG_COMPUTE_MODEL` | `neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8` | Default AI model for provenance attestation (optional — used in the prompt field if omitted) |
+
+## Tiers
+
+- **lib** — `lib/inft.ts` (portable `mintInft`, `MintInput`, `MintResult`,
+  `Provenance`, `ProvenanceReceipt`, `MintDeps` interfaces + implementation);
+  `lib/inft-abi.ts` (`INFT_ABI` — the `Inft.sol` ABI including the `mint`
+  function and `Minted` event; `Erc721Abi` from `0gkit-contracts` does not
+  include `mint`).
+- **adapters** — `app/api/inft/mint/route.ts` (POST, orchestrates upload +
+  mint), `app/api/inft/token/route.ts` (GET by tokenId),
+  `app/api/inft/tokens/route.ts` (GET collection), `app/api/inft/verify/route.ts`
+  (POST, verifies a provenance attestation). Same routes for `react-app` and
+  `chat` bases.
+- **ui** — `components/MintForm.tsx` (upload + mint form),
+  `components/Gallery.tsx` (token grid), `components/ProvenanceBadge.tsx`
+  (attestation badge — see Provenance badge section below), `app/studio/page.tsx`.
+- **contracts** — `contracts/Inft.sol` + `contracts/script/DeployInft.s.sol`
+  (Foundry deploy script).
+
+## Provenance badge
+
+`ProvenanceBadge` (`components/ProvenanceBadge.tsx`) displays the real
+attestation result for a minted token. It calls `POST /api/inft/verify` with
+the provenance receipt and attestation, then shows one of three states:
+
+- **✓ signature verified** — `recoverSigner` confirms the operator key signed
+  the digest and the digest matches. Click to expand attestation details.
+- **⚠ unverified** — verification failed (wrong signer or corrupted digest).
+- **○ verifying…** — request in flight.
+
+The badge always shows the live result from `attestor.verify()` — never a
+placeholder. Expanded details include a note that this is an EIP-191 signed
+receipt, not a TEE-quote / enclave attestation.
+
+## Honesty note
+
+The attestation is a **signed receipt**: the operator private key signs
+`digestJson(provenanceReceipt)` via EIP-191 personal-sign (`signMessage` from
+`@foundryprotocol/0gkit-attestation`); the badge is backed by `recoverSigner`
+verifying the recovered address. There is no TEE-quote verification in the
+current stack. The `Attestor` interface is injected so a real TEE-quote
+verifier can slot in later without changing the lib or adapter calling code.

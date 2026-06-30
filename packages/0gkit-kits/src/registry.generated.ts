@@ -157,6 +157,70 @@ export const KITS: KitManifest[] = [
     conflicts: [],
   },
   {
+    name: "inft-studio",
+    title: "iNFT Studio",
+    domain: "assets",
+    summary:
+      "Mint intelligent NFTs with AI-generated media stored on 0G Storage and attested provenance. Media+metadata uploaded content-addressed; minted via a typed INFT contract (Inft.sol — standard ERC-721 has no mint). Optional signed provenance receipt ties model+prompt to the content hash (✓ signature verified — not TEE-quote).",
+    compatibleBases: ["react-app", "chat"],
+    tiers: {
+      lib: ["lib/inft.ts", "lib/inft-abi.ts"],
+      adapters: {
+        "react-app": [
+          "app/api/inft/mint/route.ts",
+          "app/api/inft/token/route.ts",
+          "app/api/inft/tokens/route.ts",
+          "app/api/inft/verify/route.ts",
+        ],
+        chat: [
+          "app/api/inft/mint/route.ts",
+          "app/api/inft/token/route.ts",
+          "app/api/inft/tokens/route.ts",
+          "app/api/inft/verify/route.ts",
+        ],
+      },
+      ui: [
+        "components/MintForm.tsx",
+        "components/Gallery.tsx",
+        "components/ProvenanceBadge.tsx",
+        "app/studio/page.tsx",
+      ],
+    },
+    env: [
+      {
+        key: "OG_PRIVATE_KEY",
+        example: "0x...",
+        note: "Operator private key for signing 0G Storage transactions and provenance receipts",
+      },
+      {
+        key: "OG_RPC_URL",
+        example: "https://evmrpc-testnet.0g.ai",
+        note: "0G chain RPC endpoint",
+      },
+      {
+        key: "OG_INFT_ADDRESS",
+        example: "0x...",
+        note: "Deployed Inft.sol contract address — deploy via contracts/script/DeployInft.s.sol",
+      },
+      {
+        key: "OG_COMPUTE_MODEL",
+        example: "neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8",
+        note: "Default AI model for provenance attestation (optional)",
+      },
+    ],
+    dependencies: {
+      "@foundryprotocol/0gkit-storage": "^1.0.0",
+      "@foundryprotocol/0gkit-contracts": "^1.0.0",
+      "@foundryprotocol/0gkit-attestation": "^1.0.0",
+      "@foundryprotocol/0gkit-wallet": "^1.0.0",
+      "@foundryprotocol/0gkit-core": "^1.0.0",
+    },
+    devDependencies: {},
+    requires: [],
+    composes: [],
+    conflicts: [],
+  },
+  {
     name: "live-feed",
     title: "Live Feed",
     domain: "markets",
@@ -308,6 +372,61 @@ export const KITS: KitManifest[] = [
     ],
     dependencies: {
       "@foundryprotocol/0gkit-compute": "^1.0.0",
+      "@foundryprotocol/0gkit-attestation": "^1.0.0",
+      "@foundryprotocol/0gkit-wallet": "^1.0.0",
+      "@foundryprotocol/0gkit-core": "^1.0.0",
+    },
+    devDependencies: {},
+    requires: [],
+    composes: [],
+    conflicts: [],
+  },
+  {
+    name: "yield-intel",
+    title: "Yield Intelligence",
+    domain: "defi",
+    summary:
+      "AI-powered read-only DeFi yield analysis with an attested decision log. Ranks your positions by AI score with per-item rationale; logs intended actions as signed receipts anchored to 0G Storage. Deliberately NO automated execution — this kit is an analysis + audit tool, not a trading bot. Testnet-default (OG_NETWORK=galileo); mainnet and automated execution are intentionally out of scope.",
+    compatibleBases: ["react-app", "chat", "tee-attested-api"],
+    tiers: {
+      lib: ["lib/yield.ts", "lib/decisionLog.ts"],
+      adapters: {
+        "react-app": ["app/api/yield/route.ts"],
+        chat: ["app/api/yield/route.ts"],
+        "tee-attested-api": ["src/routes/yield.ts"],
+      },
+      ui: [
+        "components/DemoBanner.tsx",
+        "components/YieldTable.tsx",
+        "components/DecisionLog.tsx",
+        "app/yield/page.tsx",
+      ],
+    },
+    env: [
+      {
+        key: "OG_NETWORK",
+        example: "galileo",
+        note: "0G network to use. Defaults to galileo (testnet). Mainnet and automated execution are INTENTIONALLY OUT OF SCOPE for this kit.",
+      },
+      {
+        key: "OG_PRIVATE_KEY",
+        example: "0x...",
+        note: "Operator private key for signing decision receipts and 0G Storage transactions",
+      },
+      {
+        key: "OG_RPC_URL",
+        example: "https://evmrpc-testnet.0g.ai",
+        note: "0G chain RPC endpoint (Galileo testnet default)",
+      },
+      {
+        key: "OG_COMPUTE_MODEL",
+        example: "neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8",
+        note: "Model for yield analysis inference (optional — uses provider default if omitted)",
+      },
+    ],
+    dependencies: {
+      "@foundryprotocol/0gkit-compute": "^1.0.0",
+      "@foundryprotocol/0gkit-storage": "^1.0.0",
       "@foundryprotocol/0gkit-attestation": "^1.0.0",
       "@foundryprotocol/0gkit-wallet": "^1.0.0",
       "@foundryprotocol/0gkit-core": "^1.0.0",
