@@ -381,4 +381,59 @@ export const KITS: KitManifest[] = [
     composes: [],
     conflicts: [],
   },
+  {
+    name: "yield-intel",
+    title: "Yield Intelligence",
+    domain: "defi",
+    summary:
+      "AI-powered read-only DeFi yield analysis with an attested decision log. Ranks your positions by AI score with per-item rationale; logs intended actions as signed receipts anchored to 0G Storage. Deliberately NO automated execution — this kit is an analysis + audit tool, not a trading bot. Testnet-default (OG_NETWORK=galileo); mainnet and automated execution are intentionally out of scope.",
+    compatibleBases: ["react-app", "chat", "tee-attested-api"],
+    tiers: {
+      lib: ["lib/yield.ts", "lib/decisionLog.ts"],
+      adapters: {
+        "react-app": ["app/api/yield/route.ts"],
+        chat: ["app/api/yield/route.ts"],
+        "tee-attested-api": ["src/routes/yield.ts"],
+      },
+      ui: [
+        "components/DemoBanner.tsx",
+        "components/YieldTable.tsx",
+        "components/DecisionLog.tsx",
+        "app/yield/page.tsx",
+      ],
+    },
+    env: [
+      {
+        key: "OG_NETWORK",
+        example: "galileo",
+        note: "0G network to use. Defaults to galileo (testnet). Mainnet and automated execution are INTENTIONALLY OUT OF SCOPE for this kit.",
+      },
+      {
+        key: "OG_PRIVATE_KEY",
+        example: "0x...",
+        note: "Operator private key for signing decision receipts and 0G Storage transactions",
+      },
+      {
+        key: "OG_RPC_URL",
+        example: "https://evmrpc-testnet.0g.ai",
+        note: "0G chain RPC endpoint (Galileo testnet default)",
+      },
+      {
+        key: "OG_COMPUTE_MODEL",
+        example: "neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8",
+        note: "Model for yield analysis inference (optional — uses provider default if omitted)",
+      },
+    ],
+    dependencies: {
+      "@foundryprotocol/0gkit-compute": "^1.0.0",
+      "@foundryprotocol/0gkit-storage": "^1.0.0",
+      "@foundryprotocol/0gkit-attestation": "^1.0.0",
+      "@foundryprotocol/0gkit-wallet": "^1.0.0",
+      "@foundryprotocol/0gkit-core": "^1.0.0",
+    },
+    devDependencies: {},
+    requires: [],
+    composes: [],
+    conflicts: [],
+  },
 ];
