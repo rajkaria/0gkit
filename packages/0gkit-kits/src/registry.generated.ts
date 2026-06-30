@@ -31,9 +31,7 @@ export const KITS: KitManifest[] = [
         "hooks/useAgentMemory.ts"
       ]
     },
-    "requires": [
-      "0gkit-storage"
-    ],
+    "requires": [],
     "env": [
       {
         "key": "OG_STORAGE_NAMESPACE",
@@ -51,7 +49,9 @@ export const KITS: KitManifest[] = [
         "note": "0G chain RPC endpoint"
       }
     ],
-    "dependencies": {},
+    "dependencies": {
+      "@foundryprotocol/0gkit-storage": "^1.0.0"
+    },
     "devDependencies": {},
     "composes": [],
     "conflicts": []

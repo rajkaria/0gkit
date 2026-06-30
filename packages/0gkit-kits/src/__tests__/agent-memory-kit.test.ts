@@ -61,9 +61,14 @@ describe("agent-memory — manifest embedding", () => {
     expect(kit?.tiers.ui).toContain("hooks/useAgentMemory.ts");
   });
 
-  it("requires ['0gkit-storage']", () => {
+  it("requires is empty (0gkit-storage is self-supplied via dependencies)", () => {
     const kit = getKit("agent-memory");
-    expect(kit?.requires).toContain("0gkit-storage");
+    expect(kit?.requires).toEqual([]);
+  });
+
+  it("dependencies includes @foundryprotocol/0gkit-storage", () => {
+    const kit = getKit("agent-memory");
+    expect(kit?.dependencies).toHaveProperty("@foundryprotocol/0gkit-storage");
   });
 });
 

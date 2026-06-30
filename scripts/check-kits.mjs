@@ -305,11 +305,21 @@ async function main() {
         // Scaffold base from local templates/
         try {
           scaffoldBase(base, tmpDest);
-          // Symlink node_modules from base template (templates are not in pnpm workspace,
-          // so they have their own node_modules — required for tsc to find @types/node etc.)
+          // Build a real node_modules in tmpDest by symlinking each top-level
+          // entry from the base template's node_modules. We do this rather than
+          // symlinking the whole directory so we can later add kit dependencies
+          // (which the base template may not have) without mutating the base.
           const baseNodeModules = join(TEMPLATES_DIR, base, "node_modules");
+          const tmpNodeModules = join(tmpDest, "node_modules");
           if (existsSync(baseNodeModules)) {
-            symlinkSync(baseNodeModules, join(tmpDest, "node_modules"));
+            mkdirSync(tmpNodeModules, { recursive: true });
+            for (const entry of readdirSync(baseNodeModules)) {
+              const src = join(baseNodeModules, entry);
+              const dest = join(tmpNodeModules, entry);
+              if (!existsSync(dest)) {
+                symlinkSync(src, dest);
+              }
+            }
           }
         } catch (e) {
           console.error(`${label} ✗ SCAFFOLD FAILED: ${e.message}`);
@@ -343,6 +353,34 @@ async function main() {
           findings.push({ kit: kitName, base, step: "apply", error: msg });
           totalFail++;
           continue;
+        }
+
+        // Upgrade all @foundryprotocol/0gkit-* symlinks to point at the
+        // workspace package builds. This ensures tsc sees the in-repo type
+        // declarations (which are always up-to-date) rather than the
+        // npm-installed copies in the base template's node_modules (which may
+        // be behind the current branch). It also makes kit-added packages
+        // (those not in the base template) resolvable without a full install.
+        try {
+          const tmpFoundryNm = join(tmpDest, "node_modules", "@foundryprotocol");
+          // Collect every @foundryprotocol/0gkit-* workspace package
+          const workspacePkgsDir = join(ROOT, "packages");
+          if (existsSync(workspacePkgsDir)) {
+            mkdirSync(tmpFoundryNm, { recursive: true });
+            for (const shortName of readdirSync(workspacePkgsDir)) {
+              if (!shortName.startsWith("0gkit-")) continue;
+              const workspaceSrc = join(workspacePkgsDir, shortName);
+              if (!statSync(workspaceSrc).isDirectory()) continue;
+              const destLink = join(tmpFoundryNm, shortName);
+              // Remove existing symlink (from base node_modules copy) if present
+              if (existsSync(destLink)) {
+                rmSync(destLink, { recursive: true, force: true });
+              }
+              symlinkSync(workspaceSrc, destLink);
+            }
+          }
+        } catch {
+          // non-fatal: tsc may still pass if deps are already resolvable
         }
 
         // TSC check

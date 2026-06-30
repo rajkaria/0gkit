@@ -12,7 +12,7 @@
     },
     "ui": ["components/MemoryPanel.tsx", "hooks/useAgentMemory.ts"]
   },
-  "requires": ["0gkit-storage"],
+  "requires": [],
   "env": [
     {
       "key": "OG_STORAGE_NAMESPACE",
@@ -30,7 +30,9 @@
       "note": "0G chain RPC endpoint"
     }
   ],
-  "dependencies": {},
+  "dependencies": {
+    "@foundryprotocol/0gkit-storage": "^1.0.0"
+  },
   "devDependencies": {},
   "composes": [],
   "conflicts": []
