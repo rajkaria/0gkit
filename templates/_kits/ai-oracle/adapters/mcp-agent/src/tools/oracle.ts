@@ -281,6 +281,20 @@ export function registerOracleTools(
               `Commitment: ${anchorLabel} (ref: ${result.commitment.ref})`,
             ].join("\n"),
           },
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                answer: result.answer,
+                answerHash: result.answerHash,
+                receipt: result.receipt,
+                attestation: result.attestation,
+                commitment: result.commitment,
+              },
+              null,
+              2
+            ),
+          },
         ],
       };
     }
