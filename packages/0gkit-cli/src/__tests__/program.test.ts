@@ -2,6 +2,57 @@ import { describe, it, expect, vi } from "vitest";
 import { Command } from "commander";
 import { ZeroGError, getNetwork } from "@foundryprotocol/0gkit-core";
 import { buildProgram, runCommand, type ProgramDeps } from "../program.js";
+import type { KitsEngineLike } from "../commands/kits.js";
+
+// ---------------------------------------------------------------------------
+// Fake kits engine (injected so no real dynamic import / network occurs)
+// ---------------------------------------------------------------------------
+
+function fakeKitsEngine(over: Partial<KitsEngineLike> = {}): KitsEngineLike {
+  const applyKit = vi.fn(async () => ({
+    applied: ["agent-memory"],
+    filesWritten: ["lib/agent-memory.ts"],
+    envAdded: ["OG_STORAGE_NAMESPACE"],
+    notes: ["Run pnpm install to add dependencies."],
+    token: "[0gkit:kit-applied]" as const,
+  }));
+  const listKits = vi.fn(() => [
+    {
+      name: "agent-memory",
+      title: "Agent Memory",
+      domain: "agent-infra" as const,
+      summary: "Persistent agent memory on 0G Storage.",
+      compatibleBases: ["react-app", "mcp-agent"],
+      tiers: { lib: ["lib/agent-memory.ts"], adapters: {}, ui: [] },
+      env: [{ key: "OG_STORAGE_NAMESPACE", example: "agent-memory" }],
+      dependencies: {},
+      devDependencies: {},
+      requires: [],
+      composes: [],
+      conflicts: [],
+    },
+  ]);
+  const getKit = vi.fn((name: string) =>
+    name === "agent-memory"
+      ? {
+          name: "agent-memory",
+          title: "Agent Memory",
+          domain: "agent-infra" as const,
+          summary: "Persistent agent memory on 0G Storage.",
+          compatibleBases: ["react-app", "mcp-agent"],
+          tiers: { lib: ["lib/agent-memory.ts"] },
+          env: [{ key: "OG_STORAGE_NAMESPACE", example: "agent-memory" }],
+          dependencies: {},
+          devDependencies: {},
+          requires: [],
+          composes: [],
+          conflicts: [],
+        }
+      : undefined
+  );
+  const detectBase = vi.fn(() => "node");
+  return { applyKit, listKits, getKit, detectBase, ...over };
+}
 
 function fakeDeps(over: Partial<ProgramDeps> = {}): ProgramDeps {
   const lines: string[] = [];
@@ -48,6 +99,7 @@ function fakeDeps(over: Partial<ProgramDeps> = {}): ProgramDeps {
     writeErr: (s: string) => errLines.push(s),
     packageVersions: () => [],
     now: () => new Date("2026-01-01T00:00:00.000Z"),
+    loadKitsEngine: async () => fakeKitsEngine(),
     _lines: lines,
     _errLines: errLines,
     ...over,
@@ -60,6 +112,7 @@ describe("buildProgram", () => {
     const names = program.commands.map((c) => c.name()).sort();
     expect(names).toEqual(
       [
+        "add",
         "attest",
         "chain",
         "contracts",
@@ -71,6 +124,7 @@ describe("buildProgram", () => {
         "infer",
         "init",
         "jobs",
+        "kits",
         "storage",
         "traces",
       ].sort()
@@ -222,6 +276,147 @@ describe("runCommand --defect-report", () => {
     });
 
     expect(errLines.join("\n")).toBe("");
+    process.exitCode = 0;
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 0g kits / 0g add
+// ---------------------------------------------------------------------------
+
+describe("0g kits list", () => {
+  it("prints kits compatible with the detected base", async () => {
+    const engine = fakeKitsEngine({
+      detectBase: vi.fn(() => "mcp-agent"),
+      listKits: vi.fn(() => [
+        {
+          name: "agent-memory",
+          title: "Agent Memory",
+          domain: "agent-infra" as const,
+          summary: "Persistent agent memory on 0G Storage.",
+          compatibleBases: ["mcp-agent"],
+          tiers: { lib: ["lib/agent-memory.ts"], adapters: {}, ui: [] },
+          env: [],
+          dependencies: {},
+          devDependencies: {},
+          requires: [],
+          composes: [],
+          conflicts: [],
+        },
+      ]),
+    });
+    const deps = fakeDeps({
+      loadKitsEngine: async () => engine,
+      cwd: () => "/fake/project",
+    });
+
+    const program = buildProgram(deps);
+    program.exitOverride();
+    await program.parseAsync(["kits", "list"], { from: "user" });
+
+    const output = (deps as any)._lines.join("\n");
+    expect(output).toContain("agent-memory");
+    expect(output).toContain("Agent Memory");
+    // detectBase was called with the cwd
+    expect(engine.detectBase).toHaveBeenCalledWith("/fake/project");
+    // listKits was called with the detected base
+    expect(engine.listKits).toHaveBeenCalledWith(expect.objectContaining({ base: "mcp-agent" }));
+  });
+
+  it("respects --base override and skips detectBase", async () => {
+    const engine = fakeKitsEngine();
+    const deps = fakeDeps({ loadKitsEngine: async () => engine });
+
+    const program = buildProgram(deps);
+    program.exitOverride();
+    await program.parseAsync(["kits", "list", "--base", "react-app"], { from: "user" });
+
+    expect(engine.listKits).toHaveBeenCalledWith(expect.objectContaining({ base: "react-app" }));
+    expect(engine.detectBase).not.toHaveBeenCalled();
+  });
+});
+
+describe("0g add", () => {
+  it("calls applyKit with kit name and cwd as dest, then prints token", async () => {
+    const applyKit = vi.fn(async () => ({
+      applied: ["agent-memory"],
+      filesWritten: ["lib/agent-memory.ts"],
+      envAdded: [],
+      notes: ["Run pnpm install."],
+      token: "[0gkit:kit-applied]" as const,
+    }));
+    const engine = fakeKitsEngine({ applyKit, detectBase: vi.fn(() => "node") });
+    const deps = fakeDeps({
+      loadKitsEngine: async () => engine,
+      cwd: () => "/my/project",
+    });
+
+    const program = buildProgram(deps);
+    program.exitOverride();
+    await program.parseAsync(["add", "agent-memory"], { from: "user" });
+
+    expect(applyKit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kit: "agent-memory",
+        dest: "/my/project",
+        base: "node",
+      })
+    );
+
+    const output = (deps as any)._lines.join("\n");
+    expect(output).toContain("[0gkit:kit-applied]");
+  });
+
+  it("maps a KitError to failure output and sets exitCode 1", async () => {
+    const engine = fakeKitsEngine({
+      applyKit: vi.fn(async () => {
+        const err = new Error("Kit \"ghost\" not found in registry.") as Error & { code: string };
+        err.name = "KitError";
+        err.code = "KIT_NOT_FOUND";
+        throw err;
+      }),
+      detectBase: vi.fn(() => "node"),
+    });
+    const deps = fakeDeps({ loadKitsEngine: async () => engine });
+
+    const program = buildProgram(deps);
+    program.exitOverride();
+    await program.parseAsync(["add", "ghost", "--json"], { from: "user" });
+
+    const payload = JSON.parse((deps as any)._lines.at(-1));
+    expect(payload.ok).toBe(false);
+    expect(payload.error.code).toBe("KIT_NOT_FOUND");
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});
+
+describe("0g kits info", () => {
+  it("prints summary, tiers, and env vars for a known kit", async () => {
+    const engine = fakeKitsEngine();
+    const deps = fakeDeps({ loadKitsEngine: async () => engine });
+
+    const program = buildProgram(deps);
+    program.exitOverride();
+    await program.parseAsync(["kits", "info", "agent-memory"], { from: "user" });
+
+    const output = (deps as any)._lines.join("\n");
+    expect(output).toContain("Agent Memory");
+    expect(output).toContain("Persistent agent memory");
+    expect(output).toContain("OG_STORAGE_NAMESPACE");
+  });
+
+  it("exits 1 for an unknown kit", async () => {
+    const engine = fakeKitsEngine({ getKit: vi.fn(() => undefined) });
+    const deps = fakeDeps({ loadKitsEngine: async () => engine });
+
+    const program = buildProgram(deps);
+    program.exitOverride();
+    await program.parseAsync(["kits", "info", "ghost-kit", "--json"], { from: "user" });
+
+    const payload = JSON.parse((deps as any)._lines.at(-1));
+    expect(payload.ok).toBe(false);
+    expect(process.exitCode).toBe(1);
     process.exitCode = 0;
   });
 });
