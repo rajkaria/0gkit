@@ -1,0 +1,49 @@
+{
+  "name": "live-feed",
+  "title": "Live Feed",
+  "domain": "markets",
+  "summary": "Reorg-safe live social feed on 0G Storage + 0gkit-indexer. Posts are content-addressed blobs in 0G Storage; ordering and reorg-safety come from the Indexer tracking on-chain PostPublished events (requires a deployed FeedEvents contract). Falls back to storage-only mode without a contract address.",
+  "compatibleBases": ["react-app", "chat"],
+  "tiers": {
+    "lib": ["lib/feed.ts"],
+    "adapters": {
+      "react-app": ["app/api/feed/route.ts"],
+      "chat": ["app/api/feed/route.ts"]
+    },
+    "ui": [
+      "hooks/useLiveFeed.ts",
+      "components/FeedStream.tsx",
+      "app/feed/page.tsx"
+    ]
+  },
+  "requires": [],
+  "env": [
+    {
+      "key": "OG_PRIVATE_KEY",
+      "example": "0x...",
+      "note": "0x-prefixed private key for signing 0G Storage transactions (required)"
+    },
+    {
+      "key": "OG_RPC_URL",
+      "example": "https://evmrpc-testnet.0g.ai",
+      "note": "0G chain RPC endpoint (required for Storage and Indexer)"
+    },
+    {
+      "key": "OG_FEED_CONTRACT_ADDRESS",
+      "example": "0xYourDeployedFeedEventsContract",
+      "note": "Deployed FeedEvents contract address. When set, enables real Indexer reorg-safety. Without it, the adapter runs in storage-only mode (posts are stored but reorg-drop is not active)."
+    },
+    {
+      "key": "OG_FEED_NAMESPACE",
+      "example": "live-feed",
+      "note": "Storage namespace prefix for feed blobs (default: live-feed)"
+    }
+  ],
+  "dependencies": {
+    "@foundryprotocol/0gkit-storage": "^1.0.0",
+    "@foundryprotocol/0gkit-indexer": "^1.0.0"
+  },
+  "devDependencies": {},
+  "composes": [],
+  "conflicts": []
+}
