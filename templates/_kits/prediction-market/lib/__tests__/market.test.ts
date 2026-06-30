@@ -23,7 +23,11 @@ import {
 // Mock oracle (injected resolveOracle)
 // ---------------------------------------------------------------------------
 
-function makeMockOracle(answer = "YES", answerHash = "0xabc123", commitment = { ref: "root-xyz", kind: "storage" as const }) {
+function makeMockOracle(
+  answer = "YES",
+  answerHash = "0xabc123",
+  commitment = { ref: "root-xyz", kind: "storage" as const }
+) {
   return vi.fn().mockResolvedValue({
     answer,
     answerHash,
@@ -69,8 +73,14 @@ describe("openMarket", () => {
   it("assigns a unique id per market", async () => {
     const storage = makeMockStorage();
     const store = createMarketStore(storage);
-    const m1 = await openMarket(store, { question: "Q1?", closesAt: Date.now() + 1000 });
-    const m2 = await openMarket(store, { question: "Q2?", closesAt: Date.now() + 1000 });
+    const m1 = await openMarket(store, {
+      question: "Q1?",
+      closesAt: Date.now() + 1000,
+    });
+    const m2 = await openMarket(store, {
+      question: "Q2?",
+      closesAt: Date.now() + 1000,
+    });
     expect(m1.id).not.toBe(m2.id);
   });
 });
@@ -79,8 +89,16 @@ describe("placeBet", () => {
   it("records a bet on an open market", async () => {
     const storage = makeMockStorage();
     const store = createMarketStore(storage);
-    const market = await openMarket(store, { question: "Q1?", closesAt: Date.now() + 1000 });
-    const bet = await placeBet(store, { marketId: market.id, bettor: "0xalice", prediction: "YES", amount: 1 });
+    const market = await openMarket(store, {
+      question: "Q1?",
+      closesAt: Date.now() + 1000,
+    });
+    const bet = await placeBet(store, {
+      marketId: market.id,
+      bettor: "0xalice",
+      prediction: "YES",
+      amount: 1,
+    });
     expect(bet.marketId).toBe(market.id);
     expect(bet.prediction).toBe("YES");
   });
@@ -89,7 +107,12 @@ describe("placeBet", () => {
     const storage = makeMockStorage();
     const store = createMarketStore(storage);
     await expect(
-      placeBet(store, { marketId: "no-such-id", bettor: "0xalice", prediction: "YES", amount: 1 })
+      placeBet(store, {
+        marketId: "no-such-id",
+        bettor: "0xalice",
+        prediction: "YES",
+        amount: 1,
+      })
     ).rejects.toThrow(/not found/i);
   });
 });
@@ -120,14 +143,20 @@ describe("resolveMarket", () => {
       closesAt: Date.now() + 1000,
     });
 
-    const mockOracle = makeMockOracle("NO", "0xhash456", { ref: "commitment-ref-789", kind: "storage" });
+    const mockOracle = makeMockOracle("NO", "0xhash456", {
+      ref: "commitment-ref-789",
+      kind: "storage",
+    });
     const deps: MarketDeps = { resolveOracle: mockOracle, storage };
     const result = await resolveMarket(deps, market.id);
 
     // Receipt must contain the three required fields
     expect(result.receipt.answer).toBe("NO");
     expect(result.receipt.answerHash).toBe("0xhash456");
-    expect(result.receipt.commitment).toEqual({ ref: "commitment-ref-789", kind: "storage" });
+    expect(result.receipt.commitment).toEqual({
+      ref: "commitment-ref-789",
+      kind: "storage",
+    });
   });
 
   it("transitions market to 'settled' state after resolution", async () => {
@@ -154,7 +183,10 @@ describe("resolveMarket", () => {
       closesAt: Date.now() + 1000,
     });
 
-    const mockOracle = makeMockOracle("YES", "0xdeadbeef", { ref: "anchor-ref-1", kind: "storage" });
+    const mockOracle = makeMockOracle("YES", "0xdeadbeef", {
+      ref: "anchor-ref-1",
+      kind: "storage",
+    });
     const deps: MarketDeps = { resolveOracle: mockOracle, storage };
     await resolveMarket(deps, market.id);
 

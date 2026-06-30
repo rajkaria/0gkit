@@ -31,10 +31,7 @@ function mockInfer(output: string): InferenceClient {
  * sign:   HMAC-SHA256(JSON.stringify(receipt), secret) → { digest, signature }
  * verify: recompute HMAC, compare to signed.digest, check expectedSigner
  */
-function makeHmacAttestor(
-  signerAddress: string,
-  secret = "test-secret"
-): Attestor {
+function makeHmacAttestor(signerAddress: string, secret = "test-secret"): Attestor {
   function hmac(obj: unknown): string {
     return (
       "0x" + createHmac("sha256", secret).update(JSON.stringify(obj)).digest("hex")
@@ -182,11 +179,7 @@ describe("sealedInfer", () => {
       SIGNER
     );
 
-    const { ok } = await attestor.verify(
-      result.receipt,
-      result.attestation,
-      SIGNER
-    );
+    const { ok } = await attestor.verify(result.receipt, result.attestation, SIGNER);
     expect(ok).toBe(true);
   });
 
@@ -199,7 +192,10 @@ describe("sealedInfer", () => {
     );
 
     // Tamper with the receipt
-    const tampered = { ...(result.receipt as Record<string, unknown>), text: "TAMPERED" };
+    const tampered = {
+      ...(result.receipt as Record<string, unknown>),
+      text: "TAMPERED",
+    };
     const { ok } = await attestor.verify(tampered, result.attestation, SIGNER);
     expect(ok).toBe(false);
   });

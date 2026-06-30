@@ -150,13 +150,7 @@ export function registerSealedTools(
       },
       required: ["prompt"],
     },
-    async ({
-      prompt,
-      model: modelOverride,
-    }: {
-      prompt: string;
-      model?: string;
-    }) => {
+    async ({ prompt, model: modelOverride }: { prompt: string; model?: string }) => {
       const compute = await getCompute();
       const inferClient = {
         async infer(args: { prompt: string; model?: string }) {
@@ -237,8 +231,7 @@ export function registerSealedTools(
         },
         attestation: {
           type: "object",
-          description:
-            "The attestation object { digest, signature } from sealed_infer",
+          description: "The attestation object { digest, signature } from sealed_infer",
           properties: {
             digest: { type: "string" },
             signature: { type: "string" },
@@ -261,11 +254,9 @@ export function registerSealedTools(
       attestation: { digest: string; signature: string };
       expectedSigner: string;
     }) => {
-      const { ok, signer } = await (await getAttestor()).verify(
-        receipt,
-        attestation,
-        expectedSigner
-      );
+      const { ok, signer } = await (
+        await getAttestor()
+      ).verify(receipt, attestation, expectedSigner);
 
       return {
         content: [

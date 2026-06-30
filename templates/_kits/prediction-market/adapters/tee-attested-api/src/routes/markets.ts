@@ -150,8 +150,11 @@ async function buildAttestor(privateKey: `0x${string}`): Promise<Attestor> {
 
 function buildStorageAnchor(storage: Storage): Anchor {
   return {
-    async anchor(payload: Uint8Array | string): Promise<{ ref: string; kind: "storage" | "onchain" }> {
-      const encoded = typeof payload === "string" ? new TextEncoder().encode(payload) : payload;
+    async anchor(
+      payload: Uint8Array | string
+    ): Promise<{ ref: string; kind: "storage" | "onchain" }> {
+      const encoded =
+        typeof payload === "string" ? new TextEncoder().encode(payload) : payload;
       const result = await storage.upload(encoded);
       return { ref: result.root, kind: "storage" };
     },
@@ -171,12 +174,19 @@ async function buildOnchainAnchor(
     rpcUrl,
   });
   return {
-    async anchor(payload: Uint8Array | string): Promise<{ ref: string; kind: "storage" | "onchain" }> {
-      const text = typeof payload === "string" ? payload : new TextDecoder().decode(payload);
+    async anchor(
+      payload: Uint8Array | string
+    ): Promise<{ ref: string; kind: "storage" | "onchain" }> {
+      const text =
+        typeof payload === "string" ? payload : new TextDecoder().decode(payload);
       const hash = digestJson({ payload: text });
       const tag = `prediction-market:${Date.now()}`;
-      type AnchorWrite = (args: [`0x${string}`, string]) => Promise<{ txHash?: string }>;
-      const anchorFn = (contract.write as Record<string, AnchorWrite>)["anchor"] as AnchorWrite;
+      type AnchorWrite = (
+        args: [`0x${string}`, string]
+      ) => Promise<{ txHash?: string }>;
+      const anchorFn = (contract.write as Record<string, AnchorWrite>)[
+        "anchor"
+      ] as AnchorWrite;
       const writeResult = await anchorFn([hash, tag]);
       const txHash = writeResult.txHash ?? "unknown";
       return { ref: txHash, kind: "onchain" };
@@ -272,7 +282,10 @@ export function buildMarketsRouter(): Hono {
     try {
       const marketStorage = buildMarketStorageAdapter();
       const store = createMarketStore(marketStorage);
-      const market = await openMarket(store, { question: body.question, closesAt: body.closesAt });
+      const market = await openMarket(store, {
+        question: body.question,
+        closesAt: body.closesAt,
+      });
       return c.json({ market }, 201);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -285,7 +298,11 @@ export function buildMarketsRouter(): Hono {
     const marketId = c.req.param("id");
     let body: { bettor?: string; prediction?: string; amount?: number };
     try {
-      body = (await c.req.json()) as { bettor?: string; prediction?: string; amount?: number };
+      body = (await c.req.json()) as {
+        bettor?: string;
+        prediction?: string;
+        amount?: number;
+      };
     } catch {
       return c.json({ error: "invalid json" }, 400);
     }

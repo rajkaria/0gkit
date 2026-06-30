@@ -102,7 +102,15 @@ function MarketCard({
           marginBottom: 10,
         }}
       >
-        <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, flex: 1, marginRight: 12 }}>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "1rem",
+            fontWeight: 700,
+            flex: 1,
+            marginRight: 12,
+          }}
+        >
           {market.question}
         </h3>
         <span
@@ -122,10 +130,14 @@ function MarketCard({
       </div>
 
       <p style={{ margin: "0 0 4px", fontSize: "0.78rem", color: "#6b7280" }}>
-        ID: <code style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{market.id}</code>
+        ID:{" "}
+        <code style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
+          {market.id}
+        </code>
       </p>
       <p style={{ margin: "0 0 4px", fontSize: "0.78rem", color: "#6b7280" }}>
-        Created: {formatDate(market.createdAt)} &nbsp;|&nbsp; Closes: {formatDate(market.closesAt)}
+        Created: {formatDate(market.createdAt)} &nbsp;|&nbsp; Closes:{" "}
+        {formatDate(market.closesAt)}
       </p>
 
       {market.resolution && (
@@ -138,11 +150,19 @@ function MarketCard({
             borderLeft: "4px solid #16a34a",
           }}
         >
-          <p style={{ margin: "0 0 4px", fontWeight: 600, fontSize: "0.875rem", color: "#14532d" }}>
+          <p
+            style={{
+              margin: "0 0 4px",
+              fontWeight: 600,
+              fontSize: "0.875rem",
+              color: "#14532d",
+            }}
+          >
             Resolution: {market.resolution.answer}
           </p>
           <p style={{ margin: "0 0 2px", fontSize: "0.75rem", color: "#166534" }}>
-            ✓ signature verified &nbsp;·&nbsp; Anchor: {market.resolution.commitment.kind}
+            ✓ signature verified &nbsp;·&nbsp; Anchor:{" "}
+            {market.resolution.commitment.kind}
           </p>
           <p style={{ margin: 0, fontSize: "0.75rem", color: "#166534" }}>
             Commitment:{" "}
@@ -175,7 +195,9 @@ function MarketCard({
             {resolving ? "Resolving…" : "Resolve via Oracle"}
           </button>
           {error && (
-            <span style={{ color: "#dc2626", fontSize: "0.78rem" }}>Error: {error}</span>
+            <span style={{ color: "#dc2626", fontSize: "0.78rem" }}>
+              Error: {error}
+            </span>
           )}
         </div>
       )}

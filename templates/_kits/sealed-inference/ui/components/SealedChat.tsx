@@ -85,9 +85,7 @@ export function SealedChat({
         padding: 20,
       }}
     >
-      <h2 style={{ marginBottom: 4, fontSize: "1.25rem", fontWeight: 700 }}>
-        {title}
-      </h2>
+      <h2 style={{ marginBottom: 4, fontSize: "1.25rem", fontWeight: 700 }}>{title}</h2>
       <p style={{ marginBottom: 16, fontSize: "0.8rem", color: "#6b7280" }}>
         Each response is signed by the operator key. The badge reflects the real
         verification result — not TEE-quote verification.
@@ -179,8 +177,7 @@ export function SealedChat({
               {result.attestation.digest.slice(0, 26)}…
             </code>
             <br />
-            <strong>Signed at:</strong>{" "}
-            {new Date(result.receipt.ts).toLocaleString()}
+            <strong>Signed at:</strong> {new Date(result.receipt.ts).toLocaleString()}
           </div>
         </div>
       )}

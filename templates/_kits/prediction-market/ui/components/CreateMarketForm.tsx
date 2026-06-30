@@ -62,7 +62,14 @@ export function CreateMarketForm({ onSubmit }: CreateMarketFormProps) {
         padding: 20,
       }}
     >
-      <h3 style={{ margin: "0 0 14px", fontSize: "1rem", fontWeight: 700, color: "#1d4ed8" }}>
+      <h3
+        style={{
+          margin: "0 0 14px",
+          fontSize: "1rem",
+          fontWeight: 700,
+          color: "#1d4ed8",
+        }}
+      >
         Open a New Prediction Market
       </h3>
       <form
@@ -72,7 +79,13 @@ export function CreateMarketForm({ onSubmit }: CreateMarketFormProps) {
         <div>
           <label
             htmlFor="pm-question"
-            style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4, color: "#374151" }}
+            style={{
+              display: "block",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              marginBottom: 4,
+              color: "#374151",
+            }}
           >
             Question
           </label>
@@ -96,7 +109,13 @@ export function CreateMarketForm({ onSubmit }: CreateMarketFormProps) {
         <div>
           <label
             htmlFor="pm-closes-at"
-            style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4, color: "#374151" }}
+            style={{
+              display: "block",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              marginBottom: 4,
+              color: "#374151",
+            }}
           >
             Closes at
           </label>

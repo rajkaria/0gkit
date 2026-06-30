@@ -172,7 +172,9 @@ describe("prediction-market — manifest embedding", () => {
 
   it("tiers.adapters['tee-attested-api'] contains src/routes/markets.ts", () => {
     const kit = getKit("prediction-market");
-    expect(kit?.tiers.adapters?.["tee-attested-api"]).toContain("src/routes/markets.ts");
+    expect(kit?.tiers.adapters?.["tee-attested-api"]).toContain(
+      "src/routes/markets.ts"
+    );
   });
 
   it("dependencies includes @foundryprotocol/0gkit-storage", () => {

@@ -1,0 +1,81 @@
+---
+title: "prediction-market kit"
+---
+
+# prediction-market
+
+> **AI-resolved, proof-anchored prediction market.** Lifecycle: open → bet →
+> resolve (via `ai-oracle`) → settle. Composes `ai-oracle` so applying
+> `prediction-market` auto-applies `ai-oracle` first. Resolution receipts are
+> signed by the operator key (✓ signature verified — not TEE-quote) and
+> anchored to 0G Storage (or on-chain opt-in).
+
+## What it does
+
+The `prediction-market` kit adds a full prediction market lifecycle to your
+0G app:
+
+1. **Open** — create a market with a question and deadline.
+2. **Bet** — participants place YES/NO positions.
+3. **Resolve** — at deadline, the kit calls `resolveOracle` (from the composed
+   `ai-oracle` lib) to get a signed, anchored AI verdict.
+4. **Settle** — winners are paid out proportionally. The signed resolution
+   receipt is stored in 0G Storage for auditability (immutable
+   content-addressed commitment). Set `OG_ANCHOR_ONCHAIN=1` to also write the
+   root on-chain via `Anchor.sol`.
+
+Because `prediction-market` declares `"composes": ["ai-oracle"]`, running
+`0g add prediction-market` applies `ai-oracle` first, then the market overlay,
+and merges dependencies from both kits into `package.json`.
+
+## Compatible bases
+
+`react-app` · `chat` · `tee-attested-api`
+
+## Apply
+
+```bash
+# scaffold-time (applies ai-oracle automatically)
+npm create 0gkit-app -- --kits prediction-market
+
+# add to an existing project
+0g add prediction-market
+```
+
+## Environment variables
+
+Inherits all `ai-oracle` env vars, plus:
+
+| Variable               | Example                                       | Notes                                                                   |
+| ---------------------- | --------------------------------------------- | ----------------------------------------------------------------------- |
+| `OG_COMPUTE_MODEL`     | `neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8` | Model for resolution oracle (optional)                                  |
+| `OG_PRIVATE_KEY`       | `0x...`                                       | Operator key for signing resolution receipts                            |
+| `OG_RPC_URL`           | `https://evmrpc-testnet.0g.ai`                | 0G chain RPC endpoint                                                   |
+| `OG_ANCHOR_ONCHAIN`    | `1`                                           | Set to `1` to commit resolution receipts on-chain (default: 0G Storage) |
+| `OG_ANCHOR_ADDRESS`    | `0x...`                                       | Deployed `Anchor.sol` address — required when `OG_ANCHOR_ONCHAIN=1`     |
+| `OG_STORAGE_NAMESPACE` | `prediction-market`                           | Namespace prefix for market blobs in 0G Storage                         |
+
+## Tiers
+
+- **lib** — `lib/market.ts` (portable `Market`, `Bet`, `Resolution` types,
+  `openMarket` / `placeBet` / `resolveMarket` / `settleMarket` helpers).
+- **adapters** — one per base (`app/api/markets/route.ts` for Next.js,
+  `src/routes/markets.ts` for Express).
+- **ui** — `app/markets/page.tsx` (market list page),
+  `components/MarketBoard.tsx`, `components/CreateMarketForm.tsx`
+  (React bases only).
+
+## Composition
+
+`prediction-market` `composes` `ai-oracle`. The engine resolves the full
+closure deps-first (deduped, cycle-safe) before writing any files, so both
+kits' files land in the project and both kits' `package.json` dependencies
+are merged.
+
+## Honesty note
+
+Resolution uses `resolveOracle` from the composed `ai-oracle` lib, which
+produces an **operator-signed receipt** (EIP-191 signed envelope). There is
+no TEE quote verification. The badge is "✓ signature verified". The
+`Attestor` interface is injected so a real TEE-quote verifier can slot in
+later without changing market code.

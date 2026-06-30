@@ -67,10 +67,7 @@ export interface OracleResult {
  * the adapter passes `(question) => resolveOracle(oracleDeps, question)`.
  * See MarketDeps.resolveOracle below.
  */
-export type OracleResolver = (
-  deps: unknown,
-  question: string
-) => Promise<OracleResult>;
+export type OracleResolver = (deps: unknown, question: string) => Promise<OracleResult>;
 
 // ---------------------------------------------------------------------------
 // Domain types
@@ -279,10 +276,7 @@ export interface PlaceBetArgs {
  * Places a bet on an open market.
  * Throws if the market is not found.
  */
-export async function placeBet(
-  store: MarketStore,
-  args: PlaceBetArgs
-): Promise<Bet> {
+export async function placeBet(store: MarketStore, args: PlaceBetArgs): Promise<Bet> {
   const market = await store.getMarket(args.marketId);
   if (!market) {
     throw new Error(`Market not found: ${args.marketId}`);

@@ -256,7 +256,7 @@ T2 sealed-inference (lib + 3 adapters + ui)   ← independent, parallel-safe wit
       Re-run `pnpm --filter @foundryprotocol/0gkit-kits build` and confirm
       `registry.generated.ts` is prettier-clean (the generator now formats it).
 - [ ] **Run** the FULL gate — `format:check · build · lint · boundary:check · typecheck ·
-    test · test:scripts · docs:check · templates:check · kits:check` — all green. (This
+test · test:scripts · docs:check · templates:check · kits:check` — all green. (This
       is the same gate the K0 ship learned to run completely; do not skip docs:check.)
 - [ ] **Commit** + push + open PR `K1 — Verifiable AI + prediction-market`.
 - [ ] **Whole-branch review** (most-capable model) BEFORE merge — per the project rule,

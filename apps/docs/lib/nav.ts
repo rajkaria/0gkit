@@ -93,6 +93,14 @@ export const NAV: NavSection[] = [
     ],
   },
   {
+    title: "Kits",
+    links: [
+      { title: "AI Oracle", href: "/kits/ai-oracle" },
+      { title: "Sealed Inference", href: "/kits/sealed-inference" },
+      { title: "Prediction Market", href: "/kits/prediction-market" },
+    ],
+  },
+  {
     title: "Migration",
     links: [
       {

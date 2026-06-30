@@ -138,8 +138,11 @@ async function buildAttestor(privateKey: `0x${string}`): Promise<Attestor> {
 
 function buildStorageAnchor(storage: Storage): Anchor {
   return {
-    async anchor(payload: Uint8Array | string): Promise<{ ref: string; kind: "storage" | "onchain" }> {
-      const encoded = typeof payload === "string" ? new TextEncoder().encode(payload) : payload;
+    async anchor(
+      payload: Uint8Array | string
+    ): Promise<{ ref: string; kind: "storage" | "onchain" }> {
+      const encoded =
+        typeof payload === "string" ? new TextEncoder().encode(payload) : payload;
       const result = await storage.upload(encoded);
       return { ref: result.root, kind: "storage" };
     },
@@ -159,12 +162,19 @@ async function buildOnchainAnchor(
     rpcUrl,
   });
   return {
-    async anchor(payload: Uint8Array | string): Promise<{ ref: string; kind: "storage" | "onchain" }> {
-      const text = typeof payload === "string" ? payload : new TextDecoder().decode(payload);
+    async anchor(
+      payload: Uint8Array | string
+    ): Promise<{ ref: string; kind: "storage" | "onchain" }> {
+      const text =
+        typeof payload === "string" ? payload : new TextDecoder().decode(payload);
       const hash = digestJson({ payload: text });
       const tag = `prediction-market:${Date.now()}`;
-      type AnchorWrite = (args: [`0x${string}`, string]) => Promise<{ txHash?: string }>;
-      const anchorFn = (contract.write as Record<string, AnchorWrite>)["anchor"] as AnchorWrite;
+      type AnchorWrite = (
+        args: [`0x${string}`, string]
+      ) => Promise<{ txHash?: string }>;
+      const anchorFn = (contract.write as Record<string, AnchorWrite>)[
+        "anchor"
+      ] as AnchorWrite;
       const writeResult = await anchorFn([hash, tag]);
       const txHash = writeResult.txHash ?? "unknown";
       return { ref: txHash, kind: "onchain" };
@@ -250,10 +260,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!action) {
       const { question, closesAt } = body as { question?: unknown; closesAt?: unknown };
       if (typeof question !== "string" || !question) {
-        return NextResponse.json({ error: '"question" must be a non-empty string' }, { status: 400 });
+        return NextResponse.json(
+          { error: '"question" must be a non-empty string' },
+          { status: 400 }
+        );
       }
       if (typeof closesAt !== "number") {
-        return NextResponse.json({ error: '"closesAt" must be a Unix ms timestamp' }, { status: 400 });
+        return NextResponse.json(
+          { error: '"closesAt" must be a Unix ms timestamp' },
+          { status: 400 }
+        );
       }
       const market = await openMarket(store, { question, closesAt });
       return NextResponse.json({ market }, { status: 201 });
@@ -261,7 +277,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (action === "bet") {
       const { marketId, bettor, prediction, amount } = body as {
-        marketId?: unknown; bettor?: unknown; prediction?: unknown; amount?: unknown;
+        marketId?: unknown;
+        bettor?: unknown;
+        prediction?: unknown;
+        amount?: unknown;
       };
       if (typeof marketId !== "string" || !marketId) {
         return NextResponse.json({ error: '"marketId" is required' }, { status: 400 });
@@ -270,10 +289,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: '"bettor" is required' }, { status: 400 });
       }
       if (typeof prediction !== "string" || !prediction) {
-        return NextResponse.json({ error: '"prediction" is required' }, { status: 400 });
+        return NextResponse.json(
+          { error: '"prediction" is required' },
+          { status: 400 }
+        );
       }
       if (typeof amount !== "number" || amount <= 0) {
-        return NextResponse.json({ error: '"amount" must be a positive number' }, { status: 400 });
+        return NextResponse.json(
+          { error: '"amount" must be a positive number' },
+          { status: 400 }
+        );
       }
       const bet = await placeBet(store, { marketId, bettor, prediction, amount });
       return NextResponse.json({ bet }, { status: 201 });
