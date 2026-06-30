@@ -91,6 +91,18 @@ export interface OracleDeps {
 // OracleResult
 // ---------------------------------------------------------------------------
 
+/**
+ * The canonical inference receipt shape that is signed and anchored.
+ * Returned verbatim in OracleResult so verifiers can reconstruct the exact
+ * object that was passed to attestor.sign() without guessing `ts`.
+ */
+export interface OracleReceipt {
+  question: string;
+  answer: string;
+  answerHash: string;
+  ts: number;
+}
+
 export interface OracleResult {
   /** The raw answer text from the inference provider. */
   answer: string;
@@ -99,6 +111,11 @@ export interface OracleResult {
    * Deterministic: same answer → same hash.
    */
   answerHash: string;
+  /**
+   * The exact receipt object that was signed. Verifiers must pass this back
+   * to attestor.verify() — do NOT reconstruct it, as `ts` is a one-time value.
+   */
+  receipt: OracleReceipt;
   /** Signed receipt: the operator-signed digest of the inference receipt. */
   attestation: { digest: string; signature: string };
   /** Anchor commitment: where the signed receipt is anchored. */
@@ -127,8 +144,7 @@ export async function resolveOracle(
   });
 
   // 2. Hash the answer (SHA-256, hex, 0x-prefixed)
-  const answerHash =
-    "0x" + createHash("sha256").update(output, "utf8").digest("hex");
+  const answerHash = "0x" + createHash("sha256").update(output, "utf8").digest("hex");
 
   // 3. Build the inference receipt (what gets signed and anchored)
   //    This is a canonical object — adapters must not alter its shape
@@ -154,6 +170,7 @@ export async function resolveOracle(
   return {
     answer: output,
     answerHash,
+    receipt,
     attestation,
     commitment,
   };

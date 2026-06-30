@@ -7,8 +7,13 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { createHash } from "node:crypto";
-import { resolveOracle, type InferenceClient, type Attestor, type Anchor } from "../oracle.js";
+import { createHash, createHmac } from "node:crypto";
+import {
+  resolveOracle,
+  type InferenceClient,
+  type Attestor,
+  type Anchor,
+} from "../oracle.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -204,5 +209,112 @@ describe("resolveOracle", () => {
     expect(result1.answerHash).not.toBe(result2.answerHash);
     expect(result1.answerHash).toBe(sha256hex("yes"));
     expect(result2.answerHash).toBe(sha256hex("no"));
+  });
+
+  it("result includes the exact receipt object that was signed", async () => {
+    const attestor = mockAttestor();
+    const result = await resolveOracle(
+      { infer: mockInfer("Paris"), attestor, anchor: mockAnchor() },
+      "Capital of France?"
+    );
+
+    expect(result.receipt).toBeDefined();
+    expect(result.receipt.question).toBe("Capital of France?");
+    expect(result.receipt.answer).toBe("Paris");
+    expect(result.receipt.answerHash).toBe(result.answerHash);
+    expect(typeof result.receipt.ts).toBe("number");
+    // The receipt exposed in result must be the same object sign() received
+    expect(result.receipt).toEqual(attestor.lastReceipt);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Round-trip attestor (real sign/verify seam — pure crypto, no 0gkit imports)
+// ---------------------------------------------------------------------------
+
+/**
+ * A signing attestor backed by node:crypto HMAC-SHA256 for test purposes.
+ * Mimics the structural contract of the real Attestor without any 0gkit dep.
+ *
+ * sign:   HMAC-SHA256(JSON.stringify(receipt), secret) → digest+signature (same value here)
+ * verify: recompute HMAC over receipt, compare to signed.digest, check expectedSigner
+ */
+function makeRoundTripAttestor(signerAddress: string): Attestor {
+  const secret = "test-secret-key";
+
+  function hmac(obj: unknown): string {
+    return (
+      "0x" + createHmac("sha256", secret).update(JSON.stringify(obj)).digest("hex")
+    );
+  }
+
+  return {
+    async sign(receipt: unknown) {
+      const digest = hmac(receipt);
+      return { digest, signature: digest }; // signature == digest for this mock
+    },
+    async verify(
+      receipt: unknown,
+      signed: { digest: string; signature: string },
+      expectedSigner: string
+    ) {
+      const recomputed = hmac(receipt);
+      const ok =
+        recomputed.toLowerCase() === signed.digest.toLowerCase() &&
+        expectedSigner.toLowerCase() === signerAddress.toLowerCase();
+      return { ok, signer: signerAddress };
+    },
+  };
+}
+
+describe("receipt round-trip", () => {
+  const SIGNER = "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+
+  it("verify(result.receipt, result.attestation, signer) returns ok=true", async () => {
+    const attestor = makeRoundTripAttestor(SIGNER);
+    const result = await resolveOracle(
+      { infer: mockInfer("42"), attestor, anchor: mockAnchor() },
+      "What is the answer?"
+    );
+
+    const { ok, signer } = await attestor.verify(
+      result.receipt,
+      result.attestation,
+      SIGNER
+    );
+
+    expect(ok).toBe(true);
+    expect(signer.toLowerCase()).toBe(SIGNER.toLowerCase());
+  });
+
+  it("verify with a tampered receipt returns ok=false", async () => {
+    const attestor = makeRoundTripAttestor(SIGNER);
+    const result = await resolveOracle(
+      { infer: mockInfer("42"), attestor, anchor: mockAnchor() },
+      "What is the answer?"
+    );
+
+    // Tamper: change the answer in the receipt
+    const tamperedReceipt = { ...result.receipt, answer: "TAMPERED" };
+
+    const { ok } = await attestor.verify(tamperedReceipt, result.attestation, SIGNER);
+
+    expect(ok).toBe(false);
+  });
+
+  it("verify with wrong expectedSigner returns ok=false", async () => {
+    const attestor = makeRoundTripAttestor(SIGNER);
+    const result = await resolveOracle(
+      { infer: mockInfer("hello"), attestor, anchor: mockAnchor() },
+      "greeting?"
+    );
+
+    const { ok } = await attestor.verify(
+      result.receipt,
+      result.attestation,
+      "0x0000000000000000000000000000000000000001"
+    );
+
+    expect(ok).toBe(false);
   });
 });

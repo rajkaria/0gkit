@@ -54,6 +54,7 @@ export const KITS: KitManifest[] = [
       lib: ["lib/oracle.ts", "lib/anchor-abi.ts"],
       adapters: {
         "react-app": ["app/api/oracle/route.ts"],
+        chat: ["app/api/oracle/route.ts"],
         "tee-attested-api": ["src/routes/oracle.ts"],
         "mcp-agent": ["src/tools/oracle.ts"],
       },

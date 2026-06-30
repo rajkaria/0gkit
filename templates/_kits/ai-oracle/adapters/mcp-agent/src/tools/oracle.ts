@@ -166,14 +166,21 @@ export function registerOracleTools(
 
   // Lazily initialized shared deps
   let _compute: Compute | undefined;
+  let _signer: Awaited<ReturnType<typeof fromPrivateKey>> | undefined;
   let _attestor: Attestor | undefined;
   let _anchor: Anchor | undefined;
 
-  function getCompute(): Compute {
+  async function getSigner(): Promise<Awaited<ReturnType<typeof fromPrivateKey>>> {
+    if (!_signer) {
+      _signer = await fromPrivateKey(privateKey as `0x${string}`);
+    }
+    return _signer;
+  }
+
+  async function getCompute(): Promise<Compute> {
     if (!_compute) {
-      // fromPrivateKey is async but Compute only needs the signer at inference time
-      // We build Compute lazily; signer is fetched at call time via the async wrapper below
-      _compute = new Compute({ brokerKey: privateKey });
+      const signer = await getSigner();
+      _compute = new Compute({ signer });
     }
     return _compute;
   }
@@ -236,7 +243,7 @@ export function registerOracleTools(
       question: string;
       model?: string;
     }) => {
-      const compute = getCompute();
+      const compute = await getCompute();
       const inferClient = {
         async infer(args: { prompt: string; model?: string }) {
           const result = await compute.inference({
@@ -285,20 +292,31 @@ export function registerOracleTools(
 
   server.tool(
     "oracle_verify",
-    "Verify a signed oracle receipt. Recovers the signer from the signature " +
-      "and checks it matches the expected operator address. " +
-      "Returns ok (boolean) and the recovered signer address. " +
+    "Verify a signed oracle receipt. Pass the `receipt` field returned by " +
+      "oracle_resolve — it is the exact object that was signed (including `ts`). " +
+      "Recovers the signer from the signature and checks it matches the expected " +
+      "operator address. Returns ok (boolean) and the recovered signer address. " +
       "Badge: '✓ signature verified' when ok=true — NOT TEE-quote verification.",
     {
       type: "object",
       properties: {
         receipt: {
           type: "object",
-          description: "The original receipt object (question, answer, answerHash, ts)",
+          description:
+            "The receipt object returned by oracle_resolve (question, answer, answerHash, ts). " +
+            "Must be the exact object from the result — do not reconstruct it.",
+          properties: {
+            question: { type: "string" },
+            answer: { type: "string" },
+            answerHash: { type: "string" },
+            ts: { type: "number" },
+          },
+          required: ["question", "answer", "answerHash", "ts"],
         },
         attestation: {
           type: "object",
-          description: "The attestation object { digest, signature }",
+          description:
+            "The attestation object { digest, signature } from oracle_resolve",
           properties: {
             digest: { type: "string" },
             signature: { type: "string" },
