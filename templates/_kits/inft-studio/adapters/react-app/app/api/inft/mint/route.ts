@@ -158,7 +158,10 @@ async function buildMintClient(
       // Inft.sol emits: Minted(address indexed to, uint256 indexed tokenId, ...)
       const blockNumber = receipt.blockNumber;
       const mintedLogs = (await (
-        contract.events as Record<string, (opts?: unknown) => Promise<readonly unknown[]>>
+        contract.events as Record<
+          string,
+          (opts?: unknown) => Promise<readonly unknown[]>
+        >
       )["Minted"]!({
         fromBlock: blockNumber,
         toBlock: blockNumber,

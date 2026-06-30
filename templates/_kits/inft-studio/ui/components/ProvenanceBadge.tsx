@@ -89,7 +89,11 @@ export function ProvenanceBadge({
 
     // If a pre-resolved result was provided, use it directly
     if (verifyResult !== undefined) {
-      setBadge({ status: "verified", ok: verifyResult.ok, signer: verifyResult.signer });
+      setBadge({
+        status: "verified",
+        ok: verifyResult.ok,
+        signer: verifyResult.signer,
+      });
       return;
     }
 
@@ -196,7 +200,12 @@ export function ProvenanceBadge({
   if (!provenance) return null;
 
   return (
-    <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "0.875rem" }}>
+    <div
+      style={{
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        fontSize: "0.875rem",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <span style={{ fontWeight: 600, color: "#374151" }}>AI Provenance</span>
         {renderBadgePill()}
@@ -258,15 +267,20 @@ export function ProvenanceBadge({
           <div style={{ fontWeight: 600, color: "#6b7280", marginBottom: 4 }}>
             Attestation details
             <span
-              style={{ marginLeft: 8, fontWeight: 400, cursor: "pointer", color: "#2563eb" }}
+              style={{
+                marginLeft: 8,
+                fontWeight: 400,
+                cursor: "pointer",
+                color: "#2563eb",
+              }}
               onClick={() => setExpanded(false)}
             >
               [close]
             </span>
           </div>
           <p style={{ margin: 0, color: "#6b7280", fontStyle: "italic" }}>
-            This is a signed receipt — the operator key signed the provenance digest
-            via EIP-191 personal-sign. It is NOT a TEE-quote / enclave attestation.
+            This is a signed receipt — the operator key signed the provenance digest via
+            EIP-191 personal-sign. It is NOT a TEE-quote / enclave attestation.
           </p>
           {provenance.attestation && (
             <>

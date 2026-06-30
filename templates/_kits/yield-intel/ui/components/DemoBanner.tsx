@@ -45,10 +45,11 @@ export function DemoBanner() {
             lineHeight: 1.5,
           }}
         >
-          This tool provides AI-generated yield analysis for informational purposes only.
-          It does not execute any transactions on your behalf. You are solely responsible
-          for any financial decisions you make. This is a testnet demo running on the
-          Galileo network — mainnet and automated execution are intentionally out of scope.
+          This tool provides AI-generated yield analysis for informational purposes
+          only. It does not execute any transactions on your behalf. You are solely
+          responsible for any financial decisions you make. This is a testnet demo
+          running on the Galileo network — mainnet and automated execution are
+          intentionally out of scope.
         </p>
       </div>
     </div>

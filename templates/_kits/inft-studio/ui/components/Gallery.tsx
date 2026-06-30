@@ -62,7 +62,9 @@ export function Gallery({
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${apiPath}/tokens?owner=${encodeURIComponent(addr)}&limit=${limit}`);
+      const res = await fetch(
+        `${apiPath}/tokens?owner=${encodeURIComponent(addr)}&limit=${limit}`
+      );
       const data = (await res.json()) as { tokens?: TokenItem[]; error?: string };
       if (!res.ok || data.error) {
         setError(data.error ?? `HTTP ${res.status}`);
@@ -183,7 +185,13 @@ function TokenCard({ token }: { token: TokenItem }) {
       }}
     >
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+        }}
+      >
         <div>
           <span
             style={{
@@ -223,9 +231,7 @@ function TokenCard({ token }: { token: TokenItem }) {
       </div>
 
       {/* Provenance badge */}
-      {token.provenance && (
-        <ProvenanceBadge provenance={token.provenance} />
-      )}
+      {token.provenance && <ProvenanceBadge provenance={token.provenance} />}
     </div>
   );
 }

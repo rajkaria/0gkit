@@ -178,7 +178,10 @@ export function MintForm({ apiPath = "/api/inft", onMinted }: MintFormProps) {
         Mint Intelligent NFT
       </h3>
 
-      <form onSubmit={(e) => void handleSubmit(e)} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <form
+        onSubmit={(e) => void handleSubmit(e)}
+        style={{ display: "flex", flexDirection: "column", gap: 14 }}
+      >
         {/* Recipient */}
         <div>
           <label style={labelStyle}>Recipient address *</label>
@@ -199,7 +202,9 @@ export function MintForm({ apiPath = "/api/inft", onMinted }: MintFormProps) {
             type="text"
             placeholder="My iNFT #1"
             value={tokenName}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setTokenName(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setTokenName(e.target.value)
+            }
             style={inputStyle}
           />
         </div>
@@ -219,7 +224,12 @@ export function MintForm({ apiPath = "/api/inft", onMinted }: MintFormProps) {
         {/* Media */}
         <div>
           <label style={labelStyle}>Media file *</label>
-          <input type="file" ref={fileRef} accept="image/*,video/*,audio/*" style={{ fontSize: "0.875rem" }} />
+          <input
+            type="file"
+            ref={fileRef}
+            accept="image/*,video/*,audio/*"
+            style={{ fontSize: "0.875rem" }}
+          />
           <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#6b7280" }}>
             Uploaded to 0G Storage. Content hash is embedded in metadata.
           </p>
@@ -231,9 +241,14 @@ export function MintForm({ apiPath = "/api/inft", onMinted }: MintFormProps) {
             type="checkbox"
             id="attestProvenance"
             checked={includeProvenance}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setIncludeProvenance(e.target.checked)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setIncludeProvenance(e.target.checked)
+            }
           />
-          <label htmlFor="attestProvenance" style={{ fontSize: "0.875rem", color: "#374151", cursor: "pointer" }}>
+          <label
+            htmlFor="attestProvenance"
+            style={{ fontSize: "0.875rem", color: "#374151", cursor: "pointer" }}
+          >
             Attest AI provenance (sign model + prompt)
           </label>
         </div>
@@ -246,7 +261,9 @@ export function MintForm({ apiPath = "/api/inft", onMinted }: MintFormProps) {
                 type="text"
                 placeholder="neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8"
                 value={model}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setModel(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setModel(e.target.value)
+                }
                 style={inputStyle}
               />
             </div>
@@ -265,7 +282,9 @@ export function MintForm({ apiPath = "/api/inft", onMinted }: MintFormProps) {
 
         {/* Error */}
         {error && (
-          <p style={{ color: "#dc2626", fontSize: "0.875rem", margin: 0 }}>Error: {error}</p>
+          <p style={{ color: "#dc2626", fontSize: "0.875rem", margin: 0 }}>
+            Error: {error}
+          </p>
         )}
 
         {/* Success */}
@@ -283,7 +302,14 @@ export function MintForm({ apiPath = "/api/inft", onMinted }: MintFormProps) {
             <p style={{ margin: "4px 0 0", wordBreak: "break-all" }}>
               Token ID: <code>{success.tokenId}</code>
             </p>
-            <p style={{ margin: "4px 0 0", wordBreak: "break-all", fontSize: "0.8rem", color: "#374151" }}>
+            <p
+              style={{
+                margin: "4px 0 0",
+                wordBreak: "break-all",
+                fontSize: "0.8rem",
+                color: "#374151",
+              }}
+            >
               URI: {success.tokenUri}
             </p>
           </div>

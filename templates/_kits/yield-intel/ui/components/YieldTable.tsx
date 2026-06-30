@@ -33,12 +33,9 @@ export interface YieldTableProps {
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  const color =
-    score >= 75 ? "#16a34a" : score >= 50 ? "#d97706" : "#dc2626";
-  const bg =
-    score >= 75 ? "#dcfce7" : score >= 50 ? "#fef3c7" : "#fee2e2";
-  const border =
-    score >= 75 ? "#86efac" : score >= 50 ? "#fcd34d" : "#fca5a5";
+  const color = score >= 75 ? "#16a34a" : score >= 50 ? "#d97706" : "#dc2626";
+  const bg = score >= 75 ? "#dcfce7" : score >= 50 ? "#fef3c7" : "#fee2e2";
+  const border = score >= 75 ? "#86efac" : score >= 50 ? "#fcd34d" : "#fca5a5";
 
   return (
     <span
@@ -139,8 +136,9 @@ export function YieldTable({ items, positions }: YieldTableProps) {
           color: "#9ca3af",
         }}
       >
-        AI analysis only — scores reflect relative analysis, not investment recommendations.
-        You decide whether to act. This system does not execute transactions.
+        AI analysis only — scores reflect relative analysis, not investment
+        recommendations. You decide whether to act. This system does not execute
+        transactions.
       </p>
     </div>
   );

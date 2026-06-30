@@ -94,7 +94,8 @@ export function DecisionLog({
       <p style={{ margin: "0 0 16px", fontSize: "0.8rem", color: "#6b7280" }}>
         Record your intended action with an attested receipt on 0G Storage.
         <strong style={{ color: "#374151" }}>
-          {" "}This logs your decision — it does NOT execute it.
+          {" "}
+          This logs your decision — it does NOT execute it.
         </strong>
       </p>
 
@@ -179,7 +180,14 @@ export function DecisionLog({
             background: "#f0fdf4",
           }}
         >
-          <p style={{ margin: "0 0 4px", fontWeight: 600, color: "#15803d", fontSize: "0.875rem" }}>
+          <p
+            style={{
+              margin: "0 0 4px",
+              fontWeight: 600,
+              color: "#15803d",
+              fontSize: "0.875rem",
+            }}
+          >
             ✓ Decision logged and attested
           </p>
           <p style={{ margin: "0 0 2px", fontSize: "0.75rem", color: "#374151" }}>

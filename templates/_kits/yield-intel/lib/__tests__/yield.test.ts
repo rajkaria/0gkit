@@ -31,9 +31,7 @@ describe("PUBLIC API SURFACE — execution-free invariant", () => {
     const banned = ["execute", "trade", "swap", "send", "transfer"];
     const exportedKeys = Object.keys(yieldApi);
     for (const verb of banned) {
-      const matches = exportedKeys.filter(
-        (k) => k.toLowerCase().includes(verb)
-      );
+      const matches = exportedKeys.filter((k) => k.toLowerCase().includes(verb));
       expect(
         matches,
         `yield.ts must NOT export any key containing "${verb}" — found: ${matches.join(", ")}`
@@ -45,9 +43,7 @@ describe("PUBLIC API SURFACE — execution-free invariant", () => {
     const banned = ["execute", "trade", "swap", "send", "transfer"];
     const exportedKeys = Object.keys(decisionLogApi);
     for (const verb of banned) {
-      const matches = exportedKeys.filter(
-        (k) => k.toLowerCase().includes(verb)
-      );
+      const matches = exportedKeys.filter((k) => k.toLowerCase().includes(verb));
       expect(
         matches,
         `decisionLog.ts must NOT export any key containing "${verb}" — found: ${matches.join(", ")}`
@@ -56,10 +52,7 @@ describe("PUBLIC API SURFACE — execution-free invariant", () => {
   });
 
   it("combined public API exports only analysis/logging functions (whitelist sanity check)", () => {
-    const allExports = [
-      ...Object.keys(yieldApi),
-      ...Object.keys(decisionLogApi),
-    ];
+    const allExports = [...Object.keys(yieldApi), ...Object.keys(decisionLogApi)];
     // Must include the two core functions
     expect(allExports).toContain("analyze");
     expect(allExports).toContain("logDecision");
@@ -70,11 +63,7 @@ describe("PUBLIC API SURFACE — execution-free invariant", () => {
 // Mocks
 // ---------------------------------------------------------------------------
 
-import {
-  analyze,
-  type Position,
-  type AnalysisDeps,
-} from "../yield.js";
+import { analyze, type Position, type AnalysisDeps } from "../yield.js";
 
 import {
   logDecision,
@@ -108,7 +97,10 @@ function mockStorageClient(): DecisionLogDeps["storage"] & {
  * HMAC-backed mock attestor (structurally mimics real signed-receipt Attestor
  * without any 0gkit dependency).
  */
-function makeHmacAttestor(signerAddress: string, secret = "yield-test-secret"): Attestor {
+function makeHmacAttestor(
+  signerAddress: string,
+  secret = "yield-test-secret"
+): Attestor {
   function hmac(obj: unknown): string {
     return (
       "0x" + createHmac("sha256", secret).update(JSON.stringify(obj)).digest("hex")
@@ -188,9 +180,7 @@ describe("analyze", () => {
       async infer(args) {
         capturedPrompt = args.prompt;
         return {
-          output: JSON.stringify([
-            { id: "pos-1", score: 60, rationale: "test" },
-          ]),
+          output: JSON.stringify([{ id: "pos-1", score: 60, rationale: "test" }]),
         };
       },
     };
@@ -235,10 +225,15 @@ describe("analyze", () => {
     const capturingCompute: AnalysisDeps["compute"] = {
       async infer(args) {
         capturedModel = args.model;
-        return { output: JSON.stringify([{ id: "pos-1", score: 70, rationale: "ok" }]) };
+        return {
+          output: JSON.stringify([{ id: "pos-1", score: 70, rationale: "ok" }]),
+        };
       },
     };
-    await analyze(SAMPLE_POSITIONS, { compute: capturingCompute, model: "custom-model" });
+    await analyze(SAMPLE_POSITIONS, {
+      compute: capturingCompute,
+      model: "custom-model",
+    });
     expect(capturedModel).toBe("custom-model");
   });
 });
@@ -330,15 +325,16 @@ describe("logDecision", () => {
     const storage = mockStorageClient();
 
     const record = await logDecision(
-      { positionId: "pos-2", action: "Rebalance", rationale: "better yield", score: 72 },
+      {
+        positionId: "pos-2",
+        action: "Rebalance",
+        rationale: "better yield",
+        score: 72,
+      },
       { attestor, storage }
     );
 
-    const { ok } = await attestor.verify(
-      record.receipt,
-      record.attestation,
-      SIGNER
-    );
+    const { ok } = await attestor.verify(record.receipt, record.attestation, SIGNER);
     expect(ok).toBe(true);
   });
 
@@ -347,7 +343,12 @@ describe("logDecision", () => {
     const storage = mockStorageClient();
 
     const record = await logDecision(
-      { positionId: "pos-2", action: "Rebalance", rationale: "better yield", score: 72 },
+      {
+        positionId: "pos-2",
+        action: "Rebalance",
+        rationale: "better yield",
+        score: 72,
+      },
       { attestor, storage }
     );
 

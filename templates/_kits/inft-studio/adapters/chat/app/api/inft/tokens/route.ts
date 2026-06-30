@@ -81,7 +81,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     })) as readonly MintedLog[];
 
     const uniqueTokenIds = Array.from(
-      new Set(mintedLogs.map((l) => l.args.tokenId).filter((id): id is bigint => id !== undefined))
+      new Set(
+        mintedLogs
+          .map((l) => l.args.tokenId)
+          .filter((id): id is bigint => id !== undefined)
+      )
     ).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
     type ReadFn<T> = (args: [bigint]) => Promise<T>;
@@ -104,7 +108,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const tokens = settled
       .filter(
-        (r): r is PromiseFulfilledResult<{ tokenId: string; owner: string; tokenURI: string }> =>
+        (
+          r
+        ): r is PromiseFulfilledResult<{
+          tokenId: string;
+          owner: string;
+          tokenURI: string;
+        }> =>
           r.status === "fulfilled" &&
           r.value.owner.toLowerCase() === owner.toLowerCase()
       )

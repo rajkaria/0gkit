@@ -122,7 +122,10 @@ export async function analyze(
   // Parse and validate — on any error return [] (never throw to caller)
   try {
     // Strip optional markdown fences if present
-    const cleaned = output.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+    const cleaned = output
+      .trim()
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/```\s*$/, "");
     const parsed = JSON.parse(cleaned) as unknown;
 
     if (!Array.isArray(parsed)) return [];

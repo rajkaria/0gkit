@@ -34,7 +34,11 @@ import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 import { recoverSigner } from "@foundryprotocol/0gkit-attestation";
 
 import { analyze, type Position } from "../../lib/yield.js";
-import { logDecision, type DecisionInput, type Attestor } from "../../lib/decisionLog.js";
+import {
+  logDecision,
+  type DecisionInput,
+  type Attestor,
+} from "../../lib/decisionLog.js";
 
 // ---------------------------------------------------------------------------
 // Helpers

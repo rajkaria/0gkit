@@ -22,7 +22,11 @@
 
 import { useState, type FormEvent } from "react";
 import { DemoBanner } from "../../components/DemoBanner.js";
-import { YieldTable, type AnalysisItem, type Position } from "../../components/YieldTable.js";
+import {
+  YieldTable,
+  type AnalysisItem,
+  type Position,
+} from "../../components/YieldTable.js";
 import { DecisionLog } from "../../components/DecisionLog.js";
 
 // ---------------------------------------------------------------------------
@@ -110,9 +114,9 @@ export default function YieldPage() {
         Yield Intelligence
       </h1>
       <p style={{ margin: "0 0 24px", fontSize: "0.875rem", color: "#6b7280" }}>
-        AI-powered read-only yield analysis. Enter your positions, get a ranked
-        analysis with rationale, then optionally log your intended action
-        (attestation anchored to 0G Storage — Galileo testnet).
+        AI-powered read-only yield analysis. Enter your positions, get a ranked analysis
+        with rationale, then optionally log your intended action (attestation anchored
+        to 0G Storage — Galileo testnet).
         <strong style={{ color: "#374151" }}> No automated execution.</strong>
       </p>
 
@@ -204,8 +208,8 @@ export default function YieldPage() {
             3. Log your decision (optional)
           </h2>
           <p style={{ margin: "0 0 12px", fontSize: "0.8rem", color: "#6b7280" }}>
-            Record your intended action with a signed attestation anchored to 0G Storage.
-            This does <strong>not</strong> execute anything — you act manually.
+            Record your intended action with a signed attestation anchored to 0G
+            Storage. This does <strong>not</strong> execute anything — you act manually.
           </p>
           {/* Position selector */}
           <div style={{ marginBottom: 12 }}>
@@ -233,7 +237,8 @@ export default function YieldPage() {
                 const pos = positions.find((p) => p.id === item.id);
                 return (
                   <option key={item.id} value={item.id}>
-                    {pos ? `${pos.protocol} / ${pos.asset}` : item.id} (score {item.score})
+                    {pos ? `${pos.protocol} / ${pos.asset}` : item.id} (score{" "}
+                    {item.score})
                   </option>
                 );
               })}

@@ -51,7 +51,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     };
 
     if (!receipt || typeof receipt !== "object") {
-      return NextResponse.json({ error: '"receipt" must be an object' }, { status: 400 });
+      return NextResponse.json(
+        { error: '"receipt" must be an object' },
+        { status: 400 }
+      );
     }
     if (
       !attestation ||

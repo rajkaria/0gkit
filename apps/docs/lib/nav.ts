@@ -100,6 +100,8 @@ export const NAV: NavSection[] = [
       { title: "Prediction Market", href: "/kits/prediction-market" },
       { title: "Durable Agent", href: "/kits/durable-agent" },
       { title: "Live Feed", href: "/kits/live-feed" },
+      { title: "iNFT Studio", href: "/kits/inft-studio" },
+      { title: "Yield Intelligence", href: "/kits/yield-intel" },
     ],
   },
   {

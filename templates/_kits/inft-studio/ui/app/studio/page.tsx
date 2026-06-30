@@ -47,11 +47,19 @@ export default function StudioPage() {
     >
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ margin: "0 0 6px", fontSize: "1.75rem", fontWeight: 800, color: "#111827" }}>
+        <h1
+          style={{
+            margin: "0 0 6px",
+            fontSize: "1.75rem",
+            fontWeight: 800,
+            color: "#111827",
+          }}
+        >
           iNFT Studio
         </h1>
         <p style={{ margin: 0, color: "#6b7280", fontSize: "0.9375rem" }}>
-          Mint intelligent NFTs with AI-generated media and attested provenance on 0G Storage.
+          Mint intelligent NFTs with AI-generated media and attested provenance on 0G
+          Storage.
         </p>
       </div>
 
@@ -73,8 +81,8 @@ export default function StudioPage() {
           }}
         >
           <span>
-            <strong style={{ color: "#15803d" }}>Minted!</strong>{" "}
-            Token #{lastMint.tokenId} — {lastMint.tokenUri}
+            <strong style={{ color: "#15803d" }}>Minted!</strong> Token #
+            {lastMint.tokenId} — {lastMint.tokenUri}
           </span>
           <button
             onClick={() => {
@@ -108,16 +116,20 @@ export default function StudioPage() {
       </div>
 
       {/* Content */}
-      {activeTab === "mint" && (
-        <MintForm onMinted={handleMinted} />
-      )}
+      {activeTab === "mint" && <MintForm onMinted={handleMinted} />}
 
       {activeTab === "gallery" && (
         <div>
           {/* Owner input */}
           <div style={{ marginBottom: 20 }}>
             <label
-              style={{ display: "block", fontWeight: 600, fontSize: "0.875rem", marginBottom: 6, color: "#374151" }}
+              style={{
+                display: "block",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                marginBottom: 6,
+                color: "#374151",
+              }}
             >
               View tokens for address
             </label>

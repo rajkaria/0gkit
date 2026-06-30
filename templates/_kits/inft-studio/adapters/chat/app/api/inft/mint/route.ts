@@ -122,7 +122,10 @@ async function buildMintClient(
 
       const blockNumber = receipt.blockNumber;
       const mintedLogs = (await (
-        contract.events as Record<string, (opts?: unknown) => Promise<readonly unknown[]>>
+        contract.events as Record<
+          string,
+          (opts?: unknown) => Promise<readonly unknown[]>
+        >
       )["Minted"]!({
         fromBlock: blockNumber,
         toBlock: blockNumber,
@@ -164,10 +167,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     };
 
     if (typeof to !== "string" || !to) {
-      return NextResponse.json({ error: '"to" must be a non-empty string' }, { status: 400 });
+      return NextResponse.json(
+        { error: '"to" must be a non-empty string' },
+        { status: 400 }
+      );
     }
     if (typeof metadata !== "object" || metadata === null || Array.isArray(metadata)) {
-      return NextResponse.json({ error: '"metadata" must be an object' }, { status: 400 });
+      return NextResponse.json(
+        { error: '"metadata" must be an object' },
+        { status: 400 }
+      );
     }
     if (typeof mediaBase64 !== "string" || !mediaBase64) {
       return NextResponse.json(
