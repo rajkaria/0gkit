@@ -43,13 +43,17 @@ export interface StorageClient {
 
 /**
  * Typed ERC-721 mint client backed by the INFT_ABI (not the standard Erc721Abi).
+ *
  * Adapters wire createTypedContract({ address, abi: INFT_ABI, signer }).write.mint here.
+ *
+ * IMPORTANT — tokenId source:
+ *   createTypedContract().write.mint() returns a Receipt { txHash, blockNumber, latencyMs } —
+ *   NOT the Solidity function's return value. The real tokenId MUST be obtained from the
+ *   on-chain Minted event via contract.events.Minted({ fromBlock, toBlock, args: { to } }).
+ *   Adapters must NOT fabricate or guess the tokenId from the Receipt.
  */
 export interface Erc721MintClient {
-  mint(
-    to: string,
-    metadataRoot: string
-  ): Promise<{ tokenId: bigint; txHash?: string }>;
+  mint(to: string, metadataRoot: string): Promise<{ tokenId: bigint; txHash?: string }>;
 }
 
 /**
@@ -152,10 +156,7 @@ export interface MintDeps {
  * @param deps   Injected storage, erc721 client, optional attestor.
  * @returns      MintResult with tokenId, tokenUri, contentHash, optional provenance.
  */
-export async function mintInft(
-  input: MintInput,
-  deps: MintDeps
-): Promise<MintResult> {
+export async function mintInft(input: MintInput, deps: MintDeps): Promise<MintResult> {
   // 1. Upload media to 0G Storage → content-addressed root = contentHash
   const mediaUpload = await deps.storage.upload(input.media);
   const contentHash = mediaUpload.root;

@@ -1,11 +1,7 @@
 /**
  * inft-studio — chat adapter
  *
- * Next.js App Router route handler for the iNFT studio (chat base).
- * Identical in behaviour to the react-app adapter — both bases ship
- * Next.js App Router with app/api/, so the adapter is a straight copy.
- *
- * POST /api/inft/mint   — mint an intelligent NFT
+ * POST /api/inft/mint  — mint an intelligent NFT
  *   Body: {
  *     "to": "0x...",
  *     "metadata": { "name": "...", "description": "...", ... },
@@ -15,18 +11,14 @@
  *     "prompt"?: "..."
  *   }
  *
- * GET /api/inft/token?id=<tokenId>  — read token info via typed INFT_ABI client
+ * Identical in behaviour to the react-app adapter (both bases are Next.js App Router).
  *
- * Attestation honesty
- * ────────────────────
- * The attestation is a SIGNED RECEIPT — the operator key (OG_PRIVATE_KEY) signs
- * a canonical digest of the provenance receipt via EIP-191 personal-sign.
- * Badge: "✓ signature verified" — NOT TEE-quote verification.
- *
- * ERC-721 Mint note
- * ─────────────────
- * Erc721Abi (standard) has no mint. Mint goes through INFT_ABI via
- * createTypedContract. Read operations use the same INFT_ABI read client.
+ * tokenId — obtained honestly from the on-chain Minted event
+ * ─────────────────────────────────────────────────────────────
+ * createTypedContract().write.mint(...) returns a Receipt { txHash, blockNumber,
+ * latencyMs } — NOT the Solidity return value. The tokenId is recovered by
+ * querying contract.events.Minted({ fromBlock, toBlock }) on the same block and
+ * reading args.tokenId from the matching log.
  *
  * Environment variables (set in .env.local):
  *   OG_PRIVATE_KEY    — 0x-prefixed operator private key
@@ -35,7 +27,6 @@
  *   OG_COMPUTE_MODEL  — optional default model name
  */
 
-// NOTE: Adapters MAY import 0gkit packages.
 import { Storage } from "@foundryprotocol/0gkit-storage";
 import { digestJson } from "@foundryprotocol/0gkit-core";
 import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
@@ -48,12 +39,8 @@ import {
   type StorageClient,
   type Erc721MintClient,
   type Attestor,
-} from "../../../lib/inft.js";
-import { INFT_ABI } from "../../../lib/inft-abi.js";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+} from "../../../../lib/inft.js";
+import { INFT_ABI } from "../../../../lib/inft-abi.js";
 
 function getPrivateKey(): `0x${string}` {
   const key = process.env.OG_PRIVATE_KEY;
@@ -73,10 +60,6 @@ function getInftAddress(): `0x${string}` {
   return addr as `0x${string}`;
 }
 
-// ---------------------------------------------------------------------------
-// Storage client
-// ---------------------------------------------------------------------------
-
 function buildStorageClient(privateKey: `0x${string}`, rpcUrl: string): StorageClient {
   const storage = new Storage({ privateKey, rpcUrl });
   return {
@@ -87,21 +70,14 @@ function buildStorageClient(privateKey: `0x${string}`, rpcUrl: string): StorageC
   };
 }
 
-// ---------------------------------------------------------------------------
-// Attestor: signed receipt (operator key via EIP-191 personal-sign)
-// Badge: "✓ signature verified" — NOT TEE-quote verification.
-// ---------------------------------------------------------------------------
-
 async function buildAttestor(privateKey: `0x${string}`): Promise<Attestor> {
   const signer = await fromPrivateKey(privateKey);
-
   return {
     async sign(receipt: unknown): Promise<{ digest: string; signature: string }> {
       const digest = digestJson(receipt);
       const signature = await signer.signMessage({ raw: digest });
       return { digest, signature };
     },
-
     async verify(
       receipt: unknown,
       signed: { digest: string; signature: string },
@@ -121,11 +97,6 @@ async function buildAttestor(privateKey: `0x${string}`): Promise<Attestor> {
   };
 }
 
-// ---------------------------------------------------------------------------
-// ERC-721 mint client: Inft.sol via createTypedContract(INFT_ABI)
-// NOTE: standard Erc721Abi has no mint — we use INFT_ABI from lib/inft-abi.ts
-// ---------------------------------------------------------------------------
-
 async function buildMintClient(
   privateKey: `0x${string}`,
   rpcUrl: string,
@@ -141,22 +112,38 @@ async function buildMintClient(
 
   return {
     async mint(to: string, metadataRoot: string) {
-      type MintFn = (
-        args: [`0x${string}`, `0x${string}`]
-      ) => Promise<{ tokenId?: bigint; txHash?: string }>;
-      const mintFn = (contract.write as Record<string, MintFn>)["mint"] as MintFn;
-      const result = await mintFn([to as `0x${string}`, metadataRoot as `0x${string}`]);
+      const receipt = (await (
+        contract.write as Record<string, (...args: unknown[]) => Promise<unknown>>
+      )["mint"]!([to as `0x${string}`, metadataRoot as `0x${string}`])) as {
+        txHash?: string;
+        blockNumber?: bigint;
+        latencyMs: number;
+      };
+
+      const blockNumber = receipt.blockNumber;
+      const mintedLogs = (await (
+        contract.events as Record<string, (opts?: unknown) => Promise<readonly unknown[]>>
+      )["Minted"]!({
+        fromBlock: blockNumber,
+        toBlock: blockNumber,
+        args: { to: to as `0x${string}` },
+      })) as readonly { args: { tokenId?: bigint; to?: string } }[];
+
+      const log = mintedLogs[mintedLogs.length - 1];
+      if (!log?.args?.tokenId) {
+        throw new Error(
+          `inft-studio: Minted event not found in block ${String(blockNumber)} for recipient ${to}. ` +
+            `Cannot determine tokenId — not returning a fabricated value.`
+        );
+      }
+
       return {
-        tokenId: result.tokenId ?? 0n,
-        txHash: result.txHash,
+        tokenId: log.args.tokenId,
+        txHash: receipt.txHash,
       };
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// POST /api/inft/mint
-// ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -177,16 +164,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     };
 
     if (typeof to !== "string" || !to) {
-      return NextResponse.json(
-        { error: '"to" must be a non-empty string' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: '"to" must be a non-empty string' }, { status: 400 });
     }
     if (typeof metadata !== "object" || metadata === null || Array.isArray(metadata)) {
-      return NextResponse.json(
-        { error: '"metadata" must be an object' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: '"metadata" must be an object' }, { status: 400 });
     }
     if (typeof mediaBase64 !== "string" || !mediaBase64) {
       return NextResponse.json(
@@ -198,7 +179,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const privateKey = getPrivateKey();
     const rpcUrl = getRpcUrl();
     const contractAddress = getInftAddress();
-
     const mediaBytes = Buffer.from(mediaBase64, "base64");
     const storage = buildStorageClient(privateKey, rpcUrl);
     const erc721 = await buildMintClient(privateKey, rpcUrl, contractAddress);
@@ -217,51 +197,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { storage, erc721, attestor }
     );
 
-    return NextResponse.json(result);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-
-// ---------------------------------------------------------------------------
-// GET /api/inft/token?id=<tokenId>
-// ---------------------------------------------------------------------------
-
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  try {
-    const tokenIdStr = request.nextUrl.searchParams.get("id");
-    if (!tokenIdStr) {
-      return NextResponse.json(
-        { error: '"id" query param is required' },
-        { status: 400 }
-      );
-    }
-
-    const tokenId = BigInt(tokenIdStr);
-    const privateKey = getPrivateKey();
-    const rpcUrl = getRpcUrl();
-    const contractAddress = getInftAddress();
-
-    const signer = await fromPrivateKey(privateKey);
-    const contract = createTypedContract({
-      address: contractAddress,
-      abi: INFT_ABI,
-      signer,
-      rpcUrl,
+    return NextResponse.json({
+      ...result,
+      tokenId: result.tokenId.toString(),
     });
-
-    type ReadFn<T> = (args: [bigint]) => Promise<T>;
-    const ownerOf = (contract.read as Record<string, ReadFn<string>>)[
-      "ownerOf"
-    ] as ReadFn<string>;
-    const tokenURI = (contract.read as Record<string, ReadFn<string>>)[
-      "tokenURI"
-    ] as ReadFn<string>;
-
-    const [owner, uri] = await Promise.all([ownerOf([tokenId]), tokenURI([tokenId])]);
-
-    return NextResponse.json({ tokenId: tokenIdStr, owner, tokenURI: uri });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 500 });

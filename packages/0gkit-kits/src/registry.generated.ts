@@ -166,8 +166,18 @@ export const KITS: KitManifest[] = [
     tiers: {
       lib: ["lib/inft.ts", "lib/inft-abi.ts"],
       adapters: {
-        "react-app": ["app/api/inft/route.ts"],
-        chat: ["app/api/inft/route.ts"],
+        "react-app": [
+          "app/api/inft/mint/route.ts",
+          "app/api/inft/token/route.ts",
+          "app/api/inft/tokens/route.ts",
+          "app/api/inft/verify/route.ts",
+        ],
+        chat: [
+          "app/api/inft/mint/route.ts",
+          "app/api/inft/token/route.ts",
+          "app/api/inft/tokens/route.ts",
+          "app/api/inft/verify/route.ts",
+        ],
       },
       ui: [
         "components/MintForm.tsx",
