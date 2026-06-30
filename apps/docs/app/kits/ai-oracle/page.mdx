@@ -1,0 +1,69 @@
+---
+title: "ai-oracle kit"
+---
+
+# ai-oracle
+
+> **Signed AI answers with commitments anchored to 0G Storage (default) or
+> on-chain.** Each answer is hashed, signed by the operator key
+> (✓ signature verified — not TEE-quote), and anchored as an immutable proof.
+> Composes into `prediction-market`.
+
+## What it does
+
+The `ai-oracle` kit adds a verifiable AI query endpoint to your 0G app.
+When a request arrives the kit:
+
+1. Calls `@foundryprotocol/0gkit-compute` to run inference against the
+   configured model.
+2. Serialises the result into an oracle receipt (`{ question, answer,
+answerHash, ts }`).
+3. Signs the receipt with the operator key via EIP-191 personal-sign:
+   `digestJson(receipt)` is hashed and signed with `signMessage`; the
+   badge reads **✓ signature verified** and is backed by `recoverSigner`
+   — this is an operator-signed receipt, not a hardware TEE quote.
+4. Anchors the receipt to **0G Storage** by default (immutable,
+   content-addressed `root` = the commitment). Set `OG_ANCHOR_ONCHAIN=1` to
+   also write the root on-chain via the bundled `Anchor.sol` contract
+   (`@foundryprotocol/0gkit-contracts`).
+
+## Compatible bases
+
+`react-app` · `chat` · `tee-attested-api` · `mcp-agent`
+
+## Apply
+
+```bash
+# scaffold-time
+npm create 0gkit-app -- --kits ai-oracle
+
+# add to an existing project
+0g add ai-oracle
+```
+
+## Environment variables
+
+| Variable            | Example                                       | Notes                                                                         |
+| ------------------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `OG_COMPUTE_MODEL`  | `neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8` | Model for inference (optional — provider default if omitted)                  |
+| `OG_PRIVATE_KEY`    | `0x...`                                       | Operator key for signing receipts and 0G transactions                         |
+| `OG_RPC_URL`        | `https://evmrpc-testnet.0g.ai`                | 0G chain RPC endpoint                                                         |
+| `OG_ANCHOR_ONCHAIN` | `1`                                           | Set to `1` to commit receipts on-chain via `Anchor.sol` (default: 0G Storage) |
+| `OG_ANCHOR_ADDRESS` | `0x...`                                       | Deployed `Anchor.sol` address — required when `OG_ANCHOR_ONCHAIN=1`           |
+
+## Tiers
+
+- **lib** — `lib/oracle.ts` (portable `resolveOracle` + `OracleReceipt` type),
+  `lib/anchor-abi.ts` (ABI constant for the optional on-chain anchor).
+- **adapters** — one per base (`app/api/oracle/route.ts` for Next.js,
+  `src/routes/oracle.ts` for Hono, `src/tools/oracle.ts` for MCP).
+- **contracts** — `Anchor.sol` + deploy script (opt-in on-chain path only).
+
+## Honesty note
+
+The attestation layer signs `digestJson(receipt)` via EIP-191 personal-sign
+(`signMessage`); verification recovers the signer via `recoverSigner`. There
+is no TEE quote verification in the current stack. The badge is always
+"✓ signature verified" — never "TEE attested". The `Attestor` interface is
+injected so a real TEE-quote verifier can slot in later without changing
+calling code.

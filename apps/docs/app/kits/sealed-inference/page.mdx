@@ -1,0 +1,66 @@
+---
+title: "sealed-inference kit"
+---
+
+# sealed-inference
+
+> **Signed AI inference with a verification badge driven by the real verify
+> result.** Each response is signed by the operator key (✓ signature verified
+> — not TEE-quote), and the UI badge reflects the actual verification outcome
+> — never hardcoded, never always-green.
+
+## What it does
+
+The `sealed-inference` kit adds a verifiable chat or completion endpoint with
+a React badge component. On each request it:
+
+1. Runs inference via `@foundryprotocol/0gkit-compute`.
+2. Signs the inference receipt server-side: `digestJson(receipt)` is hashed
+   and signed with `signMessage` (EIP-191 personal-sign); the signer is
+   recovered via `recoverSigner` and compared to the expected operator address.
+3. Returns the signed receipt and a `verified` boolean to the client.
+4. The `SealedChat` React component renders **✓ signature verified** when
+   `verified` is `true`, or a clear failure badge otherwise. Verification
+   happens server-side inside `sealedInfer`; the component reflects that
+   result — it never calls `verifyEnvelope` directly.
+
+## Compatible bases
+
+`react-app` · `chat` · `tee-attested-api` · `mcp-agent`
+
+## Apply
+
+```bash
+# scaffold-time
+npm create 0gkit-app -- --kits sealed-inference
+
+# add to an existing project
+0g add sealed-inference
+```
+
+## Environment variables
+
+| Variable              | Example                                       | Notes                                                        |
+| --------------------- | --------------------------------------------- | ------------------------------------------------------------ |
+| `OG_COMPUTE_MODEL`    | `neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8` | Model for inference (optional — provider default if omitted) |
+| `OG_PRIVATE_KEY`      | `0x...`                                       | Operator key for signing inference receipts                  |
+| `OG_RPC_URL`          | `https://evmrpc-testnet.0g.ai`                | 0G chain RPC endpoint                                        |
+| `OG_ATTESTOR_ADDRESS` | `0x...`                                       | Expected signer address that `recoverSigner` checks against  |
+
+## Tiers
+
+- **lib** — `lib/sealed.ts` (portable `SealedInference`, `SealedEnvelope`
+  type, `sealedInfer` helper).
+- **adapters** — one per base (`app/api/sealed/route.ts` for Next.js,
+  `src/routes/sealed.ts` for Hono, `src/tools/sealed.ts` for MCP).
+- **ui** — `components/SealedChat.tsx` (badge + chat UI),
+  `hooks/useSealedInference.ts` (React hook for React bases only).
+
+## Honesty note
+
+The attestation layer signs `digestJson(receipt)` via EIP-191 personal-sign
+(`signMessage`); verification recovers the signer via `recoverSigner` and
+compares it to the expected operator address. There is no TEE quote
+verification in the current stack. The `Attestor` interface is injected so a
+real TEE-quote verifier can slot in later. The badge reflects the server's
+`verified` result — it is never hardcoded green.
