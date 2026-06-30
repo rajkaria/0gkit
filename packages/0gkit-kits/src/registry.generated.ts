@@ -99,6 +99,71 @@ export const KITS: KitManifest[] = [
     conflicts: [],
   },
   {
+    name: "prediction-market",
+    title: "Prediction Market",
+    domain: "markets",
+    summary:
+      "AI-resolved, proof-anchored prediction market. Lifecycle: open → bet → resolve (via the ai-oracle) → settle. Composes ai-oracle so applying prediction-market auto-applies ai-oracle first. Resolution receipts are signed by the operator key (✓ signature verified — not TEE-quote) and anchored to 0G Storage (or on-chain opt-in).",
+    compatibleBases: ["react-app", "chat", "tee-attested-api"],
+    tiers: {
+      lib: ["lib/market.ts"],
+      adapters: {
+        "react-app": ["app/api/markets/route.ts"],
+        chat: ["app/api/markets/route.ts"],
+        "tee-attested-api": ["src/routes/markets.ts"],
+      },
+      ui: [
+        "app/markets/page.tsx",
+        "components/MarketBoard.tsx",
+        "components/CreateMarketForm.tsx",
+      ],
+    },
+    env: [
+      {
+        key: "OG_COMPUTE_MODEL",
+        example: "neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8",
+        note: "Model to use for AI oracle inference (optional — uses provider default if omitted)",
+      },
+      {
+        key: "OG_PRIVATE_KEY",
+        example: "0x...",
+        note: "Operator private key for signing resolution receipts and 0G transactions",
+      },
+      {
+        key: "OG_RPC_URL",
+        example: "https://evmrpc-testnet.0g.ai",
+        note: "0G chain RPC endpoint",
+      },
+      {
+        key: "OG_ANCHOR_ONCHAIN",
+        example: "1",
+        note: "Set to '1' to commit resolution receipts on-chain via Anchor.sol (default: 0G Storage)",
+      },
+      {
+        key: "OG_ANCHOR_ADDRESS",
+        example: "0x...",
+        note: "Deployed Anchor contract address — required when OG_ANCHOR_ONCHAIN=1",
+      },
+      {
+        key: "OG_STORAGE_NAMESPACE",
+        example: "prediction-market",
+        note: "Namespace prefix for market blobs in 0G Storage",
+      },
+    ],
+    dependencies: {
+      "@foundryprotocol/0gkit-compute": "^1.0.0",
+      "@foundryprotocol/0gkit-attestation": "^1.0.0",
+      "@foundryprotocol/0gkit-storage": "^1.0.0",
+      "@foundryprotocol/0gkit-contracts": "^1.0.0",
+      "@foundryprotocol/0gkit-wallet": "^1.0.0",
+      "@foundryprotocol/0gkit-core": "^1.0.0",
+    },
+    devDependencies: {},
+    requires: [],
+    composes: ["ai-oracle"],
+    conflicts: [],
+  },
+  {
     name: "sealed-inference",
     title: "Sealed Inference",
     domain: "verifiable-ai",

@@ -164,40 +164,90 @@ function copyDir(src, dest) {
 }
 
 /**
- * Build a local fetchOverlay function that copies files from the kit directory
- * into the tmpDir, flattening the adapters/<base>/ prefix.
+ * Copy tier files for a single kit (given its directory and parsed manifest)
+ * into tmpDir. The engine calls fetchOverlay(name, tmpDir) once per kit in the
+ * composition closure — including composed dependencies — so this helper must
+ * correctly copy ANY kit's files, not just the originally-requested one.
  *
- * The overlay dir must contain files at their tier-path positions, e.g.:
- *   lib/agent-memory.ts
- *   src/tools/memory.ts       (from adapters/mcp-agent/src/tools/memory.ts)
- *   components/MemoryPanel.tsx (from ui/components/MemoryPanel.tsx)
+ * File layout:
+ *   lib/<path>              → tmpDir/<path>
+ *   adapters/<base>/<path>  → tmpDir/<path>   (all bases; engine picks what it needs)
+ *   ui/<path>               → tmpDir/<path>
  */
-export function makeLocalFetchOverlay(kitDir, manifest) {
+function copyKitTiersToOverlay(kitDir, manifest, tmpDir) {
+  // lib/* — copy directly
+  for (const relPath of manifest.tiers.lib ?? []) {
+    const src = join(kitDir, "lib", relPath.replace(/^lib\//, ""));
+    const dest = join(tmpDir, relPath);
+    mkdirSync(dirname(dest), { recursive: true });
+    if (existsSync(src)) copyFileSync(src, dest);
+  }
+
+  // adapters/<base>/<relPath> — copy to tmpDir/<relPath>
+  for (const [base, files] of Object.entries(manifest.tiers.adapters ?? {})) {
+    for (const relPath of files) {
+      const src = join(kitDir, "adapters", base, relPath);
+      const dest = join(tmpDir, relPath);
+      mkdirSync(dirname(dest), { recursive: true });
+      if (existsSync(src)) copyFileSync(src, dest);
+    }
+  }
+
+  // ui/* — copy with ui/ prefix stripped
+  for (const relPath of manifest.tiers.ui ?? []) {
+    const src = join(kitDir, "ui", relPath);
+    const dest = join(tmpDir, relPath);
+    mkdirSync(dirname(dest), { recursive: true });
+    if (existsSync(src)) copyFileSync(src, dest);
+  }
+}
+
+/**
+ * Build a composition-aware local fetchOverlay function.
+ *
+ * The engine calls `fetchOverlay(name, tmpDir)` once per kit in the composition
+ * closure (deps-first). For a composing kit like prediction-market, the engine
+ * calls:
+ *   1. fetchOverlay("ai-oracle", tmpDir)    ← composed dep
+ *   2. fetchOverlay("prediction-market", tmpDir) ← the kit itself
+ *
+ * This factory accepts the requesting kit's dir and manifest (for backward
+ * compat with the existing call-site) but resolves the `name` argument at
+ * call-time to templates/_kits/<name>/ — loading that kit's own manifest —
+ * so composed dependencies are correctly written to the overlay tmpDir.
+ *
+ * CHANGE FROM ORIGINAL: the original ignored `name` and always used the
+ * single `kitDir`/`manifest` captured at factory time. That works for
+ * non-composing kits but breaks when the engine calls fetchOverlay with the
+ * name of a COMPOSED kit (e.g. "ai-oracle"). Fixed by resolving `name` to the
+ * actual kit directory and loading its own manifest.
+ *
+ * @param {string} _kitDir   - Absolute path to the requesting kit directory
+ *                             (unused at call-time; kept for backward compat)
+ * @param {object} _manifest - Requesting kit's manifest (unused at call-time)
+ * @param {string} [kitsDir] - Root dir that contains all kit subdirs.
+ *                             Defaults to KITS_DIR.
+ */
+export function makeLocalFetchOverlay(fallbackKitDir, fallbackManifest, kitsDir = KITS_DIR) {
   return async (name, tmpDir) => {
-    // lib/* — copy directly
-    for (const relPath of manifest.tiers.lib ?? []) {
-      const src = join(kitDir, "lib", relPath.replace(/^lib\//, ""));
-      const dest = join(tmpDir, relPath);
-      mkdirSync(dirname(dest), { recursive: true });
-      if (existsSync(src)) copyFileSync(src, dest);
-    }
-
-    // adapters/<base>/<relPath> — copy to tmpDir/<relPath>
-    for (const [base, files] of Object.entries(manifest.tiers.adapters ?? {})) {
-      for (const relPath of files) {
-        const src = join(kitDir, "adapters", base, relPath);
-        const dest = join(tmpDir, relPath);
-        mkdirSync(dirname(dest), { recursive: true });
-        if (existsSync(src)) copyFileSync(src, dest);
-      }
-    }
-
-    // ui/* — copy with ui/ prefix stripped
-    for (const relPath of manifest.tiers.ui ?? []) {
-      const src = join(kitDir, "ui", relPath);
-      const dest = join(tmpDir, relPath);
-      mkdirSync(dirname(dest), { recursive: true });
-      if (existsSync(src)) copyFileSync(src, dest);
+    // Resolve the kit name to its local directory (composition-aware).
+    // When the engine applies a composing kit it calls fetchOverlay once for
+    // each kit in the composition closure — first composed deps (e.g. "ai-oracle"),
+    // then the requesting kit itself (e.g. "prediction-market"). We resolve
+    // `name` → kitsDir/<name> and load that kit's own manifest so the correct
+    // tier files are copied.
+    //
+    // FALLBACK: if kitsDir/<name>/kit.json does not exist (e.g. in unit tests
+    // that use synthetic fixture kits not on disk), fall back to the originally
+    // captured kitDir and manifest. This preserves backward compat with existing
+    // tests while being composition-aware for real kit names.
+    const resolvedKitDir = join(kitsDir, name);
+    const manifestResult = parseKitManifest(resolvedKitDir);
+    if (manifestResult.ok) {
+      copyKitTiersToOverlay(resolvedKitDir, manifestResult.manifest, tmpDir);
+    } else {
+      // Fallback for synthetic fixture kits (unit tests)
+      copyKitTiersToOverlay(fallbackKitDir, fallbackManifest, tmpDir);
     }
   };
 }
@@ -281,12 +331,20 @@ export function runTsc(dir) {
  * `next build`), but it DOES enforce that every file the kit injects compiles
  * correctly against the real @foundryprotocol/0gkit-* types.
  *
+ * COMPOSITION SUPPORT: for composing kits (manifest.composes !== []), the lib
+ * files of every composed kit are also included in the isolated tsc copy set.
+ * This is required because adapters in the composing kit import from the
+ * co-located composed lib (e.g. `import { resolveOracle } from "../../../lib/oracle.js"`).
+ * Without the composed kit's lib files in the tmpDir, tsc cannot resolve those
+ * relative imports and fails with TS2307 "Cannot find module".
+ *
  * @param {string} kitDir  - Absolute path to the kit directory (e.g. templates/_kits/agent-memory)
  * @param {object} manifest - Parsed + validated KitManifest
  * @param {string} base     - The base name (e.g. "react-app")
+ * @param {string} [kitsDir] - Root dir that contains all kit subdirs. Defaults to KITS_DIR.
  * @returns {{ ok: boolean, output?: string }}
  */
-export function runKitIsolatedTsc(kitDir, manifest, base) {
+export function runKitIsolatedTsc(kitDir, manifest, base, kitsDir = KITS_DIR) {
   // Collect kit overlay files for this base — adapter + lib + ui — all .ts/.tsx
   const adapterFiles = manifest.tiers.adapters?.[base] ?? [];
   const libFiles = manifest.tiers.lib ?? [];
@@ -300,6 +358,21 @@ export function runKitIsolatedTsc(kitDir, manifest, base) {
     ({ src }) =>
       existsSync(src) && (src.endsWith(".ts") || src.endsWith(".tsx"))
   );
+
+  // COMPOSITION SUPPORT: include lib files from all composed kits.
+  // When this kit's adapters import from a composed kit's lib (e.g. oracle.ts),
+  // tsc must be able to resolve those relative paths inside the isolated tmpDir.
+  for (const composedName of manifest.composes ?? []) {
+    const composedKitDir = join(kitsDir, composedName);
+    const composedManifestResult = parseKitManifest(composedKitDir);
+    if (!composedManifestResult.ok) continue; // skip unknown composed kits
+    for (const relPath of composedManifestResult.manifest.tiers.lib ?? []) {
+      const src = join(composedKitDir, "lib", relPath.replace(/^lib\//, ""));
+      if (existsSync(src) && (src.endsWith(".ts") || src.endsWith(".tsx"))) {
+        filesToCheck.push({ src, rel: relPath });
+      }
+    }
+  }
 
   if (filesToCheck.length === 0) {
     return { ok: true, skipped: "no TS files in kit overlay for this base" };
