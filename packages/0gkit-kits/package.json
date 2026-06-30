@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-kits",
-  "version": "0.0.0",
+  "version": "1.6.0",
   "description": "Kits engine for 0gkit — manifest schema, registry, and scaffolding utilities.",
   "license": "MIT",
   "homepage": "https://0gkit.com",
