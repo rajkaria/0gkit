@@ -1,0 +1,87 @@
+---
+title: "durable-agent kit"
+---
+
+# durable-agent
+
+> **Resumable multi-step agent loop with per-step durability on 0G Storage.**
+> Each step has an idempotent key; the step ledger is persisted to 0G Storage
+> so completed steps are never re-run on restart. Every executed step is traced
+> via OpenTelemetry (noop tracer used when OTel is not configured in the base).
+
+## What it does
+
+The `durable-agent` kit adds a resumable multi-step agent loop to your 0G app.
+On each run the kit:
+
+1. Creates a `JobRunner` via `@foundryprotocol/0gkit-jobs` backed by
+   `MemoryBackend` (in-process, dev-friendly). For cross-process job durability
+   swap in `SqliteBackend` from `@foundryprotocol/0gkit-jobs/backends/sqlite`.
+2. Loads the step-completion ledger from **0G Storage** (if a prior run
+   completed any steps, those roots are already in Storage).
+3. For each step in the pipeline — `research → act → record` by default:
+   - If the step key is already in the ledger → **SKIP** (no span emitted).
+   - Otherwise: open an OTel span, run the step, write the key to the ledger,
+     close the span.
+   - On failure: `span.setError` is called, the span is closed, and the step is
+     **not** marked done, so a resume will retry it.
+4. Persists the updated ledger back to 0G Storage after the run.
+
+Steps are defined via `defineAgent({ steps: [...] })` and `AgentStep` (portable
+lib, no hard inference imports). The `researchStep` is capability-guarded:
+if `ctx.sealedInference` is injected by the adapter it is used; otherwise a
+placeholder is returned. No hard dep on any inference package.
+
+**OTel note:** the tracer is injected by the adapter. Bases that do not
+configure `@opentelemetry/api` receive the built-in `makeNoopTracer()` which
+emits no real spans. Swap in a real tracer from `@opentelemetry/api` for
+production observability.
+
+**Cold-start resume caveat:** full resume across process restarts requires a
+persistent pointer to the ledger root on 0G Storage. The adapter stores this
+pointer in the `OG_STORAGE_NAMESPACE` path. Without a persistent pointer
+(e.g. first run, or namespace cleared), the agent starts a fresh run — same
+caveat documented by the `agent-memory` kit.
+
+## Compatible bases
+
+`react-app` · `chat` · `tee-attested-api` · `mcp-agent` · `storage-app`
+
+## Apply
+
+```bash
+# scaffold-time
+npm create 0gkit-app -- --kits durable-agent
+
+# add to an existing project
+0g add durable-agent
+```
+
+## Environment variables
+
+| Variable               | Example             | Notes                                                                                                                          |
+| ---------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `OG_PRIVATE_KEY`       | `0xabc123...`       | Required for 0gkit-jobs signer (signing job receipts) and 0G Storage (uploading/downloading step ledger)                       |
+| `OG_RPC_URL`           | `https://rpc.0g.ai` | 0G chain RPC URL — required for 0G Storage operations                                                                          |
+| `OG_STORAGE_NAMESPACE` | `durable-agent`     | Namespace prefix for step-ledger blobs (default: `durable-agent`). Each run stored under `<ns>/<jobId>/steps`                  |
+| `OG_JOBS_BACKEND`      | `memory`            | Documents the active jobs backend. `memory` = `MemoryBackend` (default). Swap to `SqliteBackend` for cross-process durability. |
+
+## Tiers
+
+- **lib** — `lib/agent.ts` (portable `defineAgent`, `createRunner`,
+  `AgentJobsBackend`, `StepTracer`, `makeNoopTracer` interfaces + implementations),
+  `lib/steps.ts` (sample `researchStep`, `actStep`, `recordStep` +
+  `defaultPipeline`).
+- **adapters** — one per base (`app/api/agent/route.ts` for Next.js,
+  `src/routes/agent.ts` for Hono/tee-attested-api, `src/tools/agent.ts` for
+  MCP, `src/agent-runner.ts` for storage-app).
+
+## Honesty note
+
+Step-level durability in the lib is guaranteed: skipped steps are provably
+never executed (the `completed` ledger snapshot is checked before each step).
+Full cold-start resume across process restarts requires a persistent root
+pointer in 0G Storage — the adapter stores this, but if the namespace is
+cleared or the storage root is lost, the next run starts fresh. The OTel
+integration is real when the adapter injects a real tracer from
+`@opentelemetry/api`; the default `makeNoopTracer()` is a documented noop.

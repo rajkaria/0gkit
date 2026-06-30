@@ -100,6 +100,109 @@ export const KITS: KitManifest[] = [
     conflicts: [],
   },
   {
+    name: "durable-agent",
+    title: "Durable Agent",
+    domain: "agent-infra",
+    summary:
+      "Resumable multi-step agent loop on 0gkit-jobs — step ledger persisted to 0G Storage prevents re-running completed steps on restart, every executed step is traced via OpenTelemetry. Optional sealed-inference step is capability-guarded (runtime check, not a hard dep).",
+    compatibleBases: [
+      "react-app",
+      "chat",
+      "tee-attested-api",
+      "mcp-agent",
+      "storage-app",
+    ],
+    tiers: {
+      lib: ["agent.ts", "steps.ts"],
+      adapters: {
+        "react-app": ["app/api/agent/route.ts"],
+        chat: ["app/api/agent/route.ts"],
+        "tee-attested-api": ["src/routes/agent.ts"],
+        "mcp-agent": ["src/tools/agent.ts"],
+        "storage-app": ["src/agent-runner.ts"],
+      },
+    },
+    env: [
+      {
+        key: "OG_PRIVATE_KEY",
+        example: "0xabc123...",
+        note: "0x-prefixed private key — required for 0gkit-jobs signer (signing job receipts) and 0G Storage (uploading/downloading the durable step ledger)",
+      },
+      {
+        key: "OG_RPC_URL",
+        example: "https://rpc.0g.ai",
+        note: "0G chain RPC URL — required for 0G Storage operations (step-ledger persistence)",
+      },
+      {
+        key: "OG_STORAGE_NAMESPACE",
+        example: "durable-agent",
+        note: "Namespace prefix for 0G Storage step-ledger blobs (default: 'durable-agent'). Each run's ledger is stored under <namespace>/<jobId>/steps.",
+      },
+      {
+        key: "OG_JOBS_BACKEND",
+        example: "memory",
+        note: "Informational — documents the active jobs backend. 'memory' = MemoryBackend (in-process, default, dev-friendly). Swap to 'sqlite' by importing SqliteBackend from @foundryprotocol/0gkit-jobs/backends/sqlite for cross-process job durability.",
+      },
+    ],
+    dependencies: {
+      "@foundryprotocol/0gkit-jobs": "^1.0.0",
+      "@foundryprotocol/0gkit-storage": "^1.0.0",
+      "@foundryprotocol/0gkit-wallet": "^1.0.0",
+      "@opentelemetry/api": "^1.9.0",
+      zod: "^3.23.0",
+    },
+    devDependencies: {},
+    requires: [],
+    composes: [],
+    conflicts: [],
+  },
+  {
+    name: "live-feed",
+    title: "Live Feed",
+    domain: "markets",
+    summary:
+      "Reorg-safe live social feed on 0G Storage + 0gkit-indexer. Posts are content-addressed blobs in 0G Storage; ordering and reorg-safety come from the Indexer tracking on-chain PostPublished events (requires a deployed FeedEvents contract). Falls back to storage-only mode without a contract address.",
+    compatibleBases: ["react-app", "chat"],
+    tiers: {
+      lib: ["lib/feed.ts"],
+      adapters: {
+        "react-app": ["app/api/feed/route.ts"],
+        chat: ["app/api/feed/route.ts"],
+      },
+      ui: ["hooks/useLiveFeed.ts", "components/FeedStream.tsx", "app/feed/page.tsx"],
+    },
+    env: [
+      {
+        key: "OG_PRIVATE_KEY",
+        example: "0x...",
+        note: "0x-prefixed private key for signing 0G Storage transactions (required)",
+      },
+      {
+        key: "OG_RPC_URL",
+        example: "https://evmrpc-testnet.0g.ai",
+        note: "0G chain RPC endpoint (required for Storage and Indexer)",
+      },
+      {
+        key: "OG_FEED_CONTRACT_ADDRESS",
+        example: "0xYourDeployedFeedEventsContract",
+        note: "Deployed FeedEvents contract address. When set, enables real Indexer reorg-safety. Without it, the adapter runs in storage-only mode (posts are stored but reorg-drop is not active).",
+      },
+      {
+        key: "OG_FEED_NAMESPACE",
+        example: "live-feed",
+        note: "Storage namespace prefix for feed blobs (default: live-feed)",
+      },
+    ],
+    dependencies: {
+      "@foundryprotocol/0gkit-storage": "^1.0.0",
+      "@foundryprotocol/0gkit-indexer": "^1.0.0",
+    },
+    devDependencies: {},
+    requires: [],
+    composes: [],
+    conflicts: [],
+  },
+  {
     name: "prediction-market",
     title: "Prediction Market",
     domain: "markets",
