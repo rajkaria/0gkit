@@ -1,9 +1,11 @@
 import { getLatestRelease } from "@/lib/version";
 
+import type { ReactNode } from "react";
+
 type Stat = {
   value: string;
   label: string;
-  sub?: string;
+  sub?: ReactNode;
 };
 
 export async function TrustSignals() {
@@ -28,6 +30,15 @@ export async function TrustSignals() {
       value: "MIT",
       label: "open source",
       sub: "No strings, no contracts",
+    },
+    {
+      value: "8",
+      label: "kits",
+      sub: (
+        <a href="/kits" style={{ color: "inherit", textDecoration: "underline" }}>
+          0g add &lt;kit&gt; →
+        </a>
+      ),
     },
   ];
   return (

@@ -5,7 +5,9 @@
         "http://localhost:3000/",
         "http://localhost:3000/getting-started",
         "http://localhost:3000/packages/storage",
-        "http://localhost:3000/errors"
+        "http://localhost:3000/errors",
+        "http://localhost:3000/kits",
+        "http://localhost:3000/kits/agent-memory"
       ],
       "numberOfRuns": 2,
       "settings": {
