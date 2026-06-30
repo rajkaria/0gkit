@@ -100,6 +100,45 @@ export const KITS: KitManifest[] = [
     conflicts: [],
   },
   {
+    name: "durable-agent",
+    title: "Durable Agent",
+    domain: "agent-infra",
+    summary:
+      "Resumable multi-step agent loop on 0gkit-jobs — step ledger prevents re-running completed steps on restart, every executed step is traced via OpenTelemetry. Optional sealed-inference step is capability-guarded (runtime check, not a hard dep).",
+    compatibleBases: [
+      "react-app",
+      "chat",
+      "tee-attested-api",
+      "mcp-agent",
+      "storage-app",
+    ],
+    tiers: {
+      lib: ["agent.ts", "steps.ts"],
+      adapters: {
+        "react-app": ["app/api/agent/route.ts"],
+        chat: ["app/api/agent/route.ts"],
+        "tee-attested-api": ["src/routes/agent.ts"],
+        "mcp-agent": ["src/tools/agent.ts"],
+        "storage-app": ["src/agent-runner.ts"],
+      },
+    },
+    env: [
+      {
+        key: "OG_JOBS_BACKEND",
+        example: "memory",
+        note: "Jobs backend type (memory=in-process default; swap for redis or sqlite for persistence across restarts)",
+      },
+    ],
+    dependencies: {
+      "@foundryprotocol/0gkit-jobs": "^1.0.0",
+      "@opentelemetry/api": "^1.9.0",
+    },
+    devDependencies: {},
+    requires: [],
+    composes: [],
+    conflicts: [],
+  },
+  {
     name: "prediction-market",
     title: "Prediction Market",
     domain: "markets",
