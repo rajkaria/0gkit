@@ -1,0 +1,82 @@
+---
+title: "agent-memory kit"
+---
+
+# agent-memory
+
+> **Persistent agent memory on 0G Storage — append-only JSONL blobs per
+> namespace with keyword-indexed recall.** Memories survive across restarts
+> because they live in 0G Storage, not in-process state.
+
+## What it does
+
+The `agent-memory` kit adds a persistent, namespace-scoped memory store to
+your 0G app. On each operation the kit:
+
+1. Stores memory entries as append-only JSONL blobs in **0G Storage** via
+   `@foundryprotocol/0gkit-storage`. Each namespace maps to a separate blob
+   path under `OG_STORAGE_NAMESPACE`.
+2. Supports two operations — **append** (add a new memory item) and **recall**
+   (retrieve items, optionally filtered by keyword). Both go through the
+   portable lib injected with a real `Storage` adapter.
+3. The `react-app` adapter exposes `POST /api/memory` (append) and
+   `GET /api/memory?q=<keyword>` (recall) as Next.js route handlers. The
+   `mcp-agent` adapter wires the same operations as MCP tools
+   (`memory_append`, `memory_recall`).
+
+**Recall caveat:** keyword filtering is a simple in-memory scan of the decoded
+JSONL blob — not a vector index. It scales to moderate memory sizes
+(~thousands of entries per namespace). For large corpora use a dedicated vector
+store and inject it via the `MemoryBackend` interface.
+
+**Cold-start resume caveat:** a new process loads the blob from 0G Storage on
+the first recall. If the namespace blob was written by an earlier run, those
+entries are recovered. If the blob does not exist (first run, or namespace
+cleared), the store starts empty. The same root-pointer caveat applies here as
+to `durable-agent`.
+
+## Compatible bases
+
+`react-app` · `chat` · `storage-app` · `mcp-agent`
+
+## Apply
+
+```bash
+# scaffold-time
+npm create 0gkit-app -- --kits agent-memory
+
+# add to an existing project
+0g add agent-memory
+```
+
+## Environment variables
+
+| Variable               | Example                        | Notes                                                      |
+| ---------------------- | ------------------------------ | ---------------------------------------------------------- |
+| `OG_STORAGE_NAMESPACE` | `agent-memory`                 | Namespace prefix for memory blobs in 0G Storage            |
+| `OG_PRIVATE_KEY`       | `0x...`                        | Private key for signing 0G Storage transactions (required) |
+| `OG_RPC_URL`           | `https://evmrpc-testnet.0g.ai` | 0G chain RPC endpoint                                      |
+
+## Tiers
+
+- **lib** — portable `MemoryBackend`, `MemoryEntry`, `appendMemory`,
+  `recallMemory` interfaces + implementation (no hard `@foundryprotocol/*`
+  imports — deps injected by adapters).
+- **adapters** — `app/api/memory/route.ts` for `react-app`/`chat` bases (POST
+  append + GET recall); `src/tools/memory.ts` for `mcp-agent` (MCP tool pair
+  `memory_append` / `memory_recall`).
+- **ui** — `components/MemoryPanel.tsx` (scrollable memory list + append form),
+  `hooks/useAgentMemory.ts` (React hook — `react-app` / `chat` bases only).
+
+## 0gkit packages used
+
+- `@foundryprotocol/0gkit-storage` — `Storage.upload` / `Storage.download`
+  for reading and writing the JSONL blob.
+
+## Honesty note
+
+Memory persistence relies on 0G Storage content-addressing. Every append
+creates a new blob root; the adapter tracks the latest root. Without a
+persistent pointer to that root, a new process starts with an empty store.
+The blob never mutates in-place — 0G Storage is append-by-replace (a new
+upload returns a new root).

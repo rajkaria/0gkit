@@ -95,13 +95,16 @@ export const NAV: NavSection[] = [
   {
     title: "Kits",
     links: [
+      { title: "Overview", href: "/kits" },
       { title: "AI Oracle", href: "/kits/ai-oracle" },
       { title: "Sealed Inference", href: "/kits/sealed-inference" },
       { title: "Prediction Market", href: "/kits/prediction-market" },
+      { title: "Agent Memory", href: "/kits/agent-memory" },
       { title: "Durable Agent", href: "/kits/durable-agent" },
       { title: "Live Feed", href: "/kits/live-feed" },
       { title: "iNFT Studio", href: "/kits/inft-studio" },
       { title: "Yield Intelligence", href: "/kits/yield-intel" },
+      { title: "Authoring a kit", href: "/kits/authoring" },
     ],
   },
   {

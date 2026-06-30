@@ -1,0 +1,109 @@
+---
+title: "Kits"
+---
+
+# Kits
+
+Kits are **drop-in, composable, multi-framework feature overlays** for 0G
+apps. A kit injects a working feature — files, dependencies, and env var stubs
+— into any compatible template without rewriting the base. Kits compose: some
+kits build on other kits automatically.
+
+## How kits work
+
+Every kit follows a **3-tier model**:
+
+| Tier         | What it contains                                                       | Always applied?                     |
+| ------------ | ---------------------------------------------------------------------- | ----------------------------------- |
+| **lib**      | Portable core — pure TypeScript, all deps injected                     | Yes                                 |
+| **adapters** | Per-base wiring — one file per compatible base (Next.js, Hono, MCP, …) | Only the adapter matching your base |
+| **ui**       | React components and hooks                                             | Only for React-capable bases        |
+
+The **lib tier** has zero hard `@foundryprotocol/*` imports — dependencies are
+injected by the adapter. This makes each lib independently testable and
+framework-agnostic.
+
+### Composition
+
+Some kits declare `composes` in their `kit.json`. When you apply
+`prediction-market`, the engine automatically applies `ai-oracle` first,
+then merges both kits' files and `package.json` dependencies. The resolution
+order is depth-first, deduped, and cycle-safe.
+
+### Upgradeable overlay vs. code dump
+
+Kits are **overlays**: the engine writes only the files from the kit's tiers
+for your base. Your base files are unchanged except for merged
+`package.json` dependencies and `.env.example` additions. You own the
+written files — edit them freely.
+
+## Commands
+
+```bash
+# List kits compatible with your current project base
+0g kits list
+
+# Filter by a specific base
+0g kits list --base react-app
+
+# Print details for a kit (summary, tiers, env vars)
+0g kits info ai-oracle
+
+# Apply a kit to the current project
+0g add ai-oracle
+
+# Apply multiple kits at once
+0g add agent-memory durable-agent
+
+# Apply at scaffold time (comma-separated)
+npm create 0gkit-app -- --kits agent-memory,sealed-inference
+```
+
+CLI commands verified in `packages/0gkit-cli/src/commands/kits.ts` and
+`packages/create-0g-app/src/index.ts`.
+
+## Kit catalog
+
+### Verifiable AI
+
+| Kit                                        | Summary                                                                                                   |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| [AI Oracle](/kits/ai-oracle)               | Signed AI answers with commitments anchored to 0G Storage (default) or on-chain. ✓ signature verified.    |
+| [Sealed Inference](/kits/sealed-inference) | Signed AI inference with a verification badge driven by the real verify result. Badge is never hardcoded. |
+
+### Agent Infra
+
+| Kit                                  | Summary                                                                                                                   |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| [Agent Memory](/kits/agent-memory)   | Persistent agent memory on 0G Storage — append-only JSONL blobs per namespace with keyword-indexed recall.                |
+| [Durable Agent](/kits/durable-agent) | Resumable multi-step agent loop on 0gkit-jobs — step ledger persisted to 0G Storage, every step traced via OpenTelemetry. |
+
+### Markets
+
+| Kit                                          | Summary                                                                                                                |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| [Prediction Market](/kits/prediction-market) | AI-resolved, proof-anchored prediction market. Composes `ai-oracle` automatically. ✓ signature verified.               |
+| [Live Feed](/kits/live-feed)                 | Reorg-safe live social feed on 0G Storage + 0gkit-indexer. Falls back to storage-only mode without a contract address. |
+
+### Assets
+
+| Kit                              | Summary                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------- |
+| [iNFT Studio](/kits/inft-studio) | Mint intelligent NFTs with AI-generated media stored on 0G Storage and attested provenance. |
+
+### DeFi
+
+| Kit                                     | Summary                                                                                          |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [Yield Intelligence](/kits/yield-intel) | Read-only AI yield analysis with an attested decision log. No automated execution. Testnet-only. |
+
+## After applying a kit
+
+1. Run `pnpm install` (or `npm install`) to pull the kit's declared
+   `dependencies` into `node_modules`.
+2. Copy the new entries from `.env.example` into your `.env` and fill in the
+   values.
+3. Commit the kit files to your repo — they are yours to edit.
+
+See [Authoring a kit](/kits/authoring) if you want to build your own kit and
+contribute it to the catalog.

@@ -197,3 +197,22 @@ Every template is testnet-first (Galileo) — no real funds needed. Run
 `npx @foundryprotocol/0gkit-cli doctor` to preflight, then follow the template's `README`. See
 [Getting started](/getting-started) for environment variables and
 [Troubleshooting](/troubleshooting) if a peer dependency complains.
+
+## Add a kit after scaffolding
+
+Kits are drop-in feature overlays you can apply to any template after
+scaffolding. To see which kits are compatible with your project's base:
+
+```bash
+0g kits list
+```
+
+Then apply one or more:
+
+```bash
+0g add agent-memory
+0g add ai-oracle sealed-inference
+```
+
+See the [Kits catalog](/kits) for a full list of available kits and what each
+one adds.
