@@ -27,7 +27,7 @@ market — typed, attested, multi-framework.
 
 - **K0** — `@foundryprotocol/0gkit-kits` engine, `templates/_kits/` convention,
   `kit.json` schema, `applyKit`/`resolveTiers`/composition, `kits:check` matrix,
-  `0g add` + scaffold `--kits`. This sprint only *adds kit overlays*; the engine
+  `0g add` + scaffold `--kits`. This sprint only _adds kit overlays_; the engine
   is unchanged.
 - 0gkit packages consumed by these kits (all published ≥1.5.0):
   `0gkit-compute` (inference), `0gkit-attestation` (TEE verify), `0gkit-chain`
@@ -99,57 +99,70 @@ T2 sealed-inference (lib+adapters+ui)   ← independent, parallel-safe with T1
 ### T1 — `ai-oracle` kit
 
 - [ ] **Failing test** — `lib/__tests__/oracle.test.ts`: `resolve(question)` calls
-  injected `compute.infer`, hashes the answer, calls injected `chain.anchor` with
-  `(answerHash, attestationId)`, and returns `{ answer, answerHash, txHash, attestation }`.
-  Assert the anchored hash equals `sha256(answer)`.
+      injected `compute.infer`, hashes the answer, calls injected `chain.anchor` with
+      `(answerHash, attestationId)`, and returns `{ answer, answerHash, txHash, attestation }`.
+      Assert the anchored hash equals `sha256(answer)`.
 - [ ] **Run** → red.
 - [ ] **Implement** — `lib/oracle.ts`:
+
 ```ts
 import { createHash } from "node:crypto";
-export interface OracleDeps { compute: Compute; chain: Chain; }
-export async function resolveOracle(deps: OracleDeps, question: string, model = process.env.OG_COMPUTE_MODEL) {
-  const { text, attestation } = await deps.compute.inferAttested({ model, prompt: question });
+export interface OracleDeps {
+  compute: Compute;
+  chain: Chain;
+}
+export async function resolveOracle(
+  deps: OracleDeps,
+  question: string,
+  model = process.env.OG_COMPUTE_MODEL
+) {
+  const { text, attestation } = await deps.compute.inferAttested({
+    model,
+    prompt: question,
+  });
   const answerHash = "0x" + createHash("sha256").update(text).digest("hex");
   const { txHash } = await deps.chain.anchor({ hash: answerHash, tag: "ai-oracle" });
   return { answer: text, answerHash, txHash, attestation };
 }
 ```
-  `kit.json`: `domain:"verifiable-ai"`, `compatibleBases:["react-app","chat","tee-attested-api","mcp-agent"]`, `requires:["0gkit-compute","0gkit-chain","0gkit-attestation"]`, lib + three adapters, no UI.
+
+`kit.json`: `domain:"verifiable-ai"`, `compatibleBases:["react-app","chat","tee-attested-api","mcp-agent"]`, `requires:["0gkit-compute","0gkit-chain","0gkit-attestation"]`, lib + three adapters, no UI.
+
 - [ ] **Run** → green. **Commit**: `feat(kits): ai-oracle (attested answer → on-chain commit)`.
 
 ### T2 — `sealed-inference` kit
 
 - [ ] **Failing test** — `lib/__tests__/sealed.test.ts`: `sealedInfer(prompt)` returns
-  `{ text, attestation, verified }`; `verified` is `true` only when the injected
-  `attestation.verify` resolves truthy; a tampered report → `verified:false` (never throws —
-  the UI shows the badge state).
+      `{ text, attestation, verified }`; `verified` is `true` only when the injected
+      `attestation.verify` resolves truthy; a tampered report → `verified:false` (never throws —
+      the UI shows the badge state).
 - [ ] **Run** → red.
 - [ ] **Implement** — `lib/sealed.ts` (compute.inferAttested + attestation.verify, returns
-  verification state, no throw). `kit.json`: `domain:"verifiable-ai"`,
-  `compatibleBases:["react-app","chat","tee-attested-api","mcp-agent"]`,
-  `requires:["0gkit-compute","0gkit-attestation"]`, lib + 3 adapters + UI
-  (`SealedChat` shows `✓ attestation verified` / `⚠ unverified`).
+      verification state, no throw). `kit.json`: `domain:"verifiable-ai"`,
+      `compatibleBases:["react-app","chat","tee-attested-api","mcp-agent"]`,
+      `requires:["0gkit-compute","0gkit-attestation"]`, lib + 3 adapters + UI
+      (`SealedChat` shows `✓ attestation verified` / `⚠ unverified`).
 - [ ] **Run** → green. **Commit**: `feat(kits): sealed-inference (TEE-attested private inference + verified badge)`.
 
 ### T3 — `prediction-market` kit (composes ai-oracle)
 
 - [ ] **Failing test** — `lib/__tests__/market.test.ts`: `resolveMarket(id)` delegates to
-  `resolveOracle` (injected), stores the resolution receipt on storage, and transitions the
-  market to `settled`. Assert the receipt blob contains `{ answer, answerHash, txHash }`.
+      `resolveOracle` (injected), stores the resolution receipt on storage, and transitions the
+      market to `settled`. Assert the receipt blob contains `{ answer, answerHash, txHash }`.
 - [ ] **Run** → red.
 - [ ] **Implement** — `lib/market.ts`: market lifecycle (`open`/`bet`/`resolve`/`settle`),
-  `resolve` calls `resolveOracle`, receipts to 0G Storage, market index via 0gkit-indexer.
-  `kit.json`: `domain:"markets"`, `composes:["ai-oracle"]`,
-  `compatibleBases:["react-app","chat","tee-attested-api"]`,
-  `requires:["0gkit-compute","0gkit-chain","0gkit-storage","0gkit-indexer"]`,
-  lib + 2 adapters + UI (board/create/resolve).
+      `resolve` calls `resolveOracle`, receipts to 0G Storage, market index via 0gkit-indexer.
+      `kit.json`: `domain:"markets"`, `composes:["ai-oracle"]`,
+      `compatibleBases:["react-app","chat","tee-attested-api"]`,
+      `requires:["0gkit-compute","0gkit-chain","0gkit-storage","0gkit-indexer"]`,
+      lib + 2 adapters + UI (board/create/resolve).
 - [ ] **Run** → green. **Verify composition** — `applyKit({kit:"prediction-market", base:"react-app", dest:tmp})` also writes `ai-oracle`'s lib (assert in an apply test).
 - [ ] **Commit**: `feat(kits): prediction-market flagship (composes ai-oracle)`.
 
 ### T4 — matrix check + docs stubs + changeset
 
 - [ ] **Run** — `pnpm kits:check` → every new `(kit × base)` combo scaffolds, applies,
-  typechecks, builds. Fix any base whose adapter doesn't compile.
+      typechecks, builds. Fix any base whose adapter doesn't compile.
 - [ ] **Implement** — docs stub pages under `apps/docs/app/kits/{ai-oracle,sealed-inference,prediction-market}/page.mdx` (full polish lands in K4; stubs keep `docs:check` green and the nav populated).
 - [ ] **Implement** — `.changeset/kits-verifiable-ai.md` (engine patch iff registry codegen changed; otherwise a `repo`-only note).
 - [ ] **Run** — full gate (`lint typecheck build test boundary:check templates:check kits:check docs:check format:check`) → green.

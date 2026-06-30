@@ -19,8 +19,11 @@ describe("KitManifestSchema", () => {
     expect(() =>
       KitManifestSchema.parse({
         name: "Agent Memory",
-        title: "x", domain: "agent-infra", summary: "x",
-        compatibleBases: ["react-app"], tiers: { lib: ["lib/a.ts"] },
+        title: "x",
+        domain: "agent-infra",
+        summary: "x",
+        compatibleBases: ["react-app"],
+        tiers: { lib: ["lib/a.ts"] },
       })
     ).toThrow();
   });

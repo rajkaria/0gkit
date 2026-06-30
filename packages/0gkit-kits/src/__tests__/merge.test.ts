@@ -5,14 +5,16 @@ describe("mergePackageJson", () => {
   it("merges deps, keeps existing", () => {
     const out = mergePackageJson(
       { dependencies: { a: "^1.0.0" } },
-      { dependencies: { a: "^1.0.0", b: "^2.0.0" } });
+      { dependencies: { a: "^1.0.0", b: "^2.0.0" } }
+    );
     expect(out.dependencies).toEqual({ a: "^1.0.0", b: "^2.0.0" });
   });
 
   it("does not overwrite existing keys in base", () => {
     const out = mergePackageJson(
       { dependencies: { a: "^2.0.0" } },
-      { dependencies: { a: "^1.0.0", b: "^1.0.0" } });
+      { dependencies: { a: "^1.0.0", b: "^1.0.0" } }
+    );
     expect(out.dependencies?.a).toBe("^2.0.0");
     expect(out.dependencies?.b).toBe("^1.0.0");
   });
@@ -27,7 +29,8 @@ describe("mergePackageJson", () => {
   it("merges devDependencies and scripts", () => {
     const out = mergePackageJson(
       { scripts: { build: "tsc" } },
-      { devDependencies: { vitest: "^2.0.0" }, scripts: { test: "vitest" } });
+      { devDependencies: { vitest: "^2.0.0" }, scripts: { test: "vitest" } }
+    );
     expect(out.scripts?.build).toBe("tsc");
     expect(out.scripts?.test).toBe("vitest");
     expect(out.devDependencies?.vitest).toBe("^2.0.0");

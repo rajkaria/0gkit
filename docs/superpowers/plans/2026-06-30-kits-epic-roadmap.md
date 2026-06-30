@@ -22,20 +22,20 @@ epic (K0–K4)** is the new priority; the **7 carried-over post-v1 sprints
 
 ## Full sequence
 
-| # | Sprint | Theme | Plan | Status |
-|---|--------|-------|------|--------|
-| K0 | Kits engine + `agent-memory` | overlay engine, `0g add`, `--kits`, `kits:check` | [k0-kits-engine](2026-06-30-k0-kits-engine.md) | ready |
-| K1 | Verifiable AI + flagship | `ai-oracle`, `sealed-inference`, `prediction-market` | [k1-verifiable-ai-market](2026-06-30-k1-verifiable-ai-market.md) | ready |
-| K2 | Durability + live data | `durable-agent`, `live-feed` | [k2-durability-live-data](2026-06-30-k2-durability-live-data.md) | ready |
-| K3 | Assets + honest DeFi | `inft-studio`, `yield-intel` | [k3-assets-honest-defi](2026-06-30-k3-assets-honest-defi.md) | ready |
-| K4 | Docs / GTM / publish | `/kits` docs, landing, authoring, publish | [k4-docs-gtm-publish](2026-06-30-k4-docs-gtm-publish.md) | ready |
-| K5 | (old SP17) `doctor --fix` + `0g test` | conformance runner + auto-fix | scope locked — full plan at execution | queued |
-| K6 | (old SP18) `0g mcp init <agent>` | cursor/claude/windsurf/codex MCP wiring | scope locked — full plan at execution | queued |
-| K7 | (old SP19) First-class Compute Router | `Compute.router()` (research-gated) | scope locked — full plan at execution | queued |
-| K8 | (old SP20) `0g contracts import` | chain-explorer ABI → typed client | scope locked — full plan at execution | queued |
-| K9 | (old SP21) Foundry SDK refresh | `@foundryprotocol/sdk` → `0gkit-* ^1.x` (cross-repo) | scope locked — full plan at execution | queued |
-| K10 | (old SP22) Showcase app | one public app on the published v1.x surface | multi-PR — full plan at execution | queued |
-| K11 | (old SP23) Community surface | GitHub Discussions + landing footer | config + small PR | queued |
+| #   | Sprint                                | Theme                                                | Plan                                                             | Status |
+| --- | ------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------- | ------ |
+| K0  | Kits engine + `agent-memory`          | overlay engine, `0g add`, `--kits`, `kits:check`     | [k0-kits-engine](2026-06-30-k0-kits-engine.md)                   | ready  |
+| K1  | Verifiable AI + flagship              | `ai-oracle`, `sealed-inference`, `prediction-market` | [k1-verifiable-ai-market](2026-06-30-k1-verifiable-ai-market.md) | ready  |
+| K2  | Durability + live data                | `durable-agent`, `live-feed`                         | [k2-durability-live-data](2026-06-30-k2-durability-live-data.md) | ready  |
+| K3  | Assets + honest DeFi                  | `inft-studio`, `yield-intel`                         | [k3-assets-honest-defi](2026-06-30-k3-assets-honest-defi.md)     | ready  |
+| K4  | Docs / GTM / publish                  | `/kits` docs, landing, authoring, publish            | [k4-docs-gtm-publish](2026-06-30-k4-docs-gtm-publish.md)         | ready  |
+| K5  | (old SP17) `doctor --fix` + `0g test` | conformance runner + auto-fix                        | scope locked — full plan at execution                            | queued |
+| K6  | (old SP18) `0g mcp init <agent>`      | cursor/claude/windsurf/codex MCP wiring              | scope locked — full plan at execution                            | queued |
+| K7  | (old SP19) First-class Compute Router | `Compute.router()` (research-gated)                  | scope locked — full plan at execution                            | queued |
+| K8  | (old SP20) `0g contracts import`      | chain-explorer ABI → typed client                    | scope locked — full plan at execution                            | queued |
+| K9  | (old SP21) Foundry SDK refresh        | `@foundryprotocol/sdk` → `0gkit-* ^1.x` (cross-repo) | scope locked — full plan at execution                            | queued |
+| K10 | (old SP22) Showcase app               | one public app on the published v1.x surface         | multi-PR — full plan at execution                                | queued |
+| K11 | (old SP23) Community surface          | GitHub Discussions + landing footer                  | config + small PR                                                | queued |
 
 ## Carryover scope (unchanged — pointers into the post-v1 roadmap)
 
@@ -61,7 +61,7 @@ not re-scoped**. When its turn comes, expand it to a full bite-sized plan via
   storage-adapter draft exists in a prior session transcript.
 - **K10 / SP22** — Showcase app (e.g. `0gkit-status` or `0gkit-prompt-receipts`) on
   `apps.0gkit.com`, consuming published packages. → [post-v1 §SP22]. **Synergy:** build it
-  *by composing Kits* — the ultimate dogfood + GTM proof.
+  _by composing Kits_ — the ultimate dogfood + GTM proof.
 - **K11 / SP23** — GitHub Discussions (Q&A/Show-and-tell/Ideas/RFCs) + landing community
   footer. → [post-v1 §SP23]. **Synergy:** add a "Show your kit" discussion category to seed
   community kits (ties to K4's authoring guide).
@@ -71,7 +71,7 @@ not re-scoped**. When its turn comes, expand it to a full bite-sized plan via
 - K1–K3 depend on **K0** (engine + `templates/_kits` convention). K4 depends on K0–K3.
 - Carryover K5–K8 are independent of the Kits engine and can interleave if priorities
   shift — but the default order keeps the GTM-critical Kits epic first.
-- K10 (showcase) is strongest *after* the Kits epic (compose the showcase from kits) and
+- K10 (showcase) is strongest _after_ the Kits epic (compose the showcase from kits) and
   after K7 (router) + K5 (`0g test`).
 - K9 (Foundry SDK) is cross-repo and parallel-safe with anything.
 

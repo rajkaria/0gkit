@@ -39,7 +39,7 @@ function getStorage(): Storage {
     if (!privateKey || !rpc) {
       throw new Error(
         "Missing OG_PRIVATE_KEY or OG_RPC_URL environment variables. " +
-          "See the agent-memory kit README for setup instructions.",
+          "See the agent-memory kit README for setup instructions."
       );
     }
     const provider = new ethers.JsonRpcProvider(rpc);
@@ -106,7 +106,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const { key, value } = body as { key?: unknown; value?: unknown };
     if (typeof key !== "string" || !key) {
-      return NextResponse.json({ error: '"key" must be a non-empty string' }, { status: 400 });
+      return NextResponse.json(
+        { error: '"key" must be a non-empty string' },
+        { status: 400 }
+      );
     }
     if (typeof value !== "string") {
       return NextResponse.json({ error: '"value" must be a string' }, { status: 400 });

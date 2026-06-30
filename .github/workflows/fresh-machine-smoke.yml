@@ -127,3 +127,31 @@ jobs:
           else
             echo "✓ first-success banner observed"
           fi
+
+  kits-check:
+    name: kits:check on Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22", "24"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build kits engine
+        run: pnpm --filter @foundryprotocol/0gkit-kits build
+
+      - name: Run kits:check
+        run: pnpm kits:check

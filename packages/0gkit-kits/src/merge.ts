@@ -15,11 +15,11 @@ export interface PartialPackageJson {
  */
 export function mergePackageJson(
   base: PartialPackageJson,
-  incoming: PartialPackageJson,
+  incoming: PartialPackageJson
 ): PartialPackageJson {
   const mergeRecord = (
     a: Record<string, string> | undefined,
-    b: Record<string, string> | undefined,
+    b: Record<string, string> | undefined
   ): Record<string, string> | undefined => {
     if (!a && !b) return undefined;
     // base keys win: spread incoming first, then spread base on top

@@ -40,7 +40,7 @@ export interface UseAgentMemoryResult {
 
 export function useAgentMemory(
   /** API route prefix — defaults to "/api/memory". */
-  apiPath = "/api/memory",
+  apiPath = "/api/memory"
 ): UseAgentMemoryResult {
   const [entries, setEntries] = useState<MemoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,9 +67,7 @@ export function useAgentMemory(
       setIsLoading(true);
       setError(null);
       try {
-        const url = query
-          ? `${apiPath}?q=${encodeURIComponent(query)}`
-          : apiPath;
+        const url = query ? `${apiPath}?q=${encodeURIComponent(query)}` : apiPath;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as { entries?: MemoryEntry[]; error?: string };
@@ -81,7 +79,7 @@ export function useAgentMemory(
         setIsLoading(false);
       }
     },
-    [apiPath],
+    [apiPath]
   );
 
   const remember = useCallback(
@@ -105,7 +103,7 @@ export function useAgentMemory(
         setIsLoading(false);
       }
     },
-    [apiPath, refresh],
+    [apiPath, refresh]
   );
 
   // Load all entries on mount

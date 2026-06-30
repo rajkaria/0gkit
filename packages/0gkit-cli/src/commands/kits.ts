@@ -88,7 +88,8 @@ interface AddOpts {
 }
 
 export function registerKits(program: Command, deps: ProgramDeps): void {
-  const loadEngine: () => Promise<KitsEngineLike> = deps.loadKitsEngine ?? defaultLoadKitsEngine;
+  const loadEngine: () => Promise<KitsEngineLike> =
+    deps.loadKitsEngine ?? defaultLoadKitsEngine;
 
   // ------------------------------------------------------------------
   // 0g add <kit...>
@@ -96,9 +97,18 @@ export function registerKits(program: Command, deps: ProgramDeps): void {
   program
     .command("add <kit...>")
     .description("Apply one or more kits to the current project.")
-    .option("--base <name>", "force the project base (react-app | mcp-agent | node | …)")
-    .option("--pm <pm>", "package manager to use in printed install hint (pnpm | npm | yarn)")
-    .option("--dry-run", "preview what would be written without touching the filesystem")
+    .option(
+      "--base <name>",
+      "force the project base (react-app | mcp-agent | node | …)"
+    )
+    .option(
+      "--pm <pm>",
+      "package manager to use in printed install hint (pnpm | npm | yarn)"
+    )
+    .option(
+      "--dry-run",
+      "preview what would be written without touching the filesystem"
+    )
     .action(async function (this: Command, kits: string[]) {
       await runCommand(deps, this, async () => {
         const opts = this.opts() as AddOpts;
@@ -124,7 +134,9 @@ export function registerKits(program: Command, deps: ProgramDeps): void {
             kitLines.push(`  files     ${result.filesWritten.join(", ")}`);
           }
           if (result.envAdded.length > 0) {
-            kitLines.push(`  env       ${result.envAdded.join(", ")} added to .env.example`);
+            kitLines.push(
+              `  env       ${result.envAdded.join(", ")} added to .env.example`
+            );
           }
           for (const note of result.notes) {
             kitLines.push(`  note      ${note}`);
@@ -140,9 +152,10 @@ export function registerKits(program: Command, deps: ProgramDeps): void {
 
         return {
           human: allLines,
-          json: allJson.length === 1
-            ? (allJson[0] as unknown as Record<string, unknown>)
-            : ({ kits: allJson } as unknown as Record<string, unknown>),
+          json:
+            allJson.length === 1
+              ? (allJson[0] as unknown as Record<string, unknown>)
+              : ({ kits: allJson } as unknown as Record<string, unknown>),
         };
       });
     });
@@ -182,8 +195,7 @@ export function registerKits(program: Command, deps: ProgramDeps): void {
           `kits for base: ${base}`,
           "",
           ...kits.map(
-            (k) =>
-              `  ${k.name.padEnd(24)} ${k.title.padEnd(28)} [${k.domain}]`,
+            (k) => `  ${k.name.padEnd(24)} ${k.title.padEnd(28)} [${k.domain}]`
           ),
           "",
           `${kits.length} kit(s) found.`,
@@ -209,7 +221,9 @@ export function registerKits(program: Command, deps: ProgramDeps): void {
   // ------------------------------------------------------------------
   kitsCmd
     .command("info <kit>")
-    .description("Print detailed info for a kit: summary, tiers, compatible bases, env vars.")
+    .description(
+      "Print detailed info for a kit: summary, tiers, compatible bases, env vars."
+    )
     .action(async function (this: Command, kit: string) {
       await runCommand(deps, this, async () => {
         const engine = await loadEngine();
@@ -218,7 +232,7 @@ export function registerKits(program: Command, deps: ProgramDeps): void {
         if (!manifest) {
           throw new ConfigError(
             `Kit "${kit}" not found in registry.`,
-            `Run "0g kits list" to see available kits.`,
+            `Run "0g kits list" to see available kits.`
           );
         }
 
@@ -241,7 +255,9 @@ export function registerKits(program: Command, deps: ProgramDeps): void {
         }
 
         if (manifest.requires.length > 0) {
-          human.push(`  requires  ${manifest.requires.map((r) => `@foundryprotocol/${r}`).join(", ")}`);
+          human.push(
+            `  requires  ${manifest.requires.map((r) => `@foundryprotocol/${r}`).join(", ")}`
+          );
         }
 
         if (manifest.env.length > 0) {

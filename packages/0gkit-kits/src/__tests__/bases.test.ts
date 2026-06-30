@@ -12,7 +12,11 @@ function makeDir(subdir: string): string {
   return dir;
 }
 
-function writePkg(dir: string, deps: Record<string, string>, devDeps?: Record<string, string>): void {
+function writePkg(
+  dir: string,
+  deps: Record<string, string>,
+  devDeps?: Record<string, string>
+): void {
   const pkg: Record<string, unknown> = { name: "test-app", version: "0.0.0" };
   if (Object.keys(deps).length) pkg.dependencies = deps;
   if (devDeps && Object.keys(devDeps).length) pkg.devDependencies = devDeps;

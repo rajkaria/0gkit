@@ -85,25 +85,25 @@ T2 live-feed (lib + adapters + ui)      ← parallel-safe with T1
 ### T1 — `durable-agent` kit
 
 - [ ] **Failing test** — `lib/__tests__/agent.test.ts`: enqueue a 3-step job against an
-  **in-memory `0gkit-jobs` backend**; assert (a) all steps run in order, (b) on an injected
-  crash after step 2, resuming the runner **does not re-run** steps 1–2 (ledger replay), and
-  (c) each step emits a span (assert against an injected tracer).
+      **in-memory `0gkit-jobs` backend**; assert (a) all steps run in order, (b) on an injected
+      crash after step 2, resuming the runner **does not re-run** steps 1–2 (ledger replay), and
+      (c) each step emits a span (assert against an injected tracer).
 - [ ] **Run** → red.
 - [ ] **Implement** — `lib/agent.ts`: `defineAgent({ steps })` + `createRunner({ jobs, tracer })`
-  with idempotent step keys persisted to the jobs ledger; `lib/steps.ts` sample pipeline.
-  `kit.json`: `domain:"agent-infra"`, `compatibleBases:["react-app","chat","tee-attested-api","mcp-agent","storage-app"]`,
-  `requires:["0gkit-jobs","0gkit-observability"]`, lib + 3 adapters, no UI.
+      with idempotent step keys persisted to the jobs ledger; `lib/steps.ts` sample pipeline.
+      `kit.json`: `domain:"agent-infra"`, `compatibleBases:["react-app","chat","tee-attested-api","mcp-agent","storage-app"]`,
+      `requires:["0gkit-jobs","0gkit-observability"]`, lib + 3 adapters, no UI.
 - [ ] **Run** → green. **Commit**: `feat(kits): durable-agent (resumable loop on 0gkit-jobs)`.
 
 ### T2 — `live-feed` kit
 
 - [ ] **Failing test** — `lib/__tests__/feed.test.ts`: `post(msg)` writes a storage blob and
-  returns a cursor entry; `stream()` over an injected indexer yields posts in order and, on an
-  injected reorg event, **drops the orphaned post** from the emitted stream.
+      returns a cursor entry; `stream()` over an injected indexer yields posts in order and, on an
+      injected reorg event, **drops the orphaned post** from the emitted stream.
 - [ ] **Run** → red.
 - [ ] **Implement** — `lib/feed.ts` (storage write + indexer reorg-safe cursor read).
-  `kit.json`: `domain:"markets"`, `compatibleBases:["react-app","chat"]`,
-  `requires:["0gkit-storage","0gkit-indexer"]`, lib + react adapter + UI.
+      `kit.json`: `domain:"markets"`, `compatibleBases:["react-app","chat"]`,
+      `requires:["0gkit-storage","0gkit-indexer"]`, lib + react adapter + UI.
 - [ ] **Run** → green. **Commit**: `feat(kits): live-feed (reorg-safe live feed on 0gkit-indexer)`.
 
 ### T3 — matrix check + docs stubs + changeset

@@ -1,9 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import {
-  mkdtempSync,
-  mkdirSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { run, type RunDeps } from "../index.js";
@@ -101,7 +97,15 @@ describe("run() — --kits flag", () => {
     });
 
     const code = await run(
-      argv("my-app", "--template", "react-app", "--kits", "agent-memory", "--no-install", "--no-git"),
+      argv(
+        "my-app",
+        "--template",
+        "react-app",
+        "--kits",
+        "agent-memory",
+        "--no-install",
+        "--no-git"
+      ),
       deps
     );
 
@@ -134,7 +138,15 @@ describe("run() — --kits flag", () => {
     });
 
     await run(
-      argv("my-app", "--template", "react-app", "--kits", "agent-memory", "--no-install", "--no-git"),
+      argv(
+        "my-app",
+        "--template",
+        "react-app",
+        "--kits",
+        "agent-memory",
+        "--no-install",
+        "--no-git"
+      ),
       deps
     );
 
@@ -175,14 +187,28 @@ describe("run() — --kits flag", () => {
     });
 
     const code = await run(
-      argv("my-app", "--template", "react-app", "--kits", "agent-memory,kit-b", "--no-install", "--no-git"),
+      argv(
+        "my-app",
+        "--template",
+        "react-app",
+        "--kits",
+        "agent-memory,kit-b",
+        "--no-install",
+        "--no-git"
+      ),
       deps
     );
 
     expect(code).toBe(0);
     expect(applyKitSpy).toHaveBeenCalledTimes(2);
-    expect(applyKitSpy).toHaveBeenNthCalledWith(1, expect.objectContaining({ kit: "agent-memory" }));
-    expect(applyKitSpy).toHaveBeenNthCalledWith(2, expect.objectContaining({ kit: "kit-b" }));
+    expect(applyKitSpy).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ kit: "agent-memory" })
+    );
+    expect(applyKitSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ kit: "kit-b" })
+    );
   });
 });
 
@@ -201,7 +227,15 @@ describe("run() — --kits validation errors (early exit)", () => {
     });
 
     const code = await run(
-      argv("my-app", "--template", "react-app", "--kits", "does-not-exist", "--no-install", "--no-git"),
+      argv(
+        "my-app",
+        "--template",
+        "react-app",
+        "--kits",
+        "does-not-exist",
+        "--no-install",
+        "--no-git"
+      ),
       deps
     );
 
@@ -220,7 +254,15 @@ describe("run() — --kits validation errors (early exit)", () => {
     });
 
     await run(
-      argv("my-app", "--template", "react-app", "--kits", "does-not-exist", "--no-install", "--no-git"),
+      argv(
+        "my-app",
+        "--template",
+        "react-app",
+        "--kits",
+        "does-not-exist",
+        "--no-install",
+        "--no-git"
+      ),
       deps
     );
 
@@ -235,12 +277,21 @@ describe("run() — --kits validation errors (early exit)", () => {
       cwd,
       fetchTemplate: fetchTemplateSpy,
       listKits: () => [], // no kits for this base
-      getKit: (name) => (name === "tee-verifier" ? REACT_INCOMPATIBLE_MANIFEST : undefined),
+      getKit: (name) =>
+        name === "tee-verifier" ? REACT_INCOMPATIBLE_MANIFEST : undefined,
     });
 
     const code = await run(
       // tee-verifier is only compatible with tee-attested-api, not react-app
-      argv("my-app", "--template", "react-app", "--kits", "tee-verifier", "--no-install", "--no-git"),
+      argv(
+        "my-app",
+        "--template",
+        "react-app",
+        "--kits",
+        "tee-verifier",
+        "--no-install",
+        "--no-git"
+      ),
       deps
     );
 

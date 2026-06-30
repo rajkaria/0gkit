@@ -140,7 +140,7 @@ export function createMemory({
     if (!query) return latest;
     const q = query.toLowerCase();
     return latest.filter(
-      (e) => e.key.toLowerCase().includes(q) || e.value.toLowerCase().includes(q),
+      (e) => e.key.toLowerCase().includes(q) || e.value.toLowerCase().includes(q)
     );
   }
 

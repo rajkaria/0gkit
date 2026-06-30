@@ -47,6 +47,7 @@ giget. pnpm workspace + turbo. Changesets for versioning.
 ## File structure
 
 **Created**
+
 ```
 packages/0gkit-kits/
   package.json
@@ -78,6 +79,7 @@ scripts/__tests__/check-kits.test.mjs
 ```
 
 **Modified**
+
 ```
 pnpm-workspace.yaml                         # (no change — packages/* already globbed; templates/_kits NOT a workspace, per D24)
 package.json                                # add "kits:check" script
@@ -122,6 +124,7 @@ T1 manifest schema ─┬─ T2 merge utils ──┐
 ### Task 1 — Kit manifest schema
 
 - [ ] **Failing test** — `src/__tests__/manifest.test.ts`:
+
 ```ts
 import { describe, it, expect } from "vitest";
 import { KitManifestSchema } from "../manifest.js";
@@ -144,20 +147,29 @@ describe("KitManifestSchema", () => {
     expect(() =>
       KitManifestSchema.parse({
         name: "Agent Memory",
-        title: "x", domain: "agent-infra", summary: "x",
-        compatibleBases: ["react-app"], tiers: { lib: ["lib/a.ts"] },
+        title: "x",
+        domain: "agent-infra",
+        summary: "x",
+        compatibleBases: ["react-app"],
+        tiers: { lib: ["lib/a.ts"] },
       })
     ).toThrow();
   });
 });
 ```
+
 - [ ] **Run** — `pnpm --filter @foundryprotocol/0gkit-kits test` → red.
 - [ ] **Implement** — `src/manifest.ts`:
+
 ```ts
 import { z } from "zod";
 
 export const KIT_DOMAINS = [
-  "verifiable-ai", "agent-infra", "markets", "assets", "defi",
+  "verifiable-ai",
+  "agent-infra",
+  "markets",
+  "assets",
+  "defi",
 ] as const;
 
 const kebab = z.string().regex(/^[a-z][a-z0-9-]*$/, "must be kebab-case");
@@ -173,30 +185,39 @@ export const KitManifestSchema = z.object({
     adapters: z.record(z.string(), z.array(z.string())).optional(),
     ui: z.array(z.string()).optional(),
   }),
-  env: z.array(z.object({
-    key: z.string(), example: z.string().default(""), note: z.string().optional(),
-  })).default([]),
+  env: z
+    .array(
+      z.object({
+        key: z.string(),
+        example: z.string().default(""),
+        note: z.string().optional(),
+      })
+    )
+    .default([]),
   dependencies: z.record(z.string(), z.string()).default({}),
   devDependencies: z.record(z.string(), z.string()).default({}),
-  requires: z.array(z.string()).default([]),   // 0gkit-* pkgs the base must have
-  composes: z.array(z.string()).default([]),   // other kits auto-applied first
+  requires: z.array(z.string()).default([]), // 0gkit-* pkgs the base must have
+  composes: z.array(z.string()).default([]), // other kits auto-applied first
   conflicts: z.array(z.string()).default([]),
 });
 
 export type KitManifest = z.infer<typeof KitManifestSchema>;
 export type KitDomain = (typeof KIT_DOMAINS)[number];
 ```
+
 - [ ] **Run** → green. **Commit**: `feat(kits): KitManifestSchema`.
 
 ### Task 2 — package.json merge + env append utils
 
 - [ ] **Failing test** — `src/__tests__/merge.test.ts`: assert `mergePackageJson` adds deps without clobbering existing higher versions, and `appendEnv` is idempotent (re-applying the same keys does not duplicate lines).
+
 ```ts
 import { mergePackageJson, appendEnv } from "../merge.js";
 it("merges deps, keeps existing", () => {
   const out = mergePackageJson(
     { dependencies: { a: "^1.0.0" } },
-    { dependencies: { a: "^1.0.0", b: "^2.0.0" } });
+    { dependencies: { a: "^1.0.0", b: "^2.0.0" } }
+  );
   expect(out.dependencies).toEqual({ a: "^1.0.0", b: "^2.0.0" });
 });
 it("appendEnv is idempotent", () => {
@@ -206,6 +227,7 @@ it("appendEnv is idempotent", () => {
   expect(first).toContain("# n\nBAR=2");
 });
 ```
+
 - [ ] **Run** → red.
 - [ ] **Implement** — `src/merge.ts`: deep-merge `dependencies`/`devDependencies`/`scripts` (existing wins on conflict), and `appendEnv(current, vars)` that appends `# note\nKEY=example` blocks only for keys not already present (regex `^KEY=` per line).
 - [ ] **Run** → green. **Commit**: `feat(kits): package.json merge + idempotent env append`.
@@ -215,15 +237,20 @@ it("appendEnv is idempotent", () => {
 - [ ] **Failing test** — `src/__tests__/apply.test.ts` (fetch portion, mocked): inject a fake `fetchOverlay` and assert `applyKit` calls it with `github:rajkaria/0gkit/templates/_kits/<name>#<ref>` and `force:true` into a temp dir. (Mirror the `fetchCi` contract.)
 - [ ] **Run** → red.
 - [ ] **Implement** — `src/fetch.ts`:
+
 ```ts
 import { downloadTemplate } from "giget";
 const REPO = "rajkaria/0gkit";
 const REF = process.env.OGKIT_TEMPLATE_REF ?? "main";
 export async function fetchKitOverlay(name: string, dir: string): Promise<void> {
-  await downloadTemplate(`github:${REPO}/templates/_kits/${name}#${REF}`,
-    { dir, force: true, install: false });
+  await downloadTemplate(`github:${REPO}/templates/_kits/${name}#${REF}`, {
+    dir,
+    force: true,
+    install: false,
+  });
 }
 ```
+
 - [ ] **Run** → green (against the injected mock). **Commit**: `feat(kits): giget kit overlay fetch`.
 
 ### Task 4 — base detection + React-capable set
@@ -245,9 +272,10 @@ export async function fetchKitOverlay(name: string, dir: string): Promise<void> 
 - [ ] **Failing test** — `apply.test.ts`: applying a kit with `composes:["dep-kit"]` into a temp project applies `dep-kit` first; `dependencies` land in package.json; env vars appended; re-apply is idempotent; a conflicting kit (`conflicts`) throws a typed error.
 - [ ] **Run** → red.
 - [ ] **Implement** — `src/apply.ts`:
+
 ```ts
 export interface ApplyResult {
-  applied: string[];           // kit names applied (incl. composed)
+  applied: string[]; // kit names applied (incl. composed)
   filesWritten: string[];
   envAdded: string[];
   notes: string[];
@@ -260,19 +288,27 @@ export function resolveTiers(m: KitManifest, base: string): string[] {
   return files;
 }
 export async function applyKit(opts: {
-  kit: string; dest: string; base: string; pm: string; dryRun?: boolean;
-  deps?: ApplyDeps;                 // injectable fetch/fs for tests
-}): Promise<ApplyResult> { /* compose → fetch overlay to temp → copy resolved
-  tiers into dest → mergePackageJson → appendEnv → collect notes → token */ }
+  kit: string;
+  dest: string;
+  base: string;
+  pm: string;
+  dryRun?: boolean;
+  deps?: ApplyDeps; // injectable fetch/fs for tests
+}): Promise<ApplyResult> {
+  /* compose → fetch overlay to temp → copy resolved
+  tiers into dest → mergePackageJson → appendEnv → collect notes → token */
+}
 ```
-  Conflict + missing-`requires` checks throw `KitError` (typed, with a code).
+
+Conflict + missing-`requires` checks throw `KitError` (typed, with a code).
+
 - [ ] **Run** → green. **Commit**: `feat(kits): applyKit with tier resolution + composition`.
 
 ### Task 7 — `agent-memory` reference kit overlay
 
 - [ ] **Implement** — `templates/_kits/agent-memory/`:
   - `kit.json`: `domain:"agent-infra"`, `compatibleBases:["react-app","chat","storage-app","mcp-agent"]`, `tiers.lib:["lib/agent-memory.ts"]`, `tiers.adapters:{ "mcp-agent":["src/tools/memory.ts"], "react-app":["app/api/memory/route.ts"] }`, `tiers.ui:["components/MemoryPanel.tsx","hooks/useAgentMemory.ts"]`, `requires:["0gkit-storage"]`.
-  - `lib/agent-memory.ts` — **portable core**: `createMemory({ storage, namespace })` → `{ remember(key, value), recall(query), list() }` backed by 0G Storage (append-only JSONL blob per namespace + in-memory keyword index on read). Imports `@foundryprotocol/0gkit-storage` (allowed: the *kit overlay* may import 0gkit packages; only the *engine* may not).
+  - `lib/agent-memory.ts` — **portable core**: `createMemory({ storage, namespace })` → `{ remember(key, value), recall(query), list() }` backed by 0G Storage (append-only JSONL blob per namespace + in-memory keyword index on read). Imports `@foundryprotocol/0gkit-storage` (allowed: the _kit overlay_ may import 0gkit packages; only the _engine_ may not).
   - `adapters/mcp-agent/src/tools/memory.ts` — registers `memory_remember` / `memory_recall` MCP tools.
   - `adapters/react-app/app/api/memory/route.ts` — Next route handler (GET recall, POST remember).
   - `ui/hooks/useAgentMemory.ts` + `ui/components/MemoryPanel.tsx` — React hook + panel.
@@ -307,7 +343,7 @@ export async function applyKit(opts: {
 - [ ] **Implement** — `.changeset/kits-engine.md`: `@foundryprotocol/0gkit-kits` (new, minor 0.1.0 → publish as 1.x with the fixed-version bump), `create-0g-app` minor, `create-0gkit-app` minor, `0gkit-cli` minor.
 - [ ] **Implement** — `docs/DECISIONS.md` D77–D80:
   - **D77** — Kits are git overlays under `templates/_kits/`, applied via giget (reuse `fetchCi` pattern), not published packages or string codegen.
-  - **D78** — `0gkit-kits` engine imports only `giget`+`zod`; never another `0gkit-*` (neutrality + CLI cold-start). Kit *overlays* may import `0gkit-*`.
+  - **D78** — `0gkit-kits` engine imports only `giget`+`zod`; never another `0gkit-*` (neutrality + CLI cold-start). Kit _overlays_ may import `0gkit-*`.
   - **D79** — 3-tier model: `lib` always, `adapters[base]` if present, `ui` on React bases only; a kit is offered for a base iff `resolveTiers` is non-empty.
   - **D80** — Kit composition: `composes[]` auto-applies dependency kits first; dedup by name; `conflicts[]` throws `KitError`.
 - [ ] **Run** — full gate: `pnpm lint typecheck build test boundary:check templates:check kits:check format:check` → all green.

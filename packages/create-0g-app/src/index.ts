@@ -8,7 +8,11 @@ import {
   listKits as realListKits,
   getKit as realGetKit,
 } from "@foundryprotocol/0gkit-kits";
-import type { KitManifest, ApplyKitOptions, ApplyResult } from "@foundryprotocol/0gkit-kits";
+import type {
+  KitManifest,
+  ApplyKitOptions,
+  ApplyResult,
+} from "@foundryprotocol/0gkit-kits";
 import { renderBanner } from "./banner.js";
 import { writeEnvExample } from "./env.js";
 import { initGitRepo, type InitGitResult } from "./git.js";
@@ -130,7 +134,10 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
     )
     .option("--no-install", "Skip dependency install")
     .option("--no-git", "Skip git init")
-    .option("--kits <names>", "Comma-separated kits to apply (e.g. agent-memory,kit-b)");
+    .option(
+      "--kits <names>",
+      "Comma-separated kits to apply (e.g. agent-memory,kit-b)"
+    );
 
   let parsed;
   try {
@@ -157,7 +164,10 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
 
   // Parse --kits flag into an array of trimmed, non-empty names.
   const requestedKits: string[] = opts.kits
-    ? opts.kits.split(",").map((k) => k.trim()).filter(Boolean)
+    ? opts.kits
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean)
     : [];
 
   // Validate template flag early so a typo doesn't waste a prompt.
@@ -181,7 +191,11 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
       if (!manifest) {
         err(
           `Unknown kit: ${kitName}. Valid kits for template "${opts.template}": ${
-            compatibleKits.length > 0 ? compatibleNames.size > 0 ? [...compatibleNames].join(", ") : "(none)" : "(none)"
+            compatibleKits.length > 0
+              ? compatibleNames.size > 0
+                ? [...compatibleNames].join(", ")
+                : "(none)"
+              : "(none)"
           }`
         );
         return 1;
@@ -189,7 +203,7 @@ export async function run(argv: string[], deps: RunDeps = {}): Promise<number> {
       if (!compatibleNames.has(kitName)) {
         err(
           `Kit "${kitName}" is not compatible with template "${opts.template}". ` +
-          `Compatible kits: ${compatibleKits.length > 0 ? [...compatibleNames].join(", ") : "(none)"}`
+            `Compatible kits: ${compatibleKits.length > 0 ? [...compatibleNames].join(", ") : "(none)"}`
         );
         return 1;
       }

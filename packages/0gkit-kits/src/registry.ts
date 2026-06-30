@@ -53,7 +53,7 @@ export function loadRegistry(): KitManifest[] {
  */
 export function getKit(
   name: string,
-  registry: KitManifest[] = KITS,
+  registry: KitManifest[] = KITS
 ): KitManifest | undefined {
   return registry.find((k) => k.name === name);
 }
@@ -82,8 +82,6 @@ export function listKits({
   if (!base) return registry;
 
   return registry.filter(
-    (kit) =>
-      kit.compatibleBases.includes(base) &&
-      resolveTiers(kit, base).length > 0,
+    (kit) => kit.compatibleBases.includes(base) && resolveTiers(kit, base).length > 0
   );
 }

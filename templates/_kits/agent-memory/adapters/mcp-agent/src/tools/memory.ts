@@ -27,10 +27,7 @@
 // the engine package only.
 import { Storage, type StorageConfig } from "@foundryprotocol/0gkit-storage";
 
-import {
-  createMemory,
-  type MemoryStorage,
-} from "../../lib/agent-memory.js";
+import { createMemory, type MemoryStorage } from "../../lib/agent-memory.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,7 +45,12 @@ export interface MemoryToolOptions {
 /** Minimal subset of the MCP Server interface needed to register tools. */
 export interface McpServerLike {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tool(name: string, description: string, schema: object, handler: (args: any) => Promise<any>): void;
+  tool(
+    name: string,
+    description: string,
+    schema: object,
+    handler: (args: any) => Promise<any>
+  ): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +96,7 @@ function buildStorageAdapter(storage: Storage, namespacePrefix: string): MemoryS
 
 export function registerMemoryTools(
   server: McpServerLike,
-  options: MemoryToolOptions,
+  options: MemoryToolOptions
 ): void {
   const { privateKey, rpc, namespace = "agent-memory" } = options;
 
@@ -130,7 +132,10 @@ export function registerMemoryTools(
     {
       type: "object",
       properties: {
-        key: { type: "string", description: "Identifier for this memory (e.g. 'user-name', 'last-task')" },
+        key: {
+          type: "string",
+          description: "Identifier for this memory (e.g. 'user-name', 'last-task')",
+        },
         value: { type: "string", description: "Value to store" },
       },
       required: ["key", "value"],
@@ -141,7 +146,7 @@ export function registerMemoryTools(
       return {
         content: [{ type: "text", text: `Stored: ${key} = ${value}` }],
       };
-    },
+    }
   );
 
   // -------------------------------------------------------------------------
@@ -155,7 +160,10 @@ export function registerMemoryTools(
     {
       type: "object",
       properties: {
-        query: { type: "string", description: "Search term (empty string to list all)" },
+        query: {
+          type: "string",
+          description: "Search term (empty string to list all)",
+        },
       },
       required: ["query"],
     },
@@ -167,10 +175,12 @@ export function registerMemoryTools(
           content: [{ type: "text", text: "No matching memory entries found." }],
         };
       }
-      const lines = entries.map((e: { key: string; value: string }) => `${e.key}: ${e.value}`).join("\n");
+      const lines = entries
+        .map((e: { key: string; value: string }) => `${e.key}: ${e.value}`)
+        .join("\n");
       return {
         content: [{ type: "text", text: lines }],
       };
-    },
+    }
   );
 }

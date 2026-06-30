@@ -84,7 +84,7 @@ function resolveCompositionClosure(
   kitName: string,
   registry: KitManifest[],
   visited: Set<string> = new Set(),
-  result: KitManifest[] = [],
+  result: KitManifest[] = []
 ): KitManifest[] {
   // Skip already-processed kits (dedup)
   if (visited.has(kitName)) return result;
@@ -113,13 +113,7 @@ function resolveCompositionClosure(
 // ---------------------------------------------------------------------------
 
 export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
-  const {
-    kit: kitName,
-    dest,
-    base,
-    dryRun = false,
-    deps = {},
-  } = opts;
+  const { kit: kitName, dest, base, dryRun = false, deps = {} } = opts;
 
   const {
     fetchOverlay = fetchKitOverlay as (name: string, dir: string) => Promise<void>,
@@ -138,7 +132,7 @@ export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
       if (resolvedNames.has(conflictName)) {
         throw new KitError(
           "KIT_CONFLICT",
-          `Kit "${manifest.name}" conflicts with "${conflictName}" — both are in the apply set.`,
+          `Kit "${manifest.name}" conflicts with "${conflictName}" — both are in the apply set.`
         );
       }
     }
@@ -151,7 +145,7 @@ export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
   if (topLevelTierFiles.length === 0) {
     throw new KitError(
       "KIT_INCOMPATIBLE",
-      `Kit "${kitName}" has no files for base "${base}".`,
+      `Kit "${kitName}" has no files for base "${base}".`
     );
   }
 
@@ -160,7 +154,10 @@ export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
   let destPkg: Record<string, unknown> = {};
   if (existsSync(pkgJsonPath)) {
     try {
-      destPkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as Record<string, unknown>;
+      destPkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as Record<
+        string,
+        unknown
+      >;
     } catch {
       // ignore parse errors — treat as empty
     }
@@ -183,7 +180,7 @@ export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
     if (missingPkgs.length > 0) {
       throw new KitError(
         "KIT_MISSING_REQUIRES",
-        `Kit "${manifest.name}" requires packages not present in dest: ${missingPkgs.join(", ")}`,
+        `Kit "${manifest.name}" requires packages not present in dest: ${missingPkgs.join(", ")}`
       );
     }
   }
@@ -243,7 +240,7 @@ export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
       {
         dependencies: manifest.dependencies as Record<string, string>,
         devDependencies: manifest.devDependencies as Record<string, string>,
-      },
+      }
     ) as Record<string, unknown>;
 
     // Compute env vars to add (check against current content for idempotency)
@@ -260,7 +257,7 @@ export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
 
   if (dryRun) {
     notes.push(
-      `dry-run: would apply [${appliedNames.join(", ")}] and write ${filesWritten.length} file(s) — no changes made.`,
+      `dry-run: would apply [${appliedNames.join(", ")}] and write ${filesWritten.length} file(s) — no changes made.`
     );
   } else {
     // Write back the merged package.json

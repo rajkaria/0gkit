@@ -182,9 +182,7 @@ export function MemoryPanel({
       {isLoading ? (
         <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>Loading…</p>
       ) : entries.length === 0 ? (
-        <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-          No entries found.
-        </p>
+        <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>No entries found.</p>
       ) : (
         <table
           style={{
@@ -224,7 +222,10 @@ export function MemoryPanel({
       <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 10 }}>
         Add memory
       </h3>
-      <form onSubmit={(e) => void handleRemember(e)} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <form
+        onSubmit={(e) => void handleRemember(e)}
+        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+      >
         <div style={{ display: "flex", gap: 8 }}>
           <input
             type="text"

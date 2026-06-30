@@ -19,7 +19,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "boundary:check": "depcruise \"packages/0gkit-*/src\" --config .dependency-cruiser.cjs",
+    "boundary:check": "depcruise \"packages/0gkit-*/src\" \"templates/_kits\" --config .dependency-cruiser.cjs",
     "templates:check": "node scripts/check-templates.mjs",
     "kits:check": "node scripts/check-kits.mjs",
     "docs:check": "node scripts/docs-check.mjs",

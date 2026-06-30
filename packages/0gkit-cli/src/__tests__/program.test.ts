@@ -320,7 +320,9 @@ describe("0g kits list", () => {
     // detectBase was called with the cwd
     expect(engine.detectBase).toHaveBeenCalledWith("/fake/project");
     // listKits was called with the detected base
-    expect(engine.listKits).toHaveBeenCalledWith(expect.objectContaining({ base: "mcp-agent" }));
+    expect(engine.listKits).toHaveBeenCalledWith(
+      expect.objectContaining({ base: "mcp-agent" })
+    );
   });
 
   it("respects --base override and skips detectBase", async () => {
@@ -331,7 +333,9 @@ describe("0g kits list", () => {
     program.exitOverride();
     await program.parseAsync(["kits", "list", "--base", "react-app"], { from: "user" });
 
-    expect(engine.listKits).toHaveBeenCalledWith(expect.objectContaining({ base: "react-app" }));
+    expect(engine.listKits).toHaveBeenCalledWith(
+      expect.objectContaining({ base: "react-app" })
+    );
     expect(engine.detectBase).not.toHaveBeenCalled();
   });
 });
@@ -370,7 +374,9 @@ describe("0g add", () => {
   it("maps a KitError to failure output and sets exitCode 1", async () => {
     const engine = fakeKitsEngine({
       applyKit: vi.fn(async () => {
-        const err = new Error("Kit \"ghost\" not found in registry.") as Error & { code: string };
+        const err = new Error('Kit "ghost" not found in registry.') as Error & {
+          code: string;
+        };
         err.name = "KitError";
         err.code = "KIT_NOT_FOUND";
         throw err;

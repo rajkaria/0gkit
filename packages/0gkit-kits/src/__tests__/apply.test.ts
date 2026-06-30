@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, writeFileSync, mkdirSync, readFileSync, existsSync } from "node:fs";
+import {
+  mkdtempSync,
+  writeFileSync,
+  mkdirSync,
+  readFileSync,
+  existsSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir, homedir } from "node:os";
 import { rm } from "node:fs/promises";
@@ -221,8 +227,8 @@ describe("file writes", () => {
     });
 
     // All declared files should be written
-    expect(result.filesWritten).toContain("lib/dep.ts");    // from dep-kit
-    expect(result.filesWritten).toContain("lib/main.ts");   // from main-kit
+    expect(result.filesWritten).toContain("lib/dep.ts"); // from dep-kit
+    expect(result.filesWritten).toContain("lib/main.ts"); // from main-kit
     expect(result.filesWritten).toContain("components/Main.tsx"); // ui tier (react-app)
 
     // Verify files actually exist
@@ -253,8 +259,8 @@ describe("package.json deps", () => {
     await applyKit({ kit: "main-kit", dest, base: "react-app", deps: makeDeps() });
 
     const pkg = JSON.parse(readFileSync(join(dest, "package.json"), "utf8"));
-    expect(pkg.dependencies?.["some-dep"]).toBe("^1.0.0");     // from dep-kit
-    expect(pkg.dependencies?.["main-dep"]).toBe("^2.0.0");     // from main-kit
+    expect(pkg.dependencies?.["some-dep"]).toBe("^1.0.0"); // from dep-kit
+    expect(pkg.dependencies?.["main-dep"]).toBe("^2.0.0"); // from main-kit
     expect(pkg.devDependencies?.["main-dev-dep"]).toBe("^0.1.0"); // from main-kit devDeps
   });
 });

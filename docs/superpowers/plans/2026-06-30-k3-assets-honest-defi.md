@@ -84,38 +84,38 @@ T2 yield-intel (lib + adapters + ui, honest framing)   ← parallel-safe with T1
 ### T1 — `inft-studio` kit
 
 - [ ] **Failing test** — `lib/__tests__/inft.test.ts`: `mint({ metadata, media })` uploads
-  media + metadata to injected storage, mints via injected typed erc721 client, and returns
-  `{ tokenId, tokenUri, contentHash, provenance? }`. With `attestProvenance:true`, the
-  provenance record carries a verified attestation.
+      media + metadata to injected storage, mints via injected typed erc721 client, and returns
+      `{ tokenId, tokenUri, contentHash, provenance? }`. With `attestProvenance:true`, the
+      provenance record carries a verified attestation.
 - [ ] **Run** → red.
 - [ ] **Implement** — `lib/inft.ts` + `lib/provenance.ts`. `kit.json`: `domain:"assets"`,
-  `compatibleBases:["react-app","chat"]`, `requires:["0gkit-contracts","0gkit-storage","0gkit-attestation"]`,
-  lib + react adapter + UI (`ProvenanceBadge` shows attested model/prompt).
+      `compatibleBases:["react-app","chat"]`, `requires:["0gkit-contracts","0gkit-storage","0gkit-attestation"]`,
+      lib + react adapter + UI (`ProvenanceBadge` shows attested model/prompt).
 - [ ] **Run** → green. **Commit**: `feat(kits): inft-studio (typed INFT mint + attested provenance)`.
 
 ### T2 — `yield-intel` kit (honest, no bot)
 
 - [ ] **Failing test** — `lib/__tests__/yield.test.ts`: `analyze(positions)` returns a ranked
-  list + per-item rationale from injected compute; `logDecision(d)` writes an attested record
-  to injected storage. **Negative test:** the kit exposes **no** function that signs or sends
-  a value-moving transaction (assert the public API surface contains no `execute`/`trade`/`swap`).
+      list + per-item rationale from injected compute; `logDecision(d)` writes an attested record
+      to injected storage. **Negative test:** the kit exposes **no** function that signs or sends
+      a value-moving transaction (assert the public API surface contains no `execute`/`trade`/`swap`).
 - [ ] **Run** → red.
 - [ ] **Implement** — `lib/yield.ts` (read-only analysis) + `lib/decisionLog.ts` (attested log).
-  `kit.json`: `domain:"defi"`, `compatibleBases:["react-app","chat","tee-attested-api"]`,
-  `requires:["0gkit-compute","0gkit-storage","0gkit-attestation"]`,
-  env defaults to **testnet** (`OG_NETWORK=galileo`), lib + 2 adapters + UI. `DemoBanner`
-  renders an unremovable "Demo — not financial advice; no automated execution" notice; the
-  generated `.env.example` documents that mainnet + execution are intentionally out of scope.
+      `kit.json`: `domain:"defi"`, `compatibleBases:["react-app","chat","tee-attested-api"]`,
+      `requires:["0gkit-compute","0gkit-storage","0gkit-attestation"]`,
+      env defaults to **testnet** (`OG_NETWORK=galileo`), lib + 2 adapters + UI. `DemoBanner`
+      renders an unremovable "Demo — not financial advice; no automated execution" notice; the
+      generated `.env.example` documents that mainnet + execution are intentionally out of scope.
 - [ ] **Run** → green. **Commit**: `feat(kits): yield-intel (AI analysis + attested decision log, no auto-execution)`.
 
 ### T3 — matrix check + honesty audit + docs + changeset
 
 - [ ] **Honesty audit** — grep the two kits for any signing of value-moving txs, any mainnet
-  default, any "guaranteed"/"profit" copy. `yield-intel` must be testnet-default and
-  execution-free. Record the finding in the PR description.
+      default, any "guaranteed"/"profit" copy. `yield-intel` must be testnet-default and
+      execution-free. Record the finding in the PR description.
 - [ ] **Run** — `pnpm kits:check` → green.
 - [ ] **Implement** — `apps/docs/app/kits/{inft-studio,yield-intel}/page.mdx` stubs;
-  `yield-intel` page leads with the demo/safety disclaimer.
+      `yield-intel` page leads with the demo/safety disclaimer.
 - [ ] **Implement** — `.changeset/kits-assets-defi.md`.
 - [ ] **Run** — full gate → green. **Commit** + PR `K3 — assets + honest DeFi`. Squash-merge on green.
 
