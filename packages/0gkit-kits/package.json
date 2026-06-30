@@ -28,9 +28,11 @@
     "LICENSE"
   ],
   "scripts": {
+    "prebuild": "node scripts/gen-registry.mjs",
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "pretest": "node scripts/gen-registry.mjs",
     "test": "vitest run",
     "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
     "clean": "rimraf dist"

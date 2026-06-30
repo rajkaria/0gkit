@@ -12,3 +12,6 @@ export { fetchKitOverlay } from "./fetch.js";
 export type { FetchKitOverlayDeps } from "./fetch.js";
 
 export { REACT_BASES, isReactBase, detectBase } from "./bases.js";
+
+export { loadRegistry, getKit, listKits, resolveTiers } from "./registry.js";
+export { KITS } from "./registry.generated.js";
