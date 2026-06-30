@@ -10,8 +10,9 @@
  *   - reorgSafetyActive: whether the Indexer is wired (from the initial JSON fetch)
  *
  * On a reorg signal (SSE event type: "orphan"), the orphaned post root is added
- * to orphanedIds and the post is REMOVED from the canonical posts list. The UI
- * can optionally show a brief "post removed by reorg" notification.
+ * to orphanedIds; the post stays in the feed for a brief 5s flash window (so the
+ * UI can render the "removed by reorg" label on it), then it is removed from both
+ * orphanedIds and the canonical posts list when the timer fires.
  *
  * Usage:
  *   const { posts, isLoading, error, reorgSafetyActive } = useLiveFeed();
@@ -120,18 +121,21 @@ export function useLiveFeed(
             return [...prev, msg.post].sort((a, b) => a.ts - b.ts);
           });
         } else if (msg.type === "orphan") {
-          // Reorg: remove from canonical list, flag as orphaned
-          setPosts((prev) => prev.filter((p) => p.root !== msg.post.root));
+          // Reorg: flag the post as orphaned so the UI flashes it with a
+          // "removed by reorg" label. Keep it in `posts` during the flash
+          // window so FeedStream's orphaned-post section actually renders it;
+          // the timer below drops it from both the orphan set and the feed.
           setOrphanedIds((prev) => {
             const next = new Set(prev);
             next.add(msg.post.root);
             return next;
           });
 
-          // Auto-clear the orphan badge after 5 seconds
+          // After the 5s flash, remove the post from the feed and clear the flag.
           const existing = orphanTimers.current.get(msg.post.root);
           if (existing) clearTimeout(existing);
           const timer = setTimeout(() => {
+            setPosts((prev) => prev.filter((p) => p.root !== msg.post.root));
             setOrphanedIds((prev) => {
               const next = new Set(prev);
               next.delete(msg.post.root);
