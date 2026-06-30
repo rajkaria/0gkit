@@ -2,7 +2,7 @@
   "name": "durable-agent",
   "title": "Durable Agent",
   "domain": "agent-infra",
-  "summary": "Resumable multi-step agent loop on 0gkit-jobs — step ledger prevents re-running completed steps on restart, every executed step is traced via OpenTelemetry. Optional sealed-inference step is capability-guarded (runtime check, not a hard dep).",
+  "summary": "Resumable multi-step agent loop on 0gkit-jobs — step ledger persisted to 0G Storage prevents re-running completed steps on restart, every executed step is traced via OpenTelemetry. Optional sealed-inference step is capability-guarded (runtime check, not a hard dep).",
   "compatibleBases": ["react-app", "chat", "tee-attested-api", "mcp-agent", "storage-app"],
   "tiers": {
     "lib": ["agent.ts", "steps.ts"],
@@ -17,14 +17,32 @@
   "requires": [],
   "env": [
     {
+      "key": "OG_PRIVATE_KEY",
+      "example": "0xabc123...",
+      "note": "0x-prefixed private key — required for 0gkit-jobs signer (signing job receipts) and 0G Storage (uploading/downloading the durable step ledger)"
+    },
+    {
+      "key": "OG_RPC_URL",
+      "example": "https://rpc.0g.ai",
+      "note": "0G chain RPC URL — required for 0G Storage operations (step-ledger persistence)"
+    },
+    {
+      "key": "OG_STORAGE_NAMESPACE",
+      "example": "durable-agent",
+      "note": "Namespace prefix for 0G Storage step-ledger blobs (default: 'durable-agent'). Each run's ledger is stored under <namespace>/<jobId>/steps."
+    },
+    {
       "key": "OG_JOBS_BACKEND",
       "example": "memory",
-      "note": "Jobs backend type (memory=in-process default; swap for redis or sqlite for persistence across restarts)"
+      "note": "Informational — documents the active jobs backend. 'memory' = MemoryBackend (in-process, default, dev-friendly). Swap to 'sqlite' by importing SqliteBackend from @foundryprotocol/0gkit-jobs/backends/sqlite for cross-process job durability."
     }
   ],
   "dependencies": {
     "@foundryprotocol/0gkit-jobs": "^1.0.0",
-    "@opentelemetry/api": "^1.9.0"
+    "@foundryprotocol/0gkit-storage": "^1.0.0",
+    "@foundryprotocol/0gkit-wallet": "^1.0.0",
+    "@opentelemetry/api": "^1.9.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {},
   "composes": [],

@@ -402,12 +402,14 @@ export function runKitIsolatedTsc(kitDir, manifest, base, kitsDir = KITS_DIR) {
       }
     }
 
-    // Also symlink next and react @types so import from "next/server" type-checks.
+    // Also symlink next, react, react-dom, and common kit deps so imports type-check.
     // Pull these from the base template's node_modules — they're already installed there.
+    // zod is a direct dep of @foundryprotocol/0gkit-jobs and is present in all base
+    // templates via the pnpm dependency graph; kits that call jobs.define() need it.
     const baseNm = join(TEMPLATES_DIR, base, "node_modules");
     const tmpNm = join(tmpDir, "node_modules");
     mkdirSync(tmpNm, { recursive: true });
-    for (const pkg of ["next", "react", "react-dom"]) {
+    for (const pkg of ["next", "react", "react-dom", "zod"]) {
       const src = join(baseNm, pkg);
       const dest = join(tmpNm, pkg);
       if (existsSync(src) && !existsSync(dest)) symlinkSync(src, dest);

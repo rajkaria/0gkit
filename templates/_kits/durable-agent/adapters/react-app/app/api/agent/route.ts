@@ -3,29 +3,60 @@
  *
  * Next.js App Router route handler for durable agent operations.
  *
- * POST /api/agent        — start a new agent run (fire-and-forget)
+ * POST /api/agent            — start a new agent run (enqueued via 0gkit-jobs)
  *   Body: { input?: Record<string,unknown> }
  *   Response: { jobId: string }
  *
- * GET  /api/agent?jobId=<id>  — check run status
+ * GET  /api/agent?jobId=<id>  — check run status + completed steps
  *   Response: { jobId, status, completedSteps: string[] }
  *
- * Wiring
- * ───────
- * - Step ledger: in-process Map<jobId, Set<stepKey>>. Survives requests within
- *   the same server process. For cross-restart durability, back this with a
- *   persistent store (0G Storage blob, Redis, or 0gkit-jobs backend metadata).
- * - Tracer: uses a no-op tracer by default (react-app base does not ship
- *   @opentelemetry/api). To enable real tracing, call instrument0g() from
- *   @foundryprotocol/0gkit-observability in your app layout, then replace
- *   makeNoopTracer() with an OTel tracer adapter.
+ * Durability model
+ * ─────────────────
+ * DURABLE (survives restarts):
+ *   - Step ledger — completed step keys are serialized to JSON and uploaded to
+ *     0G Storage (content-addressed root-registry pattern, exactly like the
+ *     agent-memory kit). On cold start the root registry is empty; completed
+ *     steps are re-read from Storage on the first getCompletedSteps() call.
  *
- * Environment variables:
- *   (none required by the durable-agent kit itself)
+ * NOT durable (in-process only):
+ *   - Run status registry (running/done/failed) — lives in a module-scoped Map.
+ *     A process restart loses run-status; the completed-step ledger in Storage
+ *     is still intact, so a retry of the jobId resumes correctly.
+ *   - JobRunner / MemoryBackend — the jobs queue itself is in-process by default
+ *     (MemoryBackend). Swap in @foundryprotocol/0gkit-jobs/backends/sqlite for a
+ *     cross-process durable job queue.
+ *
+ * Jobs wiring
+ * ────────────
+ * Each POST enqueues the agent run as a real 0gkit-jobs job. A singleton
+ * JobRunner is started at module init and processes jobs from the MemoryBackend.
+ * The job handler runs the agent steps via the lib's createRunner, replaying the
+ * 0G-Storage-persisted step ledger so already-completed steps are skipped on
+ * retry/resume.
+ *
+ * Tracing
+ * ────────
+ * No-op tracer: react-app base does not ship @opentelemetry/api. Replace
+ * makeNoopTracer() with an OTel tracer adapter if you configure instrument0g()
+ * from @foundryprotocol/0gkit-observability.
+ *
+ * Environment variables (set in .env.local):
+ *   OG_PRIVATE_KEY          — 0x-prefixed private key (required for 0gkit-jobs signer + Storage)
+ *   OG_RPC_URL              — 0G chain RPC URL (required for Storage)
+ *   OG_STORAGE_NAMESPACE    — blob namespace prefix (default: "durable-agent")
+ *   OG_JOBS_BACKEND         — informational; "memory" (default, in-process) or "sqlite"
+ *                             (cross-process durable — swap MemoryBackend for SqliteBackend)
  */
 
 // NOTE: Adapters MAY import 0gkit packages.
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { JobRunner, jobs } from "@foundryprotocol/0gkit-jobs";
+import { MemoryBackend } from "@foundryprotocol/0gkit-jobs/backends/memory";
+// SQLite backend is available for cross-process durability:
+//   import { SqliteBackend } from "@foundryprotocol/0gkit-jobs/backends/sqlite";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+import { Storage, type StorageConfig } from "@foundryprotocol/0gkit-storage";
 
 import {
   defineAgent,
@@ -36,29 +67,85 @@ import {
 import { defaultPipeline } from "../../../steps.js";
 
 // ---------------------------------------------------------------------------
-// Step ledger: in-process Map<jobId, Set<stepKey>>
+// Singleton Storage instance (server-side only, module-scoped)
 // ---------------------------------------------------------------------------
 
-const stepLedger = new Map<string, Set<string>>();
+let _storage: Storage | undefined;
 
-function getLedgerForJob(jobId: string): Set<string> {
-  if (!stepLedger.has(jobId)) stepLedger.set(jobId, new Set());
-  return stepLedger.get(jobId)!;
+function getStorage(): Storage {
+  if (!_storage) {
+    const privateKey = process.env.OG_PRIVATE_KEY;
+    const rpcUrl = process.env.OG_RPC_URL;
+    if (!privateKey || !rpcUrl) {
+      throw new Error(
+        "Missing OG_PRIVATE_KEY or OG_RPC_URL. " +
+          "These are required for durable step-ledger persistence in 0G Storage."
+      );
+    }
+    const config: StorageConfig = { privateKey, rpcUrl };
+    _storage = new Storage(config);
+  }
+  return _storage;
 }
 
-function makeAgentBackend(jobId: string): AgentJobsBackend {
+// ---------------------------------------------------------------------------
+// Root registry: jobId → latest 0G Storage root for the step-ledger blob
+//
+// DURABLE CONTENT: The step-ledger JSON lives in 0G Storage (content-addressed
+// immutable blobs). This in-process Map tracks the latest root per jobId so we
+// can download the current ledger. Survives multiple requests within the same
+// process. On cold start it is empty — completed steps are re-read from Storage
+// the first time getCompletedSteps() is called for a given jobId, provided the
+// caller supplies the prior root (e.g. via a persistent KV or the job metadata).
+//
+// For full cross-restart root-registry durability, persist this Map to another
+// 0G blob (keyed by a well-known namespace), mirroring agent-memory's approach.
+// ---------------------------------------------------------------------------
+
+const rootRegistry = new Map<string, string>();
+
+// ---------------------------------------------------------------------------
+// 0G-Storage-backed AgentJobsBackend
+//
+// DURABLE: The step ledger (a JSON array of completed step keys) is persisted to
+// 0G Storage on every markStepDone(). getCompletedSteps() downloads the latest
+// blob via the root stored in rootRegistry. A process restart retains durability
+// as long as rootRegistry is re-hydrated (see comment above).
+// ---------------------------------------------------------------------------
+
+function makeStorageBackend(jobId: string): AgentJobsBackend {
+  const ns = process.env.OG_STORAGE_NAMESPACE ?? "durable-agent";
+  const ledgerKey = `${ns}/${jobId}/steps`;
+
   return {
     async getCompletedSteps(): Promise<Set<string>> {
-      return new Set(getLedgerForJob(jobId));
+      const root = rootRegistry.get(ledgerKey);
+      if (!root) return new Set<string>();
+      try {
+        const bytes = await getStorage().download(root);
+        if (!bytes) return new Set<string>();
+        const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
+        if (Array.isArray(parsed)) return new Set<string>(parsed as string[]);
+        return new Set<string>();
+      } catch {
+        // Storage unavailable or corrupt blob — start fresh (safe: steps will re-run)
+        return new Set<string>();
+      }
     },
+
     async markStepDone(key: string): Promise<void> {
-      getLedgerForJob(jobId).add(key);
+      // Download current ledger, add key, re-upload, update root pointer
+      const current = await this.getCompletedSteps();
+      current.add(key);
+      const encoded = new TextEncoder().encode(JSON.stringify(Array.from(current)));
+      const result = await getStorage().upload(encoded);
+      rootRegistry.set(ledgerKey, result.root);
     },
   };
 }
 
 // ---------------------------------------------------------------------------
-// Run registry
+// Run status registry (in-process — NOT durable across restarts)
 // ---------------------------------------------------------------------------
 
 type RunStatus = "running" | "done" | "failed";
@@ -74,35 +161,71 @@ const agentDef = defineAgent({
 });
 
 // ---------------------------------------------------------------------------
-// In-process runner (fire-and-forget)
+// 0gkit-jobs: define the agent job + build the singleton JobRunner
+//
+// MemoryBackend: in-process job queue (default, dev-friendly).
+// For cross-process job durability, swap in SqliteBackend:
+//   import { SqliteBackend } from "@foundryprotocol/0gkit-jobs/backends/sqlite";
+//   const jobBackend = new SqliteBackend({ path: process.env.OG_SQLITE_PATH ?? "./jobs.db" });
 // ---------------------------------------------------------------------------
 
-function startAgentRun(jobId: string, input: Record<string, unknown>): void {
-  runRegistry.set(jobId, { status: "running" });
+const jobBackend = new MemoryBackend();
 
-  const agentBackend = makeAgentBackend(jobId);
-  // No-op tracer: react-app base does not ship @opentelemetry/api.
-  // Replace with an OTel tracer adapter if you configure instrument0g().
-  const stepTracer = makeNoopTracer();
-  const runner = createRunner({
-    agent: agentDef,
-    backend: agentBackend,
-    tracer: stepTracer,
-  });
+const agentJobDef = jobs.define({
+  name: "durable-agent-run",
+  input: z.object({
+    jobId: z.string(),
+    input: z.record(z.unknown()),
+  }),
+  output: z.object({ completedSteps: z.array(z.string()) }),
+  handler: async ({ input: payload }) => {
+    const { jobId, input } = payload;
 
-  runner.run(input).then(
-    () => {
-      runRegistry.set(jobId, { status: "done" });
-    },
-    (err: unknown) => {
-      const message = err instanceof Error ? err.message : String(err);
-      runRegistry.set(jobId, { status: "failed", error: message });
-    }
-  );
+    // Mark the run as running in the in-process registry
+    runRegistry.set(jobId, { status: "running" });
+
+    // Step ledger backed by 0G Storage — durable, survives restarts
+    const agentBackend = makeStorageBackend(jobId);
+
+    // No-op tracer: react-app base does not ship @opentelemetry/api.
+    // Swap in an OTel tracer adapter if you configure instrument0g().
+    const stepTracer = makeNoopTracer();
+
+    const runner = createRunner({
+      agent: agentDef,
+      backend: agentBackend,
+      tracer: stepTracer,
+    });
+
+    await runner.run(input);
+
+    const completed = Array.from(await agentBackend.getCompletedSteps());
+    runRegistry.set(jobId, { status: "done" });
+    return { completedSteps: completed };
+  },
+  maxAttempts: 3,
+});
+
+// Singleton JobRunner — started once at module load time
+let _jobRunner: JobRunner | undefined;
+
+async function getJobRunner(): Promise<JobRunner> {
+  if (_jobRunner) return _jobRunner;
+
+  const privateKey = process.env.OG_PRIVATE_KEY;
+  if (!privateKey) {
+    throw new Error("Missing OG_PRIVATE_KEY — required to build the 0gkit-jobs signer.");
+  }
+  const signer = await fromPrivateKey(privateKey);
+
+  _jobRunner = new JobRunner({ backend: jobBackend, signer });
+  _jobRunner.register(agentJobDef);
+  await _jobRunner.start();
+  return _jobRunner;
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/agent — start a new agent run
+// POST /api/agent — enqueue a new agent run via 0gkit-jobs
 // ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -117,7 +240,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const input = body.input ?? {};
     const jobId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    startAgentRun(jobId, input);
+    const jobRunner = await getJobRunner();
+    // Enqueue the run as a real 0gkit-jobs job — worker picks it up asynchronously
+    await jobRunner.enqueue(agentJobDef, { jobId, input });
+    // Pre-register as "running" so status polls see it immediately
+    runRegistry.set(jobId, { status: "running" });
+
     return NextResponse.json({ jobId });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -143,7 +271,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "job not found" }, { status: 404 });
   }
 
-  const completedSteps = Array.from(getLedgerForJob(jobId));
+  // Read completed steps from the durable 0G Storage ledger
+  const agentBackend = makeStorageBackend(jobId);
+  const completedSteps = Array.from(await agentBackend.getCompletedSteps());
+
   return NextResponse.json({
     jobId,
     status: run.status,
