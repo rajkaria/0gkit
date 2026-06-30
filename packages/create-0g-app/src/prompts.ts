@@ -1,4 +1,5 @@
 import * as p from "@clack/prompts";
+import { listKits } from "@foundryprotocol/0gkit-kits";
 import { CI_OPTIONS, TEMPLATES } from "./templates.js";
 import { detectPackageManager } from "./pm.js";
 import type {
@@ -125,6 +126,30 @@ export async function interactivePrompts(
     return null;
   }
 
+  // Kits — offer a multiselect of kits compatible with the chosen template.
+  // Pre-seeded from --kits flag (non-interactive); when in interactive mode,
+  // present the picker only if there are compatible kits.
+  let selectedKits: string[] = [];
+  if (!seed.kits) {
+    const availableKits = listKits({ base: template as string });
+    if (availableKits.length > 0) {
+      const pickedKits = await p.multiselect({
+        message: "Add kits? (space to select, enter to confirm)",
+        options: availableKits.map((k) => ({
+          value: k.name,
+          label: k.title,
+          hint: `[${k.domain}] ${k.summary}`,
+        })),
+        required: false,
+      });
+      if (!p.isCancel(pickedKits)) {
+        selectedKits = pickedKits as string[];
+      }
+    }
+  } else {
+    selectedKits = seed.kits;
+  }
+
   let install: boolean | symbol;
   if (typeof seed.install === "boolean") {
     install = seed.install;
@@ -162,6 +187,7 @@ export async function interactivePrompts(
     install: install as boolean,
     git: git as boolean,
     ci: ci as CiOption,
+    kits: selectedKits.length > 0 ? selectedKits : undefined,
     dest: "", // filled in by run()
     example: true,
   };

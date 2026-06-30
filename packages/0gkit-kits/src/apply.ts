@@ -1,0 +1,279 @@
+import {
+  mkdtempSync,
+  mkdirSync,
+  copyFileSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  rmSync,
+} from "node:fs";
+import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
+import type { KitManifest } from "./manifest.js";
+import { getKit, resolveTiers } from "./registry.js";
+import { fetchKitOverlay } from "./fetch.js";
+import { mergePackageJson, appendEnv } from "./merge.js";
+import { KITS } from "./registry.generated.js";
+
+// ---------------------------------------------------------------------------
+// KitError
+// ---------------------------------------------------------------------------
+
+export type KitErrorCode =
+  | "KIT_NOT_FOUND"
+  | "KIT_CONFLICT"
+  | "KIT_MISSING_REQUIRES"
+  | "KIT_INCOMPATIBLE";
+
+export class KitError extends Error {
+  readonly code: KitErrorCode;
+
+  constructor(code: KitErrorCode, message: string) {
+    super(message);
+    this.name = "KitError";
+    this.code = code;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ApplyResult
+// ---------------------------------------------------------------------------
+
+export interface ApplyResult {
+  applied: string[];
+  filesWritten: string[];
+  envAdded: string[];
+  notes: string[];
+  token: "[0gkit:kit-applied]";
+}
+
+// ---------------------------------------------------------------------------
+// ApplyDeps (injectable for testing)
+// ---------------------------------------------------------------------------
+
+export interface ApplyDeps {
+  fetchOverlay?: (name: string, dir: string) => Promise<void>;
+  registry?: KitManifest[];
+}
+
+// ---------------------------------------------------------------------------
+// Options
+// ---------------------------------------------------------------------------
+
+export interface ApplyKitOptions {
+  kit: string;
+  dest: string;
+  base: string;
+  pm?: string;
+  dryRun?: boolean;
+  deps?: ApplyDeps;
+}
+
+// ---------------------------------------------------------------------------
+// Composition resolution helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Walks the composes[] graph depth-first (DFS), building a topological order
+ * where composed dependencies come BEFORE the kit that composes them.
+ *
+ * Deduplicates by name — each kit appears exactly once.
+ * Unknown kit names throw KitError("KIT_NOT_FOUND").
+ */
+function resolveCompositionClosure(
+  kitName: string,
+  registry: KitManifest[],
+  visited: Set<string> = new Set(),
+  result: KitManifest[] = []
+): KitManifest[] {
+  // Skip already-processed kits (dedup)
+  if (visited.has(kitName)) return result;
+
+  const manifest = getKit(kitName, registry);
+  if (!manifest) {
+    throw new KitError("KIT_NOT_FOUND", `Kit "${kitName}" not found in registry.`);
+  }
+
+  // Mark as visited early to handle potential circular references gracefully
+  visited.add(kitName);
+
+  // Depth-first: process composed dependencies first
+  for (const composedName of manifest.composes) {
+    resolveCompositionClosure(composedName, registry, visited, result);
+  }
+
+  // Push self after all dependencies
+  result.push(manifest);
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// applyKit
+// ---------------------------------------------------------------------------
+
+export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
+  const { kit: kitName, dest, base, dryRun = false, deps = {} } = opts;
+
+  const {
+    fetchOverlay = fetchKitOverlay as (name: string, dir: string) => Promise<void>,
+    registry = KITS,
+  } = deps;
+
+  // 1. Resolve full composition closure (depth-first, deps-first ordering)
+  const resolved = resolveCompositionClosure(kitName, registry);
+
+  // 2. Conflict check across the resolved set
+  //    For each kit in the resolved set, if any other kit's name appears in
+  //    its conflicts[], we have a conflict.
+  const resolvedNames = new Set(resolved.map((k) => k.name));
+  for (const manifest of resolved) {
+    for (const conflictName of manifest.conflicts) {
+      if (resolvedNames.has(conflictName)) {
+        throw new KitError(
+          "KIT_CONFLICT",
+          `Kit "${manifest.name}" conflicts with "${conflictName}" — both are in the apply set.`
+        );
+      }
+    }
+  }
+
+  // 3. Top-level kit compatibility check
+  //    If the explicitly-requested kit resolves to zero tier files for `base`, throw.
+  const topLevelManifest = getKit(kitName, registry)!;
+  const topLevelTierFiles = resolveTiers(topLevelManifest, base);
+  if (topLevelTierFiles.length === 0) {
+    throw new KitError(
+      "KIT_INCOMPATIBLE",
+      `Kit "${kitName}" has no files for base "${base}".`
+    );
+  }
+
+  // 4. Read dest/package.json
+  const pkgJsonPath = join(dest, "package.json");
+  let destPkg: Record<string, unknown> = {};
+  if (existsSync(pkgJsonPath)) {
+    try {
+      destPkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as Record<
+        string,
+        unknown
+      >;
+    } catch {
+      // ignore parse errors — treat as empty
+    }
+  }
+
+  // 5. Missing-requires check across ALL kits in the resolved set
+  //    For each require, check if @foundryprotocol/<req> or <req> is in deps/devDeps.
+  const destDeps = (destPkg["dependencies"] ?? {}) as Record<string, string>;
+  const destDevDeps = (destPkg["devDependencies"] ?? {}) as Record<string, string>;
+  const allDestDeps = { ...destDeps, ...destDevDeps };
+
+  for (const manifest of resolved) {
+    const missingPkgs: string[] = [];
+    for (const req of manifest.requires) {
+      const scoped = `@foundryprotocol/${req}`;
+      if (!(req in allDestDeps) && !(scoped in allDestDeps)) {
+        missingPkgs.push(scoped);
+      }
+    }
+    if (missingPkgs.length > 0) {
+      throw new KitError(
+        "KIT_MISSING_REQUIRES",
+        `Kit "${manifest.name}" requires packages not present in dest: ${missingPkgs.join(", ")}`
+      );
+    }
+  }
+
+  // 6. Apply each kit in resolved order
+  const appliedNames: string[] = [];
+  const filesWritten: string[] = [];
+  const envAdded: string[] = [];
+  const notes: string[] = [];
+
+  // Read current .env.example content (for idempotency tracking)
+  const envExamplePath = join(dest, ".env.example");
+  let currentEnvContent = existsSync(envExamplePath)
+    ? readFileSync(envExamplePath, "utf8")
+    : "";
+
+  // Working copy of package.json for merging
+  let workingPkg = { ...destPkg } as Record<string, unknown>;
+
+  for (const manifest of resolved) {
+    const tierFiles = resolveTiers(manifest, base);
+
+    // Record kit as applied
+    appliedNames.push(manifest.name);
+
+    if (dryRun) {
+      // In dry-run: just record what WOULD be written
+      filesWritten.push(...tierFiles);
+    } else {
+      // Fetch overlay into a temp directory
+      const tmpDir = mkdtempSync(join(tmpdir(), `0gkit-kit-${manifest.name}-`));
+
+      try {
+        await fetchOverlay(manifest.name, tmpDir);
+
+        // Copy tier files from tmpDir -> dest
+        for (const relPath of tierFiles) {
+          const srcPath = join(tmpDir, relPath);
+          const dstPath = join(dest, relPath);
+
+          // Create parent directories if needed
+          mkdirSync(dirname(dstPath), { recursive: true });
+
+          // Copy (force-overwrite)
+          copyFileSync(srcPath, dstPath);
+          filesWritten.push(relPath);
+        }
+      } finally {
+        // Clean up temp dir
+        rmSync(tmpDir, { recursive: true, force: true });
+      }
+    }
+
+    // Merge package.json deps (base wins — existing versions never downgraded)
+    workingPkg = mergePackageJson(
+      workingPkg as Parameters<typeof mergePackageJson>[0],
+      {
+        dependencies: manifest.dependencies as Record<string, string>,
+        devDependencies: manifest.devDependencies as Record<string, string>,
+      }
+    ) as Record<string, unknown>;
+
+    // Compute env vars to add (check against current content for idempotency)
+    const beforeEnv = currentEnvContent;
+    currentEnvContent = appendEnv(currentEnvContent, manifest.env);
+    // Track which keys were actually appended
+    for (const { key } of manifest.env) {
+      const pattern = new RegExp(`^${key}=`, "m");
+      if (!pattern.test(beforeEnv) && pattern.test(currentEnvContent)) {
+        envAdded.push(key);
+      }
+    }
+  }
+
+  if (dryRun) {
+    notes.push(
+      `dry-run: would apply [${appliedNames.join(", ")}] and write ${filesWritten.length} file(s) — no changes made.`
+    );
+  } else {
+    // Write back the merged package.json
+    writeFileSync(pkgJsonPath, JSON.stringify(workingPkg, null, 2) + "\n", "utf8");
+
+    // Write .env.example (only if there's content to write)
+    if (currentEnvContent.length > 0) {
+      writeFileSync(envExamplePath, currentEnvContent, "utf8");
+    }
+  }
+
+  return {
+    applied: appliedNames,
+    filesWritten,
+    envAdded,
+    notes,
+    token: "[0gkit:kit-applied]",
+  };
+}

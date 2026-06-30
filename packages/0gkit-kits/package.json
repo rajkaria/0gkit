@@ -1,0 +1,62 @@
+{
+  "name": "@foundryprotocol/0gkit-kits",
+  "version": "0.0.0",
+  "description": "Kits engine for 0gkit — manifest schema, registry, and scaffolding utilities.",
+  "license": "MIT",
+  "homepage": "https://0gkit.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajkaria/0gkit.git",
+    "directory": "packages/0gkit-kits"
+  },
+  "bugs": {
+    "url": "https://github.com/rajkaria/0gkit/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prebuild": "node scripts/gen-registry.mjs",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "pretest": "node scripts/gen-registry.mjs",
+    "test": "vitest run",
+    "lint": "depcruise src --config ../../.dependency-cruiser.cjs",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "giget": "^1.2.3",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "dependency-cruiser": "^16.0.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "0g",
+    "0g-network",
+    "kits",
+    "scaffolding",
+    "toolkit"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

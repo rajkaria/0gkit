@@ -22,6 +22,29 @@ module.exports = {
       from: { path: "^packages/0gkit-[^/]+/src" },
       to: { path: "^apps/|^templates/" },
     },
+    {
+      name: "no-kits-engine-to-0gkit",
+      comment:
+        "The kits engine (packages/0gkit-kits/src) must remain pure: only " +
+        "zod, giget, and node:* are allowed as external deps. It must never " +
+        "import any other @foundryprotocol/* package — neither toolkit packages " +
+        "(@foundryprotocol/0gkit-*) nor Foundry app packages. This keeps the " +
+        "engine neutral and CLI cold-start unaffected (D78).",
+      severity: "error",
+      from: { path: "^packages/0gkit-kits/src" },
+      to: { path: "^@foundryprotocol/" },
+    },
+    {
+      name: "no-kit-overlay-to-foundry-app",
+      comment:
+        "Kit overlays (templates/_kits/) may import @foundryprotocol/0gkit-* " +
+        "toolkit packages (they are consumer code, applied into user projects). " +
+        "They must NEVER import non-0gkit @foundryprotocol/* packages such as " +
+        "@foundryprotocol/sdk or any Foundry app package (D78).",
+      severity: "error",
+      from: { path: "^templates/_kits/" },
+      to: { path: "^@foundryprotocol/(?!0gkit-)" },
+    },
   ],
   options: {
     doNotFollow: { path: "node_modules" },

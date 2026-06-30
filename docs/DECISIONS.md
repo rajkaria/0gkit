@@ -616,3 +616,53 @@ meaningful install base on a divergent base.
 **How to apply:** Never hard-code `helpUrl` at a `throw` site. Always
 derive via `helpUrlFor(code)`. If the domain ever needs to move, edit
 this one constant and ship a patch.
+
+---
+
+## D77 — Kits are git overlays applied via giget, not published packages or codegen
+
+**Date:** 2026-06-30 · **SP:** K0
+
+Kits live as source trees under `templates/_kits/<kit-name>/` (lib, adapters, ui tiers) and are applied by copying those files into an existing project — exactly what `giget`'s `downloadTemplate` does when pointed at a local or remote git path (reusing the `fetchCi` pattern from the CI templates feature). They are not published as npm packages, and they do not generate code from strings at apply-time.
+
+**Why:** Published packages would require a `@foundryprotocol/kit-*` publish cycle for every kit change and would pollute the user's `node_modules` with kit source. String codegen makes diffs unreadable and breaks editor tooling until the first build. Git overlays are auditable (users can diff before/after), composable (tier selection at apply-time), and idempotent (re-applying only rewrites changed files). The giget download path is already battle-tested for the CI template feature and handles both local monorepo and remote git sources.
+
+**How to apply:** Every new kit is a directory under `templates/_kits/` containing a `kit.json` manifest and tier subdirectories. `applyKit` calls `fetchKitOverlay` (giget) → `resolveTiers` → file merge. Never publish kit overlay files as a standalone npm package or generate kit files from template strings.
+
+---
+
+## D78 — The kits engine imports only `zod` + `giget` + `node:*`; kit overlays may import `0gkit-*`
+
+**Date:** 2026-06-30 · **SP:** K0
+
+The engine package (`packages/0gkit-kits/src`) must never import any `@foundryprotocol/*` package — neither toolkit packages (`0gkit-*`) nor Foundry app packages. Its only external deps are `zod` (manifest validation) and `giget` (overlay fetch). This is enforced by the `no-kits-engine-to-0gkit` boundary rule.
+
+Kit _overlays_ (`templates/_kits/`) are consumer code that will be applied into a user's project. They may import `@foundryprotocol/0gkit-*` toolkit packages (e.g. `0gkit-storage`, `0gkit-core`). They must never import non-0gkit `@foundryprotocol/*` packages (e.g. `@foundryprotocol/sdk`). Enforced by the `no-kit-overlay-to-foundry-app` boundary rule.
+
+**Why:** The engine is loaded by the CLI. Keeping it pure of `0gkit-*` deps prevents any transitive pull of heavy toolkit packages (ethers, OTel, SQLite) into the CLI cold-start path. Keeping kit overlays free of Foundry app packages maintains the 0gkit neutrality invariant (D3) in user projects.
+
+**How to apply:** When adding logic to the kits engine, reach for `zod`/`giget`/`node:*` only. If you need a 0gkit primitive in the engine (e.g. to resolve a network name), expose a callback parameter and let the CLI pass it in rather than importing `0gkit-core` directly. `pnpm boundary:check` enforces both rules on every CI run.
+
+---
+
+## D79 — 3-tier kit model: lib always, adapters[base] if present, ui on React bases only
+
+**Date:** 2026-06-30 · **SP:** K0
+
+Each kit overlay is organized into three tiers: `lib/` (framework-agnostic business logic, always applied), `adapters/<base>/` (base-specific wiring, applied only when the target project's base matches), and `ui/` (React components, applied only when the base is React-capable per `isReactBase`). A kit is offered for a given base if and only if `resolveTiers(kit, base)` returns a non-empty tier list — i.e., at least one tier has files for that base.
+
+**Why:** A single-tier "dump everything" overlay would either break non-React projects (by injecting JSX) or leave React projects without the hook layer. Three tiers let a single kit manifest serve every base archetype without conditional codegen or a proliferation of per-base kit packages.
+
+**How to apply:** When authoring a new kit, put all framework-agnostic logic in `lib/`, base-specific wiring in `adapters/<base-name>/` (one directory per base archetype the kit supports), and React UI primitives in `ui/`. Do not add React-only files to `lib/` or `adapters/`. `kits:check` validates that every tier directory referenced in the manifest exists and contains at least one file.
+
+---
+
+## D80 — Kit composition: `composes[]` auto-applies deps first; `conflicts[]` throws; deps travel in `dependencies`
+
+**Date:** 2026-06-30 · **SP:** K0
+
+A kit's `kit.json` may declare `composes: ["other-kit"]` to auto-apply dependency kits before itself (deps-first ordering, deduped by name, cycle-detected). It may also declare `conflicts: ["incompatible-kit"]` to throw a `KitError` if that kit is already applied. Required 0gkit packages travel in the kit's `dependencies` field (not the manifest's `requires` field), so the overlay's package.json is self-sufficient when merged into the target project — the user never has to manually install packages that the kit needs.
+
+**Why:** Without `composes`, a user applying `agent-memory-with-ui` would have to know to also apply `agent-memory` first — leaking implementation details. Without dedup, applying two kits that both compose a shared base kit would double-apply files. `KitError` on conflict prevents silent breakage when two kits patch the same files incompatibly. Putting 0gkit deps in `dependencies` (not `requires`) means the overlay is always self-sufficient: a future kit author won't have to separately document "also run `npm install @foundryprotocol/0gkit-storage`" — the `mergePackageJson` step handles it.
+
+**How to apply:** In `kit.json`, use `composes` for "apply these kits first" and `conflicts` for "fail loudly if this kit is already applied." Put `@foundryprotocol/0gkit-*` package version pins in `dependencies` (not `requires`) so `mergePackageJson` injects them automatically. `requires` is reserved for non-0gkit peer checks (e.g. "the project must already have `react` as a dep").

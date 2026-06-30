@@ -46,6 +46,7 @@ import { registerEstimate } from "./commands/estimate.js";
 import { registerJobs, type JobsBackendFactory } from "./commands/jobs.js";
 import { registerCost } from "./commands/cost.js";
 import { registerTraces } from "./commands/traces.js";
+import { registerKits, type KitsEngineLike } from "./commands/kits.js";
 import type {
   TraceFileEntry,
   TraceFileSummary,
@@ -174,6 +175,12 @@ export interface ProgramDeps {
   /** Side-channel for the issue-context report. Goes to stderr in production
    *  so it never pollutes `--json` stdout. Tests inject a recorder. */
   writeErr: (line: string) => void;
+  /**
+   * SP-kits (D39) — lazy-loads `@foundryprotocol/0gkit-kits` via a computed
+   * dynamic specifier so it is NOT statically bundled and cold-start is
+   * unaffected. Tests inject a fake to avoid any real import or network call.
+   */
+  loadKitsEngine?: () => Promise<KitsEngineLike>;
   /** Resolves installed `@foundryprotocol/0gkit-*` versions for issue-context. */
   packageVersions: () => Array<{ name: string; version: string }>;
   /** Injected for deterministic timestamps in issue-context. */
@@ -301,6 +308,7 @@ export function buildProgram(deps: ProgramDeps): Command {
   registerJobs(program, deps);
   registerCost(program, deps);
   registerTraces(program, deps);
+  registerKits(program, deps);
   registerFoundry(program, deps);
 
   return program;
