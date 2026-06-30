@@ -17,45 +17,24 @@ const kitsDir = join(repoRoot, "templates", "_kits");
 const outFile = join(pkgRoot, "src", "registry.generated.ts");
 
 // ---------------------------------------------------------------------------
-// Minimal JSON-only schema validation
+// Lightweight sanity checks (JSON-parse + presence only)
 //
-// We cannot import the TypeScript source directly from a plain .mjs script
-// (no ts-node / tsx here by design).  We do a lightweight structural check
-// that mirrors KitManifestSchema from src/manifest.ts:
-//   - name: kebab-case string
-//   - title, summary: non-empty strings
-//   - domain: one of KIT_DOMAINS
-//   - compatibleBases: non-empty string[]
-//   - tiers: object
+// Domain validity and full shape are authoritatively validated against
+// KitManifestSchema (zod) in src/__tests__ and by `pnpm kits:check` (the
+// per-kit CI gate).  This script intentionally does NOT duplicate those
+// rules — in particular it does NOT maintain its own KIT_DOMAINS set — so
+// that schema additions in src/manifest.ts never need a parallel update here.
+//
+// The only checks here are the minimum needed to prevent a crash or a
+// malformed generated array: valid JSON object + a non-empty string "name".
 // ---------------------------------------------------------------------------
-
-const KIT_DOMAINS = new Set([
-  "verifiable-ai", "agent-infra", "markets", "assets", "defi",
-]);
-
-const KEBAB_RE = /^[a-z][a-z0-9-]*$/;
 
 function validateManifest(raw, sourcePath) {
   if (typeof raw !== "object" || raw === null) {
     throw new Error(`${sourcePath}: must be a JSON object`);
   }
-  if (!KEBAB_RE.test(raw.name ?? "")) {
-    throw new Error(`${sourcePath}: "name" must be kebab-case, got: ${raw.name}`);
-  }
-  if (!raw.title || typeof raw.title !== "string") {
-    throw new Error(`${sourcePath}: "title" must be a non-empty string`);
-  }
-  if (!KIT_DOMAINS.has(raw.domain)) {
-    throw new Error(`${sourcePath}: "domain" must be one of ${[...KIT_DOMAINS].join(", ")}`);
-  }
-  if (!raw.summary || typeof raw.summary !== "string") {
-    throw new Error(`${sourcePath}: "summary" must be a non-empty string`);
-  }
-  if (!Array.isArray(raw.compatibleBases) || raw.compatibleBases.length === 0) {
-    throw new Error(`${sourcePath}: "compatibleBases" must be a non-empty array`);
-  }
-  if (typeof raw.tiers !== "object" || raw.tiers === null) {
-    throw new Error(`${sourcePath}: "tiers" must be an object`);
+  if (!raw.name || typeof raw.name !== "string") {
+    throw new Error(`${sourcePath}: "name" must be a non-empty string`);
   }
   return raw;
 }
