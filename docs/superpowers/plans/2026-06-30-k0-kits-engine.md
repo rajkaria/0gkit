@@ -119,7 +119,7 @@ T1 manifest schema ─┬─ T2 merge utils ──┐
 
 ## Tasks
 
-### T1 — Kit manifest schema
+### Task 1 — Kit manifest schema
 
 - [ ] **Failing test** — `src/__tests__/manifest.test.ts`:
 ```ts
@@ -188,7 +188,7 @@ export type KitDomain = (typeof KIT_DOMAINS)[number];
 ```
 - [ ] **Run** → green. **Commit**: `feat(kits): KitManifestSchema`.
 
-### T2 — package.json merge + env append utils
+### Task 2 — package.json merge + env append utils
 
 - [ ] **Failing test** — `src/__tests__/merge.test.ts`: assert `mergePackageJson` adds deps without clobbering existing higher versions, and `appendEnv` is idempotent (re-applying the same keys does not duplicate lines).
 ```ts
@@ -210,7 +210,7 @@ it("appendEnv is idempotent", () => {
 - [ ] **Implement** — `src/merge.ts`: deep-merge `dependencies`/`devDependencies`/`scripts` (existing wins on conflict), and `appendEnv(current, vars)` that appends `# note\nKEY=example` blocks only for keys not already present (regex `^KEY=` per line).
 - [ ] **Run** → green. **Commit**: `feat(kits): package.json merge + idempotent env append`.
 
-### T3 — giget overlay fetch
+### Task 3 — giget overlay fetch
 
 - [ ] **Failing test** — `src/__tests__/apply.test.ts` (fetch portion, mocked): inject a fake `fetchOverlay` and assert `applyKit` calls it with `github:rajkaria/0gkit/templates/_kits/<name>#<ref>` and `force:true` into a temp dir. (Mirror the `fetchCi` contract.)
 - [ ] **Run** → red.
@@ -226,21 +226,21 @@ export async function fetchKitOverlay(name: string, dir: string): Promise<void> 
 ```
 - [ ] **Run** → green (against the injected mock). **Commit**: `feat(kits): giget kit overlay fetch`.
 
-### T4 — base detection + React-capable set
+### Task 4 — base detection + React-capable set
 
 - [ ] **Failing test** — `src/__tests__/registry.test.ts` (bases portion): `detectBase(dir)` returns `"react-app"` for a dir whose package.json deps include `next`, `"mcp-agent"` when it includes `@modelcontextprotocol/sdk`, `"node"` fallback otherwise; `isReactBase("chat")===true`, `isReactBase("tee-attested-api")===false`.
 - [ ] **Run** → red.
 - [ ] **Implement** — `src/bases.ts`: `REACT_BASES = new Set(["react-app","chat"])`; `isReactBase(b)`; `detectBase(dir)` reads `package.json` + checks for `0g.config.ts`.
 - [ ] **Run** → green. **Commit**: `feat(kits): base detection + react-capable set`.
 
-### T5 — registry (load + list + compat filter)
+### Task 5 — registry (load + list + compat filter)
 
 - [ ] **Failing test** — `registry.test.ts`: `listKits({ base: "tee-attested-api" })` excludes UI-only kits with no adapter for that base; `listKits()` returns all; `getKit("agent-memory")` returns its manifest.
 - [ ] **Run** → red.
 - [ ] **Implement** — `src/registry.ts`: registry is a static manifest list embedded at build time (read from `templates/_kits/*/kit.json` via a generated `registry.generated.ts`, produced by a `prebuild` step so the engine ships self-contained and offline-listable). `listKits({base})` filters: keep kit iff `base ∈ compatibleBases` AND `resolveTiers(kit, base)` is non-empty (lib present, or adapter for base, or React UI on a React base).
 - [ ] **Run** → green. **Commit**: `feat(kits): kit registry + compatibility filter`.
 
-### T6 — applyKit + resolveTiers + composition
+### Task 6 — applyKit + resolveTiers + composition
 
 - [ ] **Failing test** — `apply.test.ts`: applying a kit with `composes:["dep-kit"]` into a temp project applies `dep-kit` first; `dependencies` land in package.json; env vars appended; re-apply is idempotent; a conflicting kit (`conflicts`) throws a typed error.
 - [ ] **Run** → red.
@@ -268,7 +268,7 @@ export async function applyKit(opts: {
   Conflict + missing-`requires` checks throw `KitError` (typed, with a code).
 - [ ] **Run** → green. **Commit**: `feat(kits): applyKit with tier resolution + composition`.
 
-### T7 — `agent-memory` reference kit overlay
+### Task 7 — `agent-memory` reference kit overlay
 
 - [ ] **Implement** — `templates/_kits/agent-memory/`:
   - `kit.json`: `domain:"agent-infra"`, `compatibleBases:["react-app","chat","storage-app","mcp-agent"]`, `tiers.lib:["lib/agent-memory.ts"]`, `tiers.adapters:{ "mcp-agent":["src/tools/memory.ts"], "react-app":["app/api/memory/route.ts"] }`, `tiers.ui:["components/MemoryPanel.tsx","hooks/useAgentMemory.ts"]`, `requires:["0gkit-storage"]`.
@@ -279,28 +279,28 @@ export async function applyKit(opts: {
 - [ ] **Test** — a vitest in the kit's lib verifying `remember`→`recall` round-trip against a mock storage.
 - [ ] **Commit**: `feat(kits): agent-memory reference kit (lib + mcp/react adapters + ui)`.
 
-### T8 — create-0g-app scaffold wiring
+### Task 8 — create-0g-app scaffold wiring
 
 - [ ] **Failing test** — `packages/create-0g-app/src/__tests__`: with injected deps, `run(["my-app","--template","react-app","--kits","agent-memory"])` calls `applyKit` once with `{kit:"agent-memory", base:"react-app"}`; invalid `--kits foo` errors early like an invalid `--template`.
 - [ ] **Run** → red.
 - [ ] **Implement** — add `kits?: string[]` to `CreateOptions` (types.ts); parse `--kits a,b` in index.ts; after template fetch, loop `applyKit`; interactive `prompts.ts` adds a multiselect from `listKits({ base: chosenTemplate })`. Inject the engine via `RunDeps.applyKit` for testability (default = real `applyKit`).
 - [ ] **Run** → green. **Commit**: `feat(create-0g-app): --kits flag + scaffold-time kit picker`.
 
-### T9 — `0g add` / `0g kits` CLI wiring
+### Task 9 — `0g add` / `0g kits` CLI wiring
 
 - [ ] **Failing test** — `packages/0gkit-cli/src/__tests__/program.test.ts`: `0g kits list` prints compatible kits for the detected base; `0g add agent-memory` calls the (lazy-loaded, injected) engine `applyKit` with the cwd as dest; `0g kits info agent-memory` prints summary + tiers + env.
 - [ ] **Run** → red.
 - [ ] **Implement** — `commands/kits.ts` `registerKits(program)`: subcommands `add <kit...>`, `kits list [--base]`, `kits info <kit>`. Engine imported via computed dynamic specifier (D39). Base auto-detected via `detectBase(process.cwd())`, overridable with `--base`. Register in `program.ts`.
 - [ ] **Run** → green. **Commit**: `feat(cli): 0g add + 0g kits list|info`.
 
-### T10 — `kits:check` (kit × base) matrix harness
+### Task 10 — `kits:check` (kit × base) matrix harness
 
 - [ ] **Failing test** — `scripts/__tests__/check-kits.test.mjs`: harness enumerates `(kit, base)` from each `kit.json`'s `compatibleBases`, and (with a stub scaffolder) reports a typecheck+build step per combo; fails if any kit references a tier file that does not exist on disk.
 - [ ] **Run** → red.
 - [ ] **Implement** — `scripts/check-kits.mjs` (model on `scripts/check-templates.mjs`): for each kit, validate `kit.json` against `KitManifestSchema`, assert every file in `tiers.*` exists, then for each compatible base scaffold the base + `applyKit` into a temp dir and run `tsc --noEmit` + the base's build. Add `"kits:check": "node scripts/check-kits.mjs"` to root `package.json`.
 - [ ] **Run** → green. **Commit**: `test(kits): kit×base matrix check harness`.
 
-### T11 — boundary check, CI, changeset, decisions
+### Task 11 — boundary check, CI, changeset, decisions
 
 - [ ] **Implement** — `.dependency-cruiser.cjs`: rule `no-kits-engine-to-0gkit` (forbid `packages/0gkit-kits/src` → `@foundryprotocol/*`); rule `no-kit-overlay-to-foundry-app` (forbid `templates/_kits` → `@foundryprotocol/(?!0gkit-)`). Run `pnpm boundary:check` → green.
 - [ ] **Implement** — `.github/workflows/fresh-machine-smoke.yml`: add a `kits-check` job running `pnpm kits:check` on Node 20/22/24.
