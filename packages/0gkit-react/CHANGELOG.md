@@ -1,5 +1,11 @@
 # @foundryprotocol/0gkit-react
 
+## 1.10.0
+
+### Patch Changes
+
+- @foundryprotocol/0gkit-indexer@1.10.0
+
 ## 1.9.0
 
 ### Patch Changes
