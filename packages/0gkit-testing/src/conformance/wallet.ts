@@ -2,7 +2,9 @@ import type { SuiteResult, SuiteDeps } from "./index.js";
 
 const TEST_MESSAGE = "0gkit-conformance-test";
 
-export async function walletSuite(deps: SuiteDeps): Promise<SuiteResult> {
+export async function walletSuite(
+  deps: Pick<SuiteDeps, "testWallet">
+): Promise<SuiteResult> {
   const signer = deps.testWallet();
   const { address, signMessage } = signer;
 

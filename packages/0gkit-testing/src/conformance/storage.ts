@@ -2,7 +2,9 @@ import type { SuiteResult, SuiteDeps } from "./index.js";
 
 const ONE_KB = new Uint8Array(1024).map((_, i) => i % 256);
 
-export async function storageSuite(deps: SuiteDeps): Promise<SuiteResult> {
+export async function storageSuite(
+  deps: Pick<SuiteDeps, "makeStorage">
+): Promise<SuiteResult> {
   const storage = deps.makeStorage();
   const { root } = await storage.upload(ONE_KB);
   const back = await storage.download(root);
