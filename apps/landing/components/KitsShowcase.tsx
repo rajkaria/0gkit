@@ -1,4 +1,7 @@
 import { SectionHeader } from "./ValueProps";
+import { KitCard } from "./KitCard";
+import { AuthorKitCTA } from "./AuthorKitCTA";
+import { KITS } from "@/lib/kits";
 
 // ---------------------------------------------------------------------------
 // Comparison table — source note (HONESTY requirement):
@@ -8,88 +11,6 @@ import { SectionHeader } from "./ValueProps";
 //   are create-0g-dapp's own marketing terminology, not an official 0G
 //   taxonomy. We make no claims about internal implementation details.
 // ---------------------------------------------------------------------------
-
-type KitCard = {
-  domain: string;
-  emoji: string;
-  name: string;
-  slug: string;
-  summary: string;
-  highlight: string;
-};
-
-const KITS: KitCard[] = [
-  {
-    domain: "Verifiable AI",
-    emoji: "🔐",
-    name: "sealed-inference",
-    slug: "sealed-inference",
-    summary:
-      "TEE-attested private inference with a verified attestation badge in the UI.",
-    highlight: "Attestation actually shown + verified",
-  },
-  {
-    domain: "Verifiable AI",
-    emoji: "🔮",
-    name: "ai-oracle",
-    slug: "ai-oracle",
-    summary:
-      "Attested off-chain AI answer → on-chain commitment. Foundational kit; prediction-market composes it.",
-    highlight: "Composable — kits build on kits",
-  },
-  {
-    domain: "Agent Infrastructure",
-    emoji: "🧠",
-    name: "agent-memory",
-    slug: "agent-memory",
-    summary:
-      "Persistent, namespaced agent memory on 0G Storage. Lib-only core works on all 9 bases.",
-    highlight: "Works across every template base",
-  },
-  {
-    domain: "Agent Infrastructure",
-    emoji: "⚙️",
-    name: "durable-agent",
-    slug: "durable-agent",
-    summary:
-      "Long-running, resumable agent loop on 0gkit-jobs. Survives restarts; step ledger + OTEL traces.",
-    highlight: "Category create-0g-dapp cannot reach",
-  },
-  {
-    domain: "Markets & Onchain Data",
-    emoji: "📈",
-    name: "prediction-market",
-    slug: "prediction-market",
-    summary: "Full-stack AI-resolved prediction market with on-chain anchored proofs.",
-    highlight: "Flagship showcase — composes ai-oracle",
-  },
-  {
-    domain: "Markets & Onchain Data",
-    emoji: "📡",
-    name: "live-feed",
-    slug: "live-feed",
-    summary: "Reorg-safe live event/social feed via 0gkit-indexer.",
-    highlight: "Correct reorg handling (theirs isn't)",
-  },
-  {
-    domain: "Assets",
-    emoji: "🖼️",
-    name: "inft-studio",
-    slug: "inft-studio",
-    summary:
-      "Intelligent-NFT mint + gallery: Storage metadata, typed contract via 0gkit-contracts, optional attested provenance.",
-    highlight: "Typed contracts + generation provenance",
-  },
-  {
-    domain: "DeFi — testnet / demo",
-    emoji: "💹",
-    name: "yield-intel",
-    slug: "yield-intel",
-    summary:
-      "AI yield analysis + attested decision log. User executes manually. Testnet-default, prominently demo-labelled.",
-    highlight: "Honest: analysis only, no auto-execution",
-  },
-];
 
 // Comparison rows — all claims are verifiable from create-0g-dapp's public README.
 type CompRow = { concern: string; kits: string; createDapp: string };
@@ -136,14 +57,6 @@ const COMP_ROWS: CompRow[] = [
   },
 ];
 
-const DOMAIN_COLORS: Record<string, string> = {
-  "Verifiable AI": "var(--color-accent-2)",
-  "Agent Infrastructure": "#a78bfa",
-  "Markets & Onchain Data": "#34d399",
-  Assets: "#f59e0b",
-  "DeFi — testnet / demo": "#94a3b8",
-};
-
 export function KitsShowcase() {
   return (
     <>
@@ -170,73 +83,7 @@ export function KitsShowcase() {
             }}
           >
             {KITS.map((kit) => (
-              <div
-                key={kit.slug}
-                className="card"
-                style={{ padding: "1.3rem 1.4rem 1.4rem" }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: "0.5rem",
-                    marginBottom: "0.7rem",
-                  }}
-                >
-                  <span style={{ fontSize: "1.5rem", lineHeight: 1 }}>{kit.emoji}</span>
-                  <span
-                    style={{
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      color: DOMAIN_COLORS[kit.domain] ?? "var(--color-fg-muted)",
-                      border: `1px solid ${DOMAIN_COLORS[kit.domain] ?? "var(--color-border)"}`,
-                      borderRadius: 999,
-                      padding: "0.15rem 0.55rem",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {kit.domain}
-                  </span>
-                </div>
-                <h3
-                  style={{
-                    margin: "0 0 0.45rem",
-                    fontSize: "1.02rem",
-                    fontWeight: 700,
-                    fontFamily: "var(--font-mono)",
-                    letterSpacing: "-0.01em",
-                    color: "var(--color-fg)",
-                  }}
-                >
-                  {kit.name}
-                </h3>
-                <p
-                  style={{
-                    margin: "0 0 0.9rem",
-                    color: "var(--color-fg-dim)",
-                    fontSize: "0.88rem",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {kit.summary}
-                </p>
-                <div
-                  style={{
-                    fontSize: "0.78rem",
-                    color: "var(--color-accent-2)",
-                    fontWeight: 600,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.3rem",
-                  }}
-                >
-                  <span aria-hidden>✦</span>
-                  {kit.highlight}
-                </div>
-              </div>
+              <KitCard key={kit.slug} kit={kit} />
             ))}
           </div>
 
@@ -289,6 +136,9 @@ export function KitsShowcase() {
               ))}
             </div>
           </div>
+
+          {/* Author-your-own-kit funnel — the community "skills repo" hook */}
+          <AuthorKitCTA />
         </div>
       </section>
 
