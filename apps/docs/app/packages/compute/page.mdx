@@ -4,16 +4,18 @@ title: "@foundryprotocol/0gkit-compute"
 
 # @foundryprotocol/0gkit-compute
 
-> Neutral 0G Compute: provider discovery, broker inference, and an
-> OpenAI-compatible shim.
+> Neutral 0G Compute: model-first routing, explicit-provider inference, provider
+> discovery, and an OpenAI-compatible shim.
 
 ## What it does
 
-Wraps the 0G compute broker SDK behind one class. Discover registered
-inference providers, run a chat completion against one (the broker handles
-acknowledgement, request headers, and best-effort on-chain fee settlement),
-and get the result plus an on-chain fee `Receipt`. A drop-in OpenAI-style
-shim is included so existing OpenAI code works unchanged.
+Wraps the 0G compute broker SDK behind one class. **`router()`** picks a
+provider for you — the managed 0G Router endpoint when you supply a
+`routerApiKey`, otherwise honest client-side selection over the provider list
+with retry/fallback. **`direct()`/`inference()`** call a provider you name.
+Either returns the result plus an on-chain fee `Receipt`. A drop-in OpenAI-style
+shim is included so existing OpenAI code works unchanged. See the concept guide
+[router() vs direct()](/concepts/compute-router-vs-direct).
 
 ## When to use it
 
@@ -50,8 +52,10 @@ interface ComputeConfig {
   brokerRpc?: string; // default https://evmrpc.0g.ai
   signer?: Signer; // preferred — use fromEnv() / fromPrivateKey() / etc.
   brokerKey?: string; // legacy — deprecated, use signer instead
-  provider?: string; // on-chain inference provider address
+  provider?: string; // on-chain inference provider address (default prefer for router())
   model?: string; // default model id
+  routerApiKey?: string; // 0G Router API key (pc.0g.ai) — enables the managed Router
+  routerUrl?: string; // override the Router base URL (default by network)
   fetch?: typeof fetch; // inject fetch (testing)
   loadBroker?: (name: string) => Promise<unknown>; // inject the broker SDK
   loadEthers?: () => Promise<typeof import("ethers")>;
@@ -69,21 +73,45 @@ management is independent of the inference client. The legacy `brokerKey`
 string continues to work but emits a deprecation warning — see
 [Legacy (deprecated)](#legacy-deprecated) below.
 
-#### `compute.inference(args)`
+#### `compute.router(args)` — model-first (recommended)
+
+```ts
+router(args: {
+  model?: string; // required for the managed Router; optional client-side
+  messages: ChatMessage[];
+  temperature?: number;
+  prefer?: string; // pin a provider (defaults to config.provider)
+  sort?: "price"; // managed-Router routing knob
+  maxAttempts?: number; // client-side retry cap
+}): Promise<InferenceResult>;
+```
+
+Picks a provider for you. With `routerApiKey` set, calls the real 0G Router
+endpoint (`router-api.0g.ai/v1`, server-side selection + failover). Without one,
+selects client-side over `listProviders()` and retries the next candidate on
+failure (logged once). **Throws** a typed `NetworkError` when no provider is
+reachable, and `ConfigError` if the managed Router is used without a model. See
+[router() vs direct()](/concepts/compute-router-vs-direct).
+
+#### `compute.direct(args)` / `compute.inference(args)`
 
 ```ts
 inference(args: {
+  provider?: string; // per-call provider (overrides config.provider)
   model?: string;
   messages: ChatMessage[];
   temperature?: number;
 }): Promise<InferenceResult>;
+
+direct: typeof inference; // explicit-provider alias (no behaviour change)
 ```
 
-Acknowledges the provider signer (non-fatal if already done), fetches service
-metadata, signs request headers, POSTs to `<endpoint>/v1/chat/completions`,
-and best-effort settles the fee (non-fatal). **Throws** `ConfigError` for a
-missing `brokerKey`/`provider` or unloadable SDK/`ethers`; **throws**
-`NetworkError` for metadata/header/HTTP failures.
+The explicit-provider path: acknowledges the provider signer (non-fatal if
+already done), fetches service metadata, signs request headers, POSTs to
+`<endpoint>/v1/chat/completions`, and best-effort settles the fee (non-fatal).
+`direct()` is a thin alias; the optional per-call `{ provider }` is additive.
+**Throws** `ConfigError` for a missing `brokerKey`/`provider` or unloadable
+SDK/`ethers`; **throws** `NetworkError` for metadata/header/HTTP failures.
 
 #### `compute.listProviders()`
 
@@ -132,6 +160,28 @@ raw(): Promise<{ inference: BrokerInference }>; // the underlying broker
 The escape hatch — the underlying broker object.
 
 ## Examples
+
+### Route by model — no provider address (recommended)
+
+```ts
+import { Compute } from "@foundryprotocol/0gkit-compute";
+
+// Managed 0G Router: server-side selection + failover, single balance.
+const compute = new Compute({
+  network: "galileo",
+  routerApiKey: process.env.ROUTER_API_KEY!, // from pc.0g.ai
+});
+
+const { output } = await compute.router({
+  model: "llama-3.1-8b",
+  messages: [{ role: "user", content: "Say hello to 0G in five words." }],
+});
+console.log(output);
+```
+
+Drop `routerApiKey` and pass a wallet `signer`/`brokerKey` instead to get the
+same `router()` call backed by **client-side** selection over the on-chain
+provider list — no dashboard key required.
 
 ### With `signer` — recommended
 
@@ -235,7 +285,7 @@ const compute = new Compute({ network: "galileo", signer, provider: "0x…" });
 | Symptom                                               | Cause                                      | Fix                                                                |
 | ----------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------ |
 | `ConfigError: Compute requires a signer or brokerKey` | No credentials in config.                  | Pass `{ signer }` (from `fromEnv()`) to the `Compute` constructor. |
-| `ConfigError: Compute requires a provider address`    | No `provider` in config.                   | Pass `{ provider }` (the on-chain inference provider address).     |
+| `ConfigError: Compute requires a provider address`    | No `provider` in config.                   | Pass `{ provider }`, or call `router()` to select one for you.     |
 | `ConfigError: 0G compute SDK not found…`              | Optional broker peer not installed.        | `npm install @0gfoundation/0g-compute-ts-sdk ethers`.              |
 | `NetworkError: Failed to fetch service metadata…`     | Provider not registered / broker unfunded. | Verify the provider address and fund the broker ledger.            |
 | `NetworkError: 0G compute provider returned HTTP …`   | Provider rejected the request.             | Verify the provider address and broker ledger balance.             |
@@ -254,8 +304,15 @@ React: [`useInference`](/react). Template:
 - `__resetDeprecationWarning`
 - `countTokens`
 - `makeComputeEstimate`
+- `pickProviderAddress`
+- `selectProviders`
+- `toProviderInfo`
 - `type ChatMessage`
 - `type ComputeConfig`
 - `type ComputeEstimate`
 - `type ComputeEstimateBreakdown`
+- `type InferenceArgs`
 - `type InferenceResult`
+- `type ProviderInfo`
+- `type RouterArgs`
+- `type RouterResult`
