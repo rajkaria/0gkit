@@ -36,7 +36,7 @@ compute.router({
   model?: string,          // optional; when omitted the fallback tries all providers
   messages: ChatMessage[],
   temperature?: number,
-  prefer?: string,         // pin a provider (fallback: head of candidate list; endpoint: passthrough where supported)
+  prefer?: string,         // pin a provider — steers the client-side fallback only (the managed endpoint does its own selection; no verified pin field)
   sort?: "price",          // real-endpoint routing knob (documented); ignored by the fallback
   maxAttempts?: number,    // fallback retry cap
 }): Promise<InferenceResult>
