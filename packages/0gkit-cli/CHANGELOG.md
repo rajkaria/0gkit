@@ -1,5 +1,13 @@
 # @foundryprotocol/0gkit-cli
 
+## 1.9.0
+
+### Patch Changes
+
+- Updated dependencies [5299ad3]
+  - @foundryprotocol/0gkit-compute@1.9.0
+  - @foundryprotocol/0gkit-mcp@1.9.0
+
 ## 1.8.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # @foundryprotocol/0gkit-react
 
+## 1.9.0
+
+### Patch Changes
+
+- Updated dependencies [5299ad3]
+  - @foundryprotocol/0gkit-compute@1.9.0
+
 ## 1.5.0
 
 ### Patch Changes
