@@ -4,6 +4,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { create0gMcpServer } from "../server.js";
 import type { McpDeps } from "../tools.js";
 import type { FoundryPlugin } from "../foundry-plugin.js";
+import type { McpToolPlugin } from "../plugin.js";
 
 function stubDeps(env: Record<string, string | undefined> = {}): McpDeps {
   return {
@@ -127,5 +128,62 @@ describe("create0gMcpServer (foundry plugin opt-in)", () => {
       arguments: { payload: "x" },
     });
     expect(JSON.parse(res.content[0].text).digest).toBe("0xd");
+  });
+});
+
+describe("create0gMcpServer (plugins[] seam)", () => {
+  const fakePlugin: McpToolPlugin = {
+    name: "test-kit",
+    tools: [
+      {
+        name: "x_tool",
+        description: "a fake plugin tool",
+        inputSchema: { type: "object", properties: {} },
+      },
+    ],
+    call: async (name) => ({
+      content: [{ type: "text", text: JSON.stringify({ pluginCalled: name }) }],
+    }),
+  };
+
+  it("merges plugin tools: ListTools returns 9 neutral + plugin tools", async () => {
+    const server = await create0gMcpServer({
+      deps: stubDeps(),
+      foundryPlugin: null,
+      plugins: [fakePlugin],
+    });
+    const client = await connect(server);
+    const { tools } = await client.listTools();
+    expect(tools).toHaveLength(10); // 9 neutral + 1 plugin
+    expect(tools.some((t) => t.name === "x_tool")).toBe(true);
+    expect(tools.filter((t) => t.name.startsWith("og_"))).toHaveLength(9);
+  });
+
+  it("CallTool for a plugin tool routes to plugin.call", async () => {
+    const server = await create0gMcpServer({
+      deps: stubDeps(),
+      foundryPlugin: null,
+      plugins: [fakePlugin],
+    });
+    const client = await connect(server);
+    const res: any = await client.callTool({ name: "x_tool", arguments: {} });
+    expect(JSON.parse(res.content[0].text)).toEqual({ pluginCalled: "x_tool" });
+  });
+
+  it("neutral tool still routes correctly when plugins are present", async () => {
+    const server = await create0gMcpServer({
+      deps: stubDeps(),
+      foundryPlugin: null,
+      plugins: [fakePlugin],
+    });
+    const client = await connect(server);
+    const res: any = await client.callTool({
+      name: "og_chain_balance",
+      arguments: { address: "0x1234567890abcdef1234567890abcdef12345678" },
+    });
+    // neutral tool returns ok result, not plugin result
+    const parsed = JSON.parse(res.content[0].text);
+    expect(parsed).toHaveProperty("address");
+    expect(res.isError).toBeFalsy();
   });
 });

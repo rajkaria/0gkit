@@ -23,3 +23,4 @@ export {
   type LoadFoundryOptions,
 } from "./foundry-plugin.js";
 export { type ToolCallResult } from "./context.js";
+export { collectToolPlugin, type McpToolPlugin, type McpServerLike } from "./plugin.js";
