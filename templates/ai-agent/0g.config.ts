@@ -14,7 +14,9 @@ export const config = define0GConfig({
     ROUTER_API_KEY: z
       .string()
       .optional()
-      .describe("0G Router API key (pc.0g.ai); set to use the managed Router endpoint."),
+      .describe(
+        "0G Router API key (pc.0g.ai); set to use the managed Router endpoint."
+      ),
     PROVIDER: z
       .string()
       .optional()

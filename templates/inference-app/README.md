@@ -27,14 +27,14 @@ npm install
 cp .env.example .env
 ```
 
-| Var              | Purpose                                                              |
-| ---------------- | ------------------------------------------------------------------- |
-| `BROKER_KEY`     | Funded 0G broker key (64-char hex) — used for client-side routing   |
-| `ROUTER_API_KEY` | 0G Router API key (pc.0g.ai) — set to use the managed Router        |
-| `PROVIDER`       | Pin a provider address — leave blank and the router picks one       |
-| `ZEROG_NETWORK`  | `galileo` (testnet, default) or `aristotle` (mainnet)               |
-| `MODEL`          | Model name; required with `ROUTER_API_KEY`, else provider default   |
-| `PROMPT`         | The question to ask                                                 |
+| Var              | Purpose                                                           |
+| ---------------- | ----------------------------------------------------------------- |
+| `BROKER_KEY`     | Funded 0G broker key (64-char hex) — used for client-side routing |
+| `ROUTER_API_KEY` | 0G Router API key (pc.0g.ai) — set to use the managed Router      |
+| `PROVIDER`       | Pin a provider address — leave blank and the router picks one     |
+| `ZEROG_NETWORK`  | `galileo` (testnet, default) or `aristotle` (mainnet)             |
+| `MODEL`          | Model name; required with `ROUTER_API_KEY`, else provider default |
+| `PROMPT`         | The question to ask                                               |
 
 ## Run
 

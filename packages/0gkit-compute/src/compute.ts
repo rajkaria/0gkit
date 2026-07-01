@@ -6,11 +6,7 @@ import {
   type Signer,
 } from "@foundryprotocol/0gkit-core";
 import { makeComputeEstimate, type ComputeEstimate } from "./estimate.js";
-import {
-  selectProviders,
-  toProviderInfo,
-  type ProviderInfo,
-} from "./router-select.js";
+import { selectProviders, toProviderInfo, type ProviderInfo } from "./router-select.js";
 
 const DEFAULT_RPC = "https://evmrpc.0g.ai";
 const PKG_NEW = "@0gfoundation/0g-compute-ts-sdk";
@@ -421,9 +417,7 @@ export class Compute {
       });
     } catch (err) {
       throw new NetworkError(
-        `0G Router request failed: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+        `0G Router request failed: ${err instanceof Error ? err.message : String(err)}`,
         `Check the router endpoint (${base}) and your network connectivity.`
       );
     }
@@ -455,9 +449,7 @@ export class Compute {
     }
     const raw = await this.listProviders();
     const candidates = selectProviders(
-      raw
-        .map(toProviderInfo)
-        .filter((p): p is ProviderInfo => p !== undefined),
+      raw.map(toProviderInfo).filter((p): p is ProviderInfo => p !== undefined),
       { model: args.model, prefer: args.prefer }
     );
     if (candidates.length === 0) {
@@ -468,10 +460,7 @@ export class Compute {
         `Run \`0g doctor\` to check the broker RPC, set ROUTER_API_KEY to use the 0G Router, or pass { prefer } with a known provider.`
       );
     }
-    const limit = Math.min(
-      args.maxAttempts ?? candidates.length,
-      candidates.length
-    );
+    const limit = Math.min(args.maxAttempts ?? candidates.length, candidates.length);
     let lastErr: unknown;
     for (let i = 0; i < limit; i++) {
       try {

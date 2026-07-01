@@ -106,7 +106,12 @@ export function registerSealedTools(
   async function getCompute(): Promise<Compute> {
     if (!_compute) {
       const signer = await getSigner();
-      _compute = new Compute({ signer, ...(process.env.ROUTER_API_KEY ? { routerApiKey: process.env.ROUTER_API_KEY } : {}) });
+      _compute = new Compute({
+        signer,
+        ...(process.env.ROUTER_API_KEY
+          ? { routerApiKey: process.env.ROUTER_API_KEY }
+          : {}),
+      });
     }
     return _compute;
   }

@@ -105,7 +105,12 @@ export function buildSealedRouter(): Hono {
     const attestorAddress = getAttestorAddress();
 
     const signer = await fromPrivateKey(privateKey);
-    const compute = new Compute({ signer, ...(process.env.ROUTER_API_KEY ? { routerApiKey: process.env.ROUTER_API_KEY } : {}) });
+    const compute = new Compute({
+      signer,
+      ...(process.env.ROUTER_API_KEY
+        ? { routerApiKey: process.env.ROUTER_API_KEY }
+        : {}),
+    });
     const inferClient = {
       async infer(args: { prompt: string; model?: string }) {
         const result = await compute.router({

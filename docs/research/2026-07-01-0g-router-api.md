@@ -10,26 +10,26 @@ return a provider to call or proxy the call itself?
 
 ## Findings (cited)
 
-**Yes — the 0G Compute Router is a real, shipped server endpoint.** It is *not*
+**Yes — the 0G Compute Router is a real, shipped server endpoint.** It is _not_
 the per-provider broker path; it is a distinct OpenAI-compatible HTTP gateway
 that selects a provider server-side and settles payment from a single balance.
 
-| Fact | Value | Source |
-|---|---|---|
-| Mainnet base URL | `https://router-api.0g.ai/v1` | [router/overview] |
-| Testnet base URL | `https://router-api-testnet.integratenetwork.work/v1` | [router/overview] |
-| Protocol | Pure **OpenAI-compatible HTTP** — "Any OpenAI client library works by changing `base_url` and `api_key`." No broker SDK required. | [router/faq] |
-| Endpoint | `POST /v1/chat/completions` (streaming, tool-calling, reasoning tokens) | [router/overview] |
-| Auth | `Authorization: Bearer <ROUTER_API_KEY>` | [router/overview] |
-| Selection | Server-side. Routes by **lowest latency**, **lowest price** (`sort: 'price'`), or **pin to a provider**; built-in failover ("failover picks a healthy provider"). | [router/overview], [router/faq] |
-| Models | Listed at `GET /v1/models`; names not enumerated in docs (browse the live catalog). | [router/faq] |
-| API-key issuance | **Web UI only** (pc.0g.ai — wallet connect via MetaMask/WalletConnect or social sign-in via Privy). No documented programmatic/SDK issuance. | [router/faq] |
-| Balance | Single unified on-chain balance; "Deposit 0G tokens, consume on-chain, settle periodically." | [router/overview] |
+| Fact             | Value                                                                                                                                                             | Source                          |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| Mainnet base URL | `https://router-api.0g.ai/v1`                                                                                                                                     | [router/overview]               |
+| Testnet base URL | `https://router-api-testnet.integratenetwork.work/v1`                                                                                                             | [router/overview]               |
+| Protocol         | Pure **OpenAI-compatible HTTP** — "Any OpenAI client library works by changing `base_url` and `api_key`." No broker SDK required.                                 | [router/faq]                    |
+| Endpoint         | `POST /v1/chat/completions` (streaming, tool-calling, reasoning tokens)                                                                                           | [router/overview]               |
+| Auth             | `Authorization: Bearer <ROUTER_API_KEY>`                                                                                                                          | [router/overview]               |
+| Selection        | Server-side. Routes by **lowest latency**, **lowest price** (`sort: 'price'`), or **pin to a provider**; built-in failover ("failover picks a healthy provider"). | [router/overview], [router/faq] |
+| Models           | Listed at `GET /v1/models`; names not enumerated in docs (browse the live catalog).                                                                               | [router/faq]                    |
+| API-key issuance | **Web UI only** (pc.0g.ai — wallet connect via MetaMask/WalletConnect or social sign-in via Privy). No documented programmatic/SDK issuance.                      | [router/faq]                    |
+| Balance          | Single unified on-chain balance; "Deposit 0G tokens, consume on-chain, settle periodically."                                                                      | [router/overview]               |
 
 ## Decision (honesty rule)
 
 The Router endpoint is **confirmed**, so `Compute.router()` **wires the real
-endpoint** — but note it uses a *different credential model* than our existing
+endpoint** — but note it uses a _different credential model_ than our existing
 `Compute.inference()` path:
 
 - **`inference()`** — wallet-signer / broker SDK (`createZGComputeNetworkBroker`),

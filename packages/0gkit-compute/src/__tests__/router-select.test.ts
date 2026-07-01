@@ -79,7 +79,11 @@ describe("toProviderInfo", () => {
   });
 
   it("prefers an explicit `endpoint` key over `url`", () => {
-    const info = toProviderInfo({ provider: "0xp", endpoint: "https://e", url: "https://u" });
+    const info = toProviderInfo({
+      provider: "0xp",
+      endpoint: "https://e",
+      url: "https://u",
+    });
     expect(info?.endpoint).toBe("https://e");
   });
 

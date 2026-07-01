@@ -112,7 +112,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Build signer and inference client
     const signer = await fromPrivateKey(privateKey);
-    const compute = new Compute({ signer, ...(process.env.ROUTER_API_KEY ? { routerApiKey: process.env.ROUTER_API_KEY } : {}) });
+    const compute = new Compute({
+      signer,
+      ...(process.env.ROUTER_API_KEY
+        ? { routerApiKey: process.env.ROUTER_API_KEY }
+        : {}),
+    });
 
     const inferClient = {
       async infer(args: { prompt: string; model?: string }) {

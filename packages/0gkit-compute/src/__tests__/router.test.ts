@@ -44,7 +44,10 @@ describe("Compute.inference — per-call provider override (drift #2)", () => {
       loadBroker: async () => mod as never,
       loadEthers,
     });
-    await c.inference({ provider: "0xOVERRIDE", messages: [{ role: "user", content: "x" }] });
+    await c.inference({
+      provider: "0xOVERRIDE",
+      messages: [{ role: "user", content: "x" }],
+    });
     expect(mod.__inference.getServiceMetadata).toHaveBeenCalledWith("0xOVERRIDE");
     expect(fetchMock).toHaveBeenCalledWith(
       "https://0xOVERRIDE.example/v1/chat/completions",
@@ -74,10 +77,15 @@ describe("Compute.router — real 0G Router endpoint (primary path)", () => {
       routerApiKey: "sk-test",
       fetch: fetchMock,
     });
-    const r = await c.router({ model: "llama-3.1-8b", messages: [{ role: "user", content: "hi" }] });
+    const r = await c.router({
+      model: "llama-3.1-8b",
+      messages: [{ role: "user", content: "hi" }],
+    });
     expect(r.output).toBe("routed");
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://router-api-testnet.integratenetwork.work/v1/chat/completions");
+    expect(url).toBe(
+      "https://router-api-testnet.integratenetwork.work/v1/chat/completions"
+    );
     expect((init as RequestInit).method).toBe("POST");
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers.authorization).toBe("Bearer sk-test");
@@ -88,14 +96,24 @@ describe("Compute.router — real 0G Router endpoint (primary path)", () => {
 
   it("uses the mainnet router URL for network=aristotle", async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
-    const c = new Compute({ network: "aristotle", routerApiKey: "sk", fetch: fetchMock });
+    const c = new Compute({
+      network: "aristotle",
+      routerApiKey: "sk",
+      fetch: fetchMock,
+    });
     await c.router({ model: "m", messages: [{ role: "user", content: "x" }] });
-    expect(fetchMock.mock.calls[0][0]).toBe("https://router-api.0g.ai/v1/chat/completions");
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://router-api.0g.ai/v1/chat/completions"
+    );
   });
 
   it("honours an explicit `routerUrl` override", async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
-    const c = new Compute({ routerApiKey: "sk", routerUrl: "https://my.router/v1", fetch: fetchMock });
+    const c = new Compute({
+      routerApiKey: "sk",
+      routerUrl: "https://my.router/v1",
+      fetch: fetchMock,
+    });
     await c.router({ model: "m", messages: [{ role: "user", content: "x" }] });
     expect(fetchMock.mock.calls[0][0]).toBe("https://my.router/v1/chat/completions");
   });
@@ -111,7 +129,11 @@ describe("Compute.router — real 0G Router endpoint (primary path)", () => {
   it("passes a `sort` routing knob through to the endpoint body", async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
     const c = new Compute({ routerApiKey: "sk", fetch: fetchMock });
-    await c.router({ model: "m", sort: "price", messages: [{ role: "user", content: "x" }] });
+    await c.router({
+      model: "m",
+      sort: "price",
+      messages: [{ role: "user", content: "x" }],
+    });
     const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
     expect(body.sort).toBe("price");
   });
@@ -160,7 +182,10 @@ describe("Compute.router — client-side fallback (no ROUTER_API_KEY)", () => {
       loadBroker: async () => mod as never,
       loadEthers,
     });
-    const r = await c.router({ model: "m1", messages: [{ role: "user", content: "hi" }] });
+    const r = await c.router({
+      model: "m1",
+      messages: [{ role: "user", content: "hi" }],
+    });
     expect(r.output).toBe("from-C");
   });
 
@@ -182,7 +207,10 @@ describe("Compute.router — client-side fallback (no ROUTER_API_KEY)", () => {
       loadBroker: async () => mod as never,
       loadEthers,
     });
-    const r = await c.router({ model: "m1", messages: [{ role: "user", content: "hi" }] });
+    const r = await c.router({
+      model: "m1",
+      messages: [{ role: "user", content: "hi" }],
+    });
     expect(r.output).toBe("pinned");
   });
 
@@ -194,7 +222,10 @@ describe("Compute.router — client-side fallback (no ROUTER_API_KEY)", () => {
       loadBroker: async () => mod as never,
       loadEthers,
     });
-    const r = await c.router({ model: "m1", messages: [{ role: "user", content: "hi" }] });
+    const r = await c.router({
+      model: "m1",
+      messages: [{ role: "user", content: "hi" }],
+    });
     expect(r.output).toBe("solo");
   });
 
@@ -237,7 +268,10 @@ describe("Compute.direct — explicit-provider alias", () => {
       loadBroker: async () => mod as never,
       loadEthers,
     });
-    const r = await c.direct({ provider: "0xDIRECT", messages: [{ role: "user", content: "x" }] });
+    const r = await c.direct({
+      provider: "0xDIRECT",
+      messages: [{ role: "user", content: "x" }],
+    });
     expect(r.output).toBe("direct");
     expect(mod.__inference.getServiceMetadata).toHaveBeenCalledWith("0xDIRECT");
   });
