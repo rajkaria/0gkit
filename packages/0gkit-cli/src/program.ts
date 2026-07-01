@@ -138,6 +138,19 @@ export interface ProgramDeps {
       network: string;
       rpcUrl?: string;
     }) => Promise<Estimate>;
+    /**
+     * K8 (D92) — fetch a verified ABI from the 0G ChainScan explorer's
+     * Etherscan-compatible `/open/api` endpoint. Injected so `0g contracts
+     * import <address>` is unit-testable without a real network call. Returns
+     * the bare ABI array (as `getabi` returns it); `writeTempAbi` wraps it.
+     */
+    fetchExplorerAbi: (address: string, network: string) => Promise<unknown[]>;
+    /**
+     * K8 (D92) — wrap a bare explorer ABI array in a `{ abi, contractName }`
+     * Foundry-artifact shape (which `generate()` requires) and write it to a
+     * temp file, returning the path. Injected so tests stay off the filesystem.
+     */
+    writeTempAbi: (abi: unknown[], name?: string) => Promise<string>;
   };
   jobsBackendFactory: JobsBackendFactory;
   /**

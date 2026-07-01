@@ -52,6 +52,8 @@ function makeDeps(over: {
     loadFoundry: vi.fn(async () => null),
     contracts: {
       generate: noop as never,
+      fetchExplorerAbi: noop as never,
+      writeTempAbi: noop as never,
       listStandard: vi.fn(() => []),
       getStandard: vi.fn(() => null),
       estimate: noop as never,

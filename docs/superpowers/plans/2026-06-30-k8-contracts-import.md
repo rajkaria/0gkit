@@ -31,6 +31,24 @@ Close the last gap in the contracts story (SP4 shipped `generate/list/info`). Af
 **K0 synergy:** the `inft-studio` kit docs reference `0g contracts import` as the
 way to pull a deployed iNFT contract into a typed client.
 
+## Reality check (2026-07-01 — before coding; the K1/K5/K7 discipline)
+
+Ran the research gate + a code inventory against the real exports. **The plan
+was ~90% correct — two material, ship-breaking corrections found:**
+
+| #   | Plan said                                                                | Reality (verified)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Fix                                                                                                                                                                         |
+| --- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | ABI URL is `${explorer}/api?module=contract&action=getabi`               | The bare `/api` path serves the explorer's **React SPA HTML** (custom "0G ChainScan", not Blockscout/Etherscan-hosted). The **real** Etherscan-compatible API is at **`${explorer}/open/api`** — verified live: `…/open/api?module=contract&action=getabi&address=…` returns real JSON on **both** galileo + mainnet (`{"status":"0","message":"NOTOK","result":"Contract source code not verified"}` for unverified). Keyless works ("use a placeholder if you don't have one" per the 0G deploy docs). | URL → `${explorer}/open/api?…`; optional additive `apiKey` appended only when provided. The plan's `status !== "1"` honesty check works verbatim against the real response. |
+| 2   | `writeTempAbi(abi)` writes the fetched ABI to a temp file → `generate()` | `generate()`→`parseFoundryArtifact` **requires a top-level `{ abi: [...] }` wrapper + a name** (`hasArrayAbi`); it **rejects a bare ABI array**. `getabi` returns a **bare** array with **no** contract name.                                                                                                                                                                                                                                                                                            | `writeTempAbi(abi, name)` wraps as `{ abi, contractName: name }`; **`--name` is required on the address path** (throw a typed `ConfigError` early — getabi yields no name). |
+
+**Confirmed correct as written:** `getNetwork`/`preset.explorer`/`NetworkName`
+(`aristotle|galileo|local`; `galileo.explorer = https://chainscan-galileo.0g.ai`),
+`deps.contracts.generate({abiPath,outDir,name}) → {name,outputPath,bytesWritten}`,
+additive `ProgramDeps.contracts` extension, `runCommand(…, ctx => …)` with
+`ctx.network` (defaults galileo), 2-arg `ConfigError(message, hint)`, and
+`deps.fetch` already on `ProgramDeps` (injected for doctor). Decisions renumbered
+to **D92–D93** (D89–D91 were taken by K7 last session).
+
 ## Dependencies / Architecture
 
 - **The codegen already exists** — `0g contracts generate` wraps

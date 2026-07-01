@@ -26,3 +26,5 @@ export {
   type ContractEstimateBreakdown,
 } from "./estimate.js";
 export { type WriteOptions } from "./types.js";
+
+export { fetchExplorerAbi, type FetchAbiOptions } from "./explorer.js";
