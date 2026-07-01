@@ -18,6 +18,7 @@ import { create0gMcpServer } from "@foundryprotocol/0gkit-mcp";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { printFirstSuccess } from "@foundryprotocol/0gkit-core";
 import { config } from "../0g.config.js";
+import { kitPlugins } from "./kits.js";
 
 async function main(): Promise<void> {
   // Validate env up-front via the typed config so a misconfigured runtime
@@ -26,7 +27,7 @@ async function main(): Promise<void> {
 
   // Foundry is opt-in and absent unless ZEROG_FOUNDRY=1 is set. Pass
   // `{ foundryPlugin: null }` to create0gMcpServer() to force-disable it.
-  const server = await create0gMcpServer();
+  const server = await create0gMcpServer({ plugins: kitPlugins });
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
@@ -46,7 +47,7 @@ async function main(): Promise<void> {
     "0gkit MCP server connected over stdio. " +
       "Tools: og_storage_put, og_storage_get, og_storage_exists, og_infer, " +
       "og_da_publish, og_da_verify, og_chain_faucet, og_chain_balance, " +
-      "og_attest_verify."
+      "og_attest_verify. Plus any kit tools wired via ./kits.ts."
   );
 }
 
