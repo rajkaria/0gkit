@@ -40,6 +40,59 @@ export function registerContracts(program: Command, deps: ProgramDeps): void {
     });
 
   contracts
+    .command("import [address]")
+    .description(
+      "Fetch a verified ABI from the chain explorer (or use --abi) and codegen a typed client"
+    )
+    .option("--abi <path>", "use an off-chain artifact JSON instead of fetching")
+    .option("--name <name>", "contract name (and output filename)")
+    .option("--out <dir>", "output directory", "./0gkit/contracts")
+    .action(async function (this: Command, address: string | undefined) {
+      await runCommand(deps, this, async (ctx) => {
+        const opts = this.opts() as { abi?: string; name?: string; out: string };
+        let abiPath = opts.abi;
+        let source: string;
+        if (abiPath) {
+          source = opts.abi as string;
+        } else {
+          if (!address) {
+            throw new ConfigError(
+              "Pass a contract <address> or --abi <path>.json.",
+              "e.g. 0g contracts import 0xAbc… --name MyToken"
+            );
+          }
+          if (!opts.name) {
+            throw new ConfigError(
+              "`--name <Name>` is required when importing by address.",
+              "The explorer's `getabi` returns no contract name — e.g. 0g contracts import 0xAbc… --name MyToken."
+            );
+          }
+          const abi = await deps.contracts.fetchExplorerAbi(address, ctx.network);
+          abiPath = await deps.contracts.writeTempAbi(abi, opts.name);
+          source = `${ctx.network} explorer (${address})`;
+        }
+        const result = await deps.contracts.generate({
+          abiPath,
+          outDir: opts.out,
+          name: opts.name,
+        });
+        return {
+          human: [
+            `✓ imported ${result.name} → ${result.outputPath}`,
+            `  source: ${source}`,
+            `  ${result.bytesWritten} bytes`,
+          ],
+          json: {
+            ...result,
+            address: address ?? null,
+            network: ctx.network,
+            abi: opts.abi ?? null,
+          },
+        };
+      });
+    });
+
+  contracts
     .command("list")
     .description("List the bundled standard 0G contracts and their pinned addresses")
     .action(async function (this: Command) {

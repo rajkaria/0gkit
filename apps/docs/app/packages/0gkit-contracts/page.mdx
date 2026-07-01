@@ -18,6 +18,7 @@ pnpm add @foundryprotocol/0gkit-contracts
 - `RegistryAbi`
 - `buildClients`
 - `createTypedContract`
+- `fetchExplorerAbi`
 - `makeContractEstimate`
 - `standardContracts`
 - `standardContractsMeta`
@@ -26,12 +27,51 @@ pnpm add @foundryprotocol/0gkit-contracts
 - `type ContractEstimate`
 - `type ContractEstimateBreakdown`
 - `type EventOptions`
+- `type FetchAbiOptions`
 - `type Network`
 - `type StandardContractMeta`
 - `type TypedContract`
 - `type TypedContractOptions`
 - `type WriteOptions`
 - `weiToFee`
+
+## Import a deployed contract
+
+`0g contracts import` pulls a **verified** ABI straight from the 0G ChainScan
+block explorer and runs it through the same codegen as `0g contracts generate`,
+producing a typed client at `./0gkit/contracts/<Name>.ts` (override with `--out`).
+
+```bash
+# From a verified on-chain address (defaults to --network galileo):
+0g contracts import 0xAbC… --name MyToken
+#   → fetches the ABI from chainscan-galileo.0g.ai/open/api → typed client
+
+# From an off-chain Foundry artifact (no network needed):
+0g contracts import --abi ./out/MyToken.sol/MyToken.json --name MyToken
+```
+
+Both paths converge on the existing `generate()` codegen — there is no separate
+emitter. Under the hood the address path calls `fetchExplorerAbi(address,
+network)` against the explorer's Etherscan-compatible `/open/api` endpoint.
+
+**Honesty:** if the contract is **not verified** on the explorer, `import` fails
+with a typed `ConfigError` telling you to pass the build artifact via
+`--abi <path>.json` — it never fabricates an ABI. `--name` is required on the
+address path because `getabi` returns no contract name. Galileo is the default
+network; mainnet (`aristotle`) works too, and no behaviour is gated on mainnet
+being live. Read endpoints are keyless; set `OG_EXPLORER_API_KEY` only if you
+need to lift a rate limit.
+
+Kits like [`inft-studio`](/kits/inft-studio) reference `0g contracts import` as
+the way to pull a deployed iNFT contract into a typed client.
+
+## Programmatic ABI fetch
+
+```ts
+import { fetchExplorerAbi } from "@foundryprotocol/0gkit-contracts";
+
+const abi = await fetchExplorerAbi("0xAbC…", "galileo");
+```
 
 See the package README and source in
 [`packages/0gkit-contracts/`](https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-contracts)

@@ -788,3 +788,23 @@ The three compute-calling base templates (`inference-app`, `ai-agent`, `tee-atte
 **Why:** Every kit adapter and `ai-agent`/`tee` constructed `new Compute({ signer })` **without a provider**, so `inference()` would have thrown `ConfigError` at runtime — a latent bug. `router()` discovers/selects a provider, fixing them _and_ delivering the model-first default. This is real synergy, not a flag (contrast the K6 fiction, D87). Verified end-to-end by `kits:check` (27/27 kit×base combos type-check the router() adapters against real types) — which also fixed the K6 follow-up where `check-kits.mjs` staged the overlay flat instead of tier-prefixed.
 
 **How to apply:** New compute-calling templates/kit adapters call `router()` and pass `ROUTER_API_KEY` through. `kits:check` must stay green (`copyKitTiersToOverlay` mirrors the real giget tier-prefixed layout).
+
+## D92 — `0g contracts import` reuses the SP4 codegen; the only new surface is `fetchExplorerAbi(address, network)`
+
+**Date:** 2026-07-01 · **SP:** K8
+
+`0g contracts import` adds an **ABI-source step** in front of the existing `generate()` codegen (SP4) — it does not re-implement code emission. The address path fetches a verified ABI via the new `0gkit-contracts` export `fetchExplorerAbi(address, network)`, wraps it in a `{ abi, contractName }` Foundry-artifact shape (`writeTempAbi`, injected on `ProgramDeps.contracts`), and feeds it to the same `generate()` the `--abi <path>.json` path uses. Both paths converge on one emitter; output lands at `./0gkit/contracts/<Name>.ts` (`--out` overrides). `fetch` and `writeTempAbi` are dependency-injected so the command is unit-tested fully offline.
+
+**Why:** The reality-check found `generate()`→`parseFoundryArtifact` **requires** a top-level `{ abi: [...] }` wrapper + a name and **rejects a bare ABI array** — which is exactly what the explorer's `getabi` returns. Wrapping in `writeTempAbi` (rather than writing the raw array) is what makes the fetched ABI consumable by the existing codegen without a second emitter. `--name` is required on the address path because `getabi` carries no contract name.
+
+**How to apply:** Never add a parallel ABI emitter — new ABI sources (Hardhat artifacts, a future verification API) must funnel into `generate()`. Any fetched ABI must be wrapped in `{ abi, contractName }` before codegen. Keep `fetchExplorerAbi`'s `fetch` injectable so tests stay offline.
+
+## D93 — Explorer ABI fetch hits ChainScan's `/open/api` (Etherscan-compatible), is keyless, and never fabricates an ABI
+
+**Date:** 2026-07-01 · **SP:** K8
+
+`fetchExplorerAbi` targets the 0G ChainScan explorer's **`${explorer}/open/api?module=contract&action=getabi&address=…`** endpoint — verified live on both galileo (`chainscan-galileo.0g.ai`) and mainnet (`chainscan.0g.ai`). The bare `${explorer}/api` path serves the explorer's React SPA HTML, **not** JSON — the research gate caught the plan's original `/api` URL, which would have made every `import <address>` `JSON.parse`-fail. Read endpoints are **keyless** (0G deploy docs: "use a placeholder if you don't have one"); an optional `OG_EXPLORER_API_KEY` is appended only when set. An unverified contract (`status: "0"`), an HTTP error, or a malformed payload each throw a typed `ConfigError` pointing at `--abi <path>.json` — never a fabricated ABI. Galileo is the default; nothing is gated on mainnet being live (D10).
+
+**Why:** The honesty rule requires wiring the confirmed real endpoint (the correct `/open/api` base, verified by probe on both networks) rather than the plan's assumed `/api` — and requires surfacing "not verified" as an honest, actionable error rather than inventing an ABI. Keyless-by-default matches the documented behaviour; the optional key is additive for rate-limit relief.
+
+**How to apply:** Never point ABI fetch at `${explorer}/api` (SPA HTML). Use `${explorer}/open/api` with Etherscan-compatible `module=contract&action=getabi`. Treat `status !== "1"` as "not verified" and route the user to `--abi`. Do not require an API key; append `OG_EXPLORER_API_KEY` only when the user sets it.

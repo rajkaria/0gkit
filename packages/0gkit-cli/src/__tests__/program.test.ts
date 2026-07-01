@@ -134,6 +134,13 @@ describe("buildProgram", () => {
     );
   });
 
+  it("registers `contracts import` as a subcommand", () => {
+    const program = buildProgram(fakeDeps());
+    const contracts = program.commands.find((c) => c.name() === "contracts");
+    const subs = contracts?.commands.map((c) => c.name()).sort();
+    expect(subs).toEqual(["generate", "import", "info", "list"]);
+  });
+
   it("hides `foundry` from help when the plugin is absent", async () => {
     const program = buildProgram(fakeDeps());
     program.exitOverride();
