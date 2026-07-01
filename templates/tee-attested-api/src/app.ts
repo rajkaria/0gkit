@@ -10,11 +10,11 @@ import {
 export interface AppDeps extends AttestationProvider {
   compute: {
     /**
-     * Narrow form of `Compute.inference` — production wires the real client,
-     * tests inject a fake. The dry-run overload isn't exposed by the API so
-     * the type stays simple.
+     * Narrow form of `Compute.router` — picks a provider for you (managed 0G
+     * Router when ROUTER_API_KEY is set, else client-side selection + fallback).
+     * Production wires the real client; tests inject a fake.
      */
-    inference(args: { messages: ChatMessage[] }): Promise<InferenceResult>;
+    router(args: { messages: ChatMessage[] }): Promise<InferenceResult>;
   };
   /**
    * Optional OTel tracer override. Production passes nothing — the global
@@ -42,7 +42,7 @@ export function buildApp(deps: AppDeps): Hono {
     if (!body.prompt || typeof body.prompt !== "string") {
       return c.json({ error: "missing prompt" }, 400);
     }
-    const result = await deps.compute.inference({
+    const result = await deps.compute.router({
       messages: [{ role: "user", content: body.prompt }],
     });
     return c.json({ reply: result.output, txHash: result.receipt.txHash ?? null });

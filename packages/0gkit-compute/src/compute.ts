@@ -370,10 +370,18 @@ export class Compute {
    * retry/fallback (honest — labelled at runtime and in the docs).
    */
   async router(args: RouterArgs): Promise<InferenceResult> {
+    // Resolve model + prefer once (per-call wins, then the constructor default)
+    // so templates that pin { model } / { provider } on the client don't repeat
+    // them per request. `prefer` only steers the client-side fallback ordering.
+    const resolved: RouterArgs = {
+      ...args,
+      model: args.model ?? this.cfg.model,
+      prefer: args.prefer ?? this.cfg.provider,
+    };
     if (this.cfg.routerApiKey) {
-      return this.routeViaEndpoint(args, this.cfg.routerApiKey);
+      return this.routeViaEndpoint(resolved, this.cfg.routerApiKey);
     }
-    return this.routeClientSide(args);
+    return this.routeClientSide(resolved);
   }
 
   /** Explicit-provider path — a thin alias for {@link inference} (D13: no rename). */

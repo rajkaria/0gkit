@@ -43,7 +43,7 @@ curl -i -X POST http://localhost:8787/chat \
 
 Every request emits an OTel span (`{METHOD} {PATH}` with `http.method`,
 `http.route`, `http.status_code`, `http.duration_ms` attributes). Every 0G
-primitive call inside the request — for example `Compute.inference()` in
+primitive call inside the request — for example `Compute.router()` in
 `/chat` — also emits a `0gkit.*` span via
 [`instrument0g()`](https://docs.0gkit.com/packages/0gkit-observability).
 

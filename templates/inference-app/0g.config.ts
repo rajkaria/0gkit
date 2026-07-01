@@ -10,11 +10,15 @@ export const config = define0GConfig({
     BROKER_KEY: z
       .string()
       .min(64)
-      .describe("Funded 0G broker private key for inference."),
+      .describe("Funded 0G broker key for client-side routing (used when ROUTER_API_KEY is blank)."),
+    ROUTER_API_KEY: z
+      .string()
+      .optional()
+      .describe("0G Router API key (pc.0g.ai); set to use the managed Router endpoint."),
     PROVIDER: z
       .string()
       .optional()
-      .describe("Pin a provider address; blank = auto-discover."),
+      .describe("Pin a provider address; blank = router picks one."),
     MODEL: z
       .string()
       .optional()

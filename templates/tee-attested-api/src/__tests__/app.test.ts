@@ -33,7 +33,7 @@ function makeDeps() {
   });
   return {
     compute: {
-      inference: (args: { messages: ChatMessage[] }) => client.inference(args),
+      router: (args: { messages: ChatMessage[] }) => client.inference(args),
     },
     getAttestation: vi
       .fn()

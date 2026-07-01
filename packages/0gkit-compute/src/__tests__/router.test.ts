@@ -100,6 +100,14 @@ describe("Compute.router — real 0G Router endpoint (primary path)", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("https://my.router/v1/chat/completions");
   });
 
+  it("falls back to the constructor `model` when the call omits one", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
+    const c = new Compute({ routerApiKey: "sk", model: "cfg-model", fetch: fetchMock });
+    await c.router({ messages: [{ role: "user", content: "x" }] });
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.model).toBe("cfg-model");
+  });
+
   it("passes a `sort` routing knob through to the endpoint body", async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
     const c = new Compute({ routerApiKey: "sk", fetch: fetchMock });
@@ -154,6 +162,28 @@ describe("Compute.router — client-side fallback (no ROUTER_API_KEY)", () => {
     });
     const r = await c.router({ model: "m1", messages: [{ role: "user", content: "hi" }] });
     expect(r.output).toBe("from-C");
+  });
+
+  it("defaults `prefer` to the constructor provider (preserves a PROVIDER pin)", async () => {
+    const providers = [
+      { provider: "0xA", model: "m1" },
+      { provider: "0xPINNED", model: "m1" },
+    ];
+    const mod = fakeBroker(providers);
+    // Both providers succeed with distinct output, so the *order* (not retry)
+    // decides the winner — proving the pin is honoured, not just fallback.
+    const fetchMock = vi.fn(async (url: string) =>
+      okResponse(url.includes("0xPINNED") ? "pinned" : "other")
+    );
+    const c = new Compute({
+      brokerKey: ANVIL_KEY,
+      provider: "0xPINNED",
+      fetch: fetchMock as never,
+      loadBroker: async () => mod as never,
+      loadEthers,
+    });
+    const r = await c.router({ model: "m1", messages: [{ role: "user", content: "hi" }] });
+    expect(r.output).toBe("pinned");
   });
 
   it("calls the only provider directly when there is exactly one", async () => {
