@@ -66,7 +66,7 @@ const SAMPLES: Sample[] = [
     label: "Compute",
     filename: "inference.ts",
     blurb:
-      "Run inference against the 0G Compute broker network. Get a typed Receipt with the provider, model, and on-chain tx.",
+      "Route inference with router() — the managed 0G Router endpoint when a key is set, else honest client-side provider selection. Get a typed Receipt with the provider, model, and on-chain tx.",
     code: (
       <>
         <span className="tok-keyword">import</span> {"{ "}
@@ -87,14 +87,12 @@ const SAMPLES: Sample[] = [
         {" } = "}
         <span className="tok-keyword">await</span>{" "}
         <span className="tok-const">compute</span>.
-        <span className="tok-fn">inference</span>({"{"}
+        <span className="tok-fn">router</span>({"{"}
         {"\n  messages: ["}
         {"{ "}role: <span className="tok-string">&quot;user&quot;</span>, content:{" "}
         <span className="tok-string">&quot;Summarise this thread...&quot;</span>
         {" }"}],{"\n  model: "}
-        <span className="tok-string">&quot;llama-3.3-70b&quot;</span>,
-        {"\n  maxOutputTokens: "}
-        <span className="tok-const">512</span>,{"\n"}
+        <span className="tok-string">&quot;llama-3.3-70b&quot;</span>,{"\n"}
         {"}"});{"\n\n"}
         <span className="tok-comment">
           {"// receipt: { provider, model, txHash, gas, blockNumber, ... }"}

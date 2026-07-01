@@ -66,6 +66,48 @@ npm create 0gkit-app -- --kits durable-agent
 | `OG_STORAGE_NAMESPACE` | `durable-agent`     | Namespace prefix for step-ledger blobs (default: `durable-agent`). Each run stored under `<ns>/<jobId>/steps`                  |
 | `OG_JOBS_BACKEND`      | `memory`            | Documents the active jobs backend. `memory` = `MemoryBackend` (default). Swap to `SqliteBackend` for cross-process durability. |
 
+## Quick start
+
+```bash
+0g add durable-agent
+```
+
+Compose steps with `defineAgent`, then run them through `createRunner`. Each
+step has an idempotent `key`; the injected `AgentJobsBackend` is the durable
+step ledger — completed steps are skipped on resume. This uses an in-memory
+ledger + the built-in no-op tracer (the `storage-app` adapter swaps in a
+0G-Storage-backed backend so resume survives restarts):
+
+```ts
+import {
+  defineAgent,
+  createRunner,
+  makeNoopTracer,
+  type AgentJobsBackend,
+} from "./lib/agent.js";
+import { defaultPipeline } from "./lib/steps.js"; // research → act → record
+
+const done = new Set<string>();
+const backend: AgentJobsBackend = {
+  async getCompletedSteps() {
+    return done;
+  },
+  async markStepDone(key) {
+    done.add(key);
+  },
+};
+
+const agent = defineAgent({ name: "durable-agent", steps: defaultPipeline });
+const runner = createRunner({ agent, backend, tracer: makeNoopTracer() });
+
+await runner.run({ prompt: "Summarize the current state of the 0G network." });
+console.log([...done]); // ["research", "act", "record"] — re-running is a no-op
+```
+
+> **Cold-start caveat:** step-skip durability is only as durable as the
+> `AgentJobsBackend`. The in-memory ledger above resets on restart; the
+> `storage-app` adapter persists it to 0G Storage and resumes from its `root`.
+
 ## Tiers
 
 - **lib** — `lib/agent.ts` (portable `defineAgent`, `createRunner`,

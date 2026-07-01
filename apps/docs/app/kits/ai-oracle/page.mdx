@@ -51,6 +51,79 @@ npm create 0gkit-app -- --kits ai-oracle
 | `OG_ANCHOR_ONCHAIN` | `1`                                           | Set to `1` to commit receipts on-chain via `Anchor.sol` (default: 0G Storage) |
 | `OG_ANCHOR_ADDRESS` | `0x...`                                       | Deployed `Anchor.sol` address — required when `OG_ANCHOR_ONCHAIN=1`           |
 
+## Quick start
+
+```bash
+0g add ai-oracle
+```
+
+`resolveOracle(deps, question)` runs inference → hashes the answer → signs the
+receipt → anchors it. `deps` is injected; here is the default wiring the
+`react-app` adapter builds (compute router + signed-receipt attestor + 0G
+Storage anchor). The `.env` keys are the ones in the table above:
+
+```ts
+import { Compute } from "@foundryprotocol/0gkit-compute";
+import { Storage } from "@foundryprotocol/0gkit-storage";
+import { digestJson } from "@foundryprotocol/0gkit-core";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+import { recoverSigner } from "@foundryprotocol/0gkit-attestation";
+import { resolveOracle, type Attestor, type Anchor } from "./lib/oracle.js";
+
+const privateKey = process.env.OG_PRIVATE_KEY as `0x${string}`;
+const signer = await fromPrivateKey(privateKey);
+const compute = new Compute({ signer });
+
+const infer = {
+  async infer({ prompt, model }: { prompt: string; model?: string }) {
+    const r = await compute.router({
+      messages: [{ role: "user" as const, content: prompt }],
+      ...(model ? { model } : {}),
+    });
+    return { output: r.output };
+  },
+};
+
+const attestor: Attestor = {
+  async sign(receipt) {
+    const digest = digestJson(receipt);
+    return { digest, signature: await signer.signMessage({ raw: digest }) };
+  },
+  async verify(receipt, signed, expectedSigner) {
+    const match = digestJson(receipt).toLowerCase() === signed.digest.toLowerCase();
+    const recovered = await recoverSigner({
+      digest: signed.digest as `0x${string}`,
+      signature: signed.signature as `0x${string}`,
+    });
+    return {
+      ok: match && recovered.toLowerCase() === expectedSigner.toLowerCase(),
+      signer: recovered,
+    };
+  },
+};
+
+const storage = new Storage({ privateKey, rpcUrl: process.env.OG_RPC_URL! });
+const anchor: Anchor = {
+  async anchor(payload) {
+    const bytes =
+      typeof payload === "string" ? new TextEncoder().encode(payload) : payload;
+    const { root } = await storage.upload(bytes);
+    return { ref: root, kind: "storage" };
+  },
+};
+
+const result = await resolveOracle(
+  { infer, attestor, anchor, model: process.env.OG_COMPUTE_MODEL },
+  "Will 0G mainnet launch in 2026?"
+);
+console.log(result.answer, result.answerHash, result.commitment); // { ref, kind: "storage" }
+```
+
+> **Honesty caveat:** `attestation` is a **signed receipt** (operator key signs
+> `digestJson(receipt)` via EIP-191), **not** a TEE-quote. The badge means "the
+> expected operator signed this exact receipt" — swap the `Attestor` for a real
+> TEE-quote verifier later without touching `resolveOracle`.
+
 ## Tiers
 
 - **lib** — `lib/oracle.ts` (portable `resolveOracle` + `OracleReceipt` type),

@@ -57,11 +57,58 @@ npm create 0gkit-app -- --kits agent-memory
 | `OG_PRIVATE_KEY`       | `0x...`                        | Private key for signing 0G Storage transactions (required) |
 | `OG_RPC_URL`           | `https://evmrpc-testnet.0g.ai` | 0G chain RPC endpoint                                      |
 
+## Quick start
+
+```bash
+0g add agent-memory
+```
+
+The portable `lib/` is storage-agnostic — it takes an injected `MemoryStorage`
+(`putBlob(ns, data)` / `getBlob(ns)`). This is the exact bridge the `react-app` /
+`mcp-agent` adapters build over `@foundryprotocol/0gkit-storage`:
+
+```ts
+import { Storage } from "@foundryprotocol/0gkit-storage";
+import { createMemory, type MemoryStorage } from "./lib/agent-memory.js";
+
+const storage = new Storage({
+  privateKey: process.env.OG_PRIVATE_KEY as `0x${string}`,
+  rpcUrl: process.env.OG_RPC_URL!,
+});
+
+// Bridge 0G Storage (content-addressed) to the mutable-namespace MemoryStorage.
+const roots = new Map<string, string>();
+const memStorage: MemoryStorage = {
+  async putBlob(ns, data) {
+    const { root } = await storage.upload(new TextEncoder().encode(data));
+    roots.set(ns, root);
+  },
+  async getBlob(ns) {
+    const root = roots.get(ns);
+    if (!root) return undefined;
+    const bytes = await storage.download(root);
+    return bytes ? new TextDecoder().decode(bytes) : undefined;
+  },
+};
+
+const memory = createMemory({ storage: memStorage, namespace: "memories" });
+
+await memory.remember("user:favorite-chain", "0G");
+const hits = await memory.recall("chain"); // MemoryEntry[] — { key, value, ts }
+console.log(hits);
+```
+
+> **Root-persistence caveat:** 0G Storage is content-addressed — every
+> `remember` writes a new immutable blob with a new `root`. The `roots` map above
+> lives in-process and is **not** durable across restarts. Persist the
+> namespace→root pointer (another 0G blob or a database) if memory must survive a
+> cold start.
+
 ## Tiers
 
-- **lib** — portable `MemoryBackend`, `MemoryEntry`, `appendMemory`,
-  `recallMemory` interfaces + implementation (no hard `@foundryprotocol/*`
-  imports — deps injected by adapters).
+- **lib** — portable `createMemory()` → `AgentMemory` (`remember` / `recall` /
+  `list`) over an injected `MemoryStorage` (no hard `@foundryprotocol/*` imports
+  — deps injected by adapters).
 - **adapters** — `app/api/memory/route.ts` for `react-app`/`chat` bases (POST
   append + GET recall); `src/tools/memory.ts` for `mcp-agent` (MCP tool pair
   `memory_append` / `memory_recall`).
