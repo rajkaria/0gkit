@@ -9,6 +9,13 @@ apps. A kit injects a working feature — files, dependencies, and env var stubs
 — into any compatible template without rewriting the base. Kits compose: some
 kits build on other kits automatically.
 
+> **Built with Kits — `0gkit-status`.** Our showcase app, a live 0G network
+> dashboard, is composed from the [`agent-memory`](/kits/agent-memory) +
+> [`live-feed`](/kits/live-feed) kits on the **published** `@foundryprotocol/0gkit-*`
+> packages, using `Compute.router()` and `0g test` as its CI gate — the epic's
+> end-to-end dogfood.
+> [See the source](https://github.com/rajkaria/0gkit/tree/main/showcase/0gkit-status).
+
 ## How kits work
 
 Every kit follows a **3-tier model**:

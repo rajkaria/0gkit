@@ -40,6 +40,18 @@ export async function TrustSignals() {
         </a>
       ),
     },
+    {
+      value: "1",
+      label: "showcase app",
+      sub: (
+        <a
+          href="https://github.com/rajkaria/0gkit/tree/main/showcase/0gkit-status"
+          style={{ color: "inherit", textDecoration: "underline" }}
+        >
+          0gkit-status — built with kits →
+        </a>
+      ),
+    },
   ];
   return (
     <section style={{ paddingTop: "3.5rem", paddingBottom: "0.5rem" }}>

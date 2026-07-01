@@ -828,3 +828,25 @@ GitHub's GraphQL/REST API exposes **`createDiscussion`** but **no** `createDiscu
 **Why:** The plan assumed a `createDiscussionCategory` mutation and API pinning — both fictional. Honesty (and idempotency) means seeding what the API allows and handing off the two clicks the API forbids, rather than silently doing three of five and claiming "done". Routing support through `--copy-issue-context` is the highest-leverage etiquette because it makes every report reproducible and secret-free by construction.
 
 **How to apply:** Never assume a discussions category/pin can be created via API — those stay UI-only in the runbook's printed steps. Keep the seed script idempotent (skip existing titles; skip missing categories with instructions). Any "how to ask / report a bug" guidance must point at `--copy-issue-context`.
+
+## D96 — The `0gkit-status` showcase consumes published `@foundryprotocol/0gkit-*@^1.x`, lives outside the workspace, and is composed from kits — the epic's dogfood
+
+**Date:** 2026-07-01 · **SP:** K10
+
+The showcase lives at `showcase/0gkit-status/` — **not** in `pnpm-workspace.yaml` (globs are `apps/*` + `packages/*`), so it installs the **published** npm packages exactly like a real user's app (mirrors D24; zero `workspace:*`). It is **composed from the `agent-memory` + `live-feed` kits** (their portable `lib/` applied into `lib/`, driven by `app/api/{pins,feed}` routes), uses `Compute.router()` (K7) for the AI summary, and ships `0g test` (K5) as its CI gate. The network panel reads **real galileo** data over public JSON-RPC (`0gkit-core` `galileo` preset; verified live — chainId 16602); every keyed feature degrades to a clear "configure X" note, never a fabricated number (honesty rule), so it deploys keyless.
+
+**Why:** The whole point is an end-to-end dogfood on the _published_ surface — if a published package or kit regresses, the showcase regresses. Keeping it out of the workspace is what makes that true. Honest keyless degradation is what lets it be a public, always-on demo without secrets.
+
+**How to apply:** The showcase must never depend on `workspace:*` or reach into `packages/`. New panels wire published packages via the kit-overlay pattern (injected deps) and must show real data or a configure-note — never a placeholder number.
+
+## D97 — The showcase is hand-authored (bespoke network panel) but composes the real kit overlays; deploy is account-gated
+
+**Date:** 2026-07-01 · **SP:** K10
+
+The plan's `npm create 0gkit-app@latest … --kits agent-memory,live-feed` **does** work on published tooling — a mid-session scoping error briefly claimed otherwise: the canonical scaffolder `create-0gkit-app` (unscoped; D12) is published at **1.1.0 with `--kits`** (verified: its dist contains `--kits`/`listKits`/`selectedKits`). The earlier "404" came from querying the wrong **scoped** name `@foundryprotocol/create-0gkit-app`; the unscoped `create-0gkit-app` is live. So the kit pages' scaffold-time examples are correct, and no scaffold-docs follow-up is needed. The showcase is nonetheless **hand-authored** — by choice, not necessity — because it needs a bespoke 0G-network-status panel that isn't a kit, and hand-authoring gives full control in a headless build; it still consumes only published packages and composes the real `agent-memory` + `live-feed` `lib/` overlays. **Deploy is account-gated:** the Vercel MCP `deploy_to_vercel` is parameterless — it can't target the `showcase/` monorepo subdirectory and its context is the session's (different, private) worktree, so blind-firing it risks publishing the wrong repo. Creating the Vercel project (root dir `showcase/0gkit-status`) + mapping `apps.0gkit.com` is the user's account action.
+
+**Why:** Verify-before-asserting cuts both ways — the same discipline that caught real plan fictions (K1/K5/K6/K7/K8) also caught _this_ session's own false "scaffolder is broken" claim (wrong-name npm query). The honest record is: the plan was right about the scaffolder; hand-authoring is a deliberate implementation choice. Not blind-firing a parameterless deploy that could publish the wrong directory is the same honesty applied to an outward-facing action.
+
+**How to apply:** Query npm with the exact package name (unscoped `create-0gkit-app`, per D12) before asserting publish state. For subdirectory apps, deploy via a Vercel project with an explicit root directory (dashboard/CLI), not the parameterless MCP deploy.
+
+**How to apply:** Publishing `create-0g-app@1.1.0` (which has `--kits`) is the permanent fix for the scaffold-time `--kits` docs examples — track separately. For subdirectory apps, deploy via a Vercel project with an explicit root directory (dashboard/CLI), not the parameterless MCP deploy.
