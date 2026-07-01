@@ -227,7 +227,12 @@ export interface ProgramDeps {
       applied?: { applied: string[]; base: string } | null;
     }) => {
       path: string;
-      json: { mcpServers: Record<string, { command: string; args: string[]; env?: Record<string, string> }> };
+      json: {
+        mcpServers: Record<
+          string,
+          { command: string; args: string[]; env?: Record<string, string> }
+        >;
+      };
       mode: "neutral" | "local";
       kits: string[];
     };

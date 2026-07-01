@@ -24,12 +24,12 @@ the config is committable and travels with the repo.
 
 ## Where each agent's config lands
 
-| Agent      | `0g mcp init <agent>` (project)      | `--global` (user-level)                     |
-| ---------- | ------------------------------------ | ------------------------------------------- |
-| `cursor`   | `.cursor/mcp.json`                   | `~/.cursor/mcp.json`                        |
-| `claude`   | `./.mcp.json`                        | `~/.claude/mcp.json`                        |
-| `windsurf` | `.windsurf/mcp.json`                 | `~/.codeium/windsurf/mcp_config.json`       |
-| `codex`    | `.codex/mcp.json`                    | `~/.codex/mcp.json`                          |
+| Agent      | `0g mcp init <agent>` (project) | `--global` (user-level)               |
+| ---------- | ------------------------------- | ------------------------------------- |
+| `cursor`   | `.cursor/mcp.json`              | `~/.cursor/mcp.json`                  |
+| `claude`   | `./.mcp.json`                   | `~/.claude/mcp.json`                  |
+| `windsurf` | `.windsurf/mcp.json`            | `~/.codeium/windsurf/mcp_config.json` |
+| `codex`    | `.codex/mcp.json`               | `~/.codex/mcp.json`                   |
 
 Add `--global` to install into the agent's user-level config instead of the
 project:
@@ -46,17 +46,17 @@ server is always the published version with zero setup.
 
 Every generated config points at these nine tools:
 
-| Tool                | What it does                                   |
-| ------------------- | ---------------------------------------------- |
-| `og_storage_put`    | Upload bytes to 0G Storage → root hash         |
-| `og_storage_get`    | Download by root hash                          |
-| `og_storage_exists` | Check a root hash exists                        |
-| `og_infer`          | Run inference via the 0G Compute broker        |
-| `og_da_publish`     | Publish a blob to 0G Data Availability         |
-| `og_da_verify`      | Verify a DA commitment                         |
-| `og_chain_faucet`   | Request testnet funds                          |
-| `og_chain_balance`  | Read a native balance                          |
-| `og_attest_verify`  | Verify a signed inference receipt              |
+| Tool                | What it does                            |
+| ------------------- | --------------------------------------- |
+| `og_storage_put`    | Upload bytes to 0G Storage → root hash  |
+| `og_storage_get`    | Download by root hash                   |
+| `og_storage_exists` | Check a root hash exists                |
+| `og_infer`          | Run inference via the 0G Compute broker |
+| `og_da_publish`     | Publish a blob to 0G Data Availability  |
+| `og_da_verify`      | Verify a DA commitment                  |
+| `og_chain_faucet`   | Request testnet funds                   |
+| `og_chain_balance`  | Read a native balance                   |
+| `og_attest_verify`  | Verify a signed inference receipt       |
 
 Set the server's environment (network, key, provider) in the generated config's
 `env` block — see the [`0gkit-mcp` package

@@ -81,7 +81,10 @@ export function collectToolPlugin(
   return {
     name,
     tools,
-    async call(toolName: string, args: Record<string, unknown>): Promise<ToolCallResult> {
+    async call(
+      toolName: string,
+      args: Record<string, unknown>
+    ): Promise<ToolCallResult> {
       const h = handlers[toolName];
       if (!h) {
         return {

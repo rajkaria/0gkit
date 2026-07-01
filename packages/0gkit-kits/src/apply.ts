@@ -329,7 +329,8 @@ export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
         const entryFile = mcpAdapters[0]; // e.g. "src/tools/memory.ts"
         // Convert alias: camelCase(name) + "Plugin"
         const alias =
-          name.replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase()) + "Plugin";
+          name.replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase()) +
+          "Plugin";
         // Convert entryFile to ESM specifier relative to src/kits.ts:
         //   "src/tools/memory.ts" -> "./tools/memory.js"
         const specifier =

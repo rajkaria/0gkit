@@ -16,10 +16,13 @@ export type AgentName = (typeof AGENTS)[number];
 export type McpScope = "project" | "global";
 
 const PATHS: Record<AgentName, { project: string; global: string }> = {
-  cursor:   { project: ".cursor/mcp.json",                    global: ".cursor/mcp.json" },
-  claude:   { project: ".mcp.json",                           global: ".claude/mcp.json" },
-  windsurf: { project: ".windsurf/mcp.json",                  global: ".codeium/windsurf/mcp_config.json" },
-  codex:    { project: ".codex/mcp.json",                     global: ".codex/mcp.json" },
+  cursor: { project: ".cursor/mcp.json", global: ".cursor/mcp.json" },
+  claude: { project: ".mcp.json", global: ".claude/mcp.json" },
+  windsurf: {
+    project: ".windsurf/mcp.json",
+    global: ".codeium/windsurf/mcp_config.json",
+  },
+  codex: { project: ".codex/mcp.json", global: ".codex/mcp.json" },
 };
 
 export interface AppliedKits {

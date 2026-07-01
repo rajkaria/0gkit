@@ -37,8 +37,10 @@ export function registerMcp(program: Command, deps: ProgramDeps): void {
 
         if (deps.mcpConfig) {
           // Test seam: use injected functions directly.
-          buildMcpConfig = deps.mcpConfig.buildMcpConfig as unknown as typeof BuildMcpConfigFn;
-          readAppliedKits = deps.mcpConfig.readAppliedKits as unknown as typeof ReadAppliedKitsFn;
+          buildMcpConfig = deps.mcpConfig
+            .buildMcpConfig as unknown as typeof BuildMcpConfigFn;
+          readAppliedKits = deps.mcpConfig
+            .readAppliedKits as unknown as typeof ReadAppliedKitsFn;
         } else {
           // Production: lazy computed-specifier import (D39).
           const spec = ["@foundryprotocol", "0gkit-mcp"].join("/");

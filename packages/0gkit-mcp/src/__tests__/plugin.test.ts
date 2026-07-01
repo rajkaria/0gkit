@@ -4,12 +4,9 @@ import { collectToolPlugin } from "../plugin.js";
 describe("collectToolPlugin", () => {
   it("returns a plugin with the correct name and collected tools", () => {
     const plugin = collectToolPlugin("agent-memory", (s) => {
-      s.tool(
-        "memory_remember",
-        "desc",
-        { type: "object" },
-        async () => ({ content: [{ type: "text", text: "ok" }] })
-      );
+      s.tool("memory_remember", "desc", { type: "object" }, async () => ({
+        content: [{ type: "text", text: "ok" }],
+      }));
     });
 
     expect(plugin.name).toBe("agent-memory");
@@ -23,12 +20,9 @@ describe("collectToolPlugin", () => {
 
   it("plugin.call invokes the captured handler and returns ToolCallResult", async () => {
     const plugin = collectToolPlugin("agent-memory", (s) => {
-      s.tool(
-        "memory_remember",
-        "desc",
-        { type: "object" },
-        async () => ({ content: [{ type: "text", text: "ok" }] })
-      );
+      s.tool("memory_remember", "desc", { type: "object" }, async () => ({
+        content: [{ type: "text", text: "ok" }],
+      }));
     });
 
     const result = await plugin.call("memory_remember", {});
@@ -37,12 +31,9 @@ describe("collectToolPlugin", () => {
 
   it("plugin.call for an unknown tool returns an isError result", async () => {
     const plugin = collectToolPlugin("agent-memory", (s) => {
-      s.tool(
-        "memory_remember",
-        "desc",
-        { type: "object" },
-        async () => ({ content: [{ type: "text", text: "ok" }] })
-      );
+      s.tool("memory_remember", "desc", { type: "object" }, async () => ({
+        content: [{ type: "text", text: "ok" }],
+      }));
     });
 
     const result = await plugin.call("nope", {});
@@ -61,6 +52,9 @@ describe("collectToolPlugin", () => {
     );
 
     expect(capturedOpts).toHaveLength(1);
-    expect(capturedOpts[0]).toEqual({ privateKey: "0xabc", rpc: "https://rpc.example.com" });
+    expect(capturedOpts[0]).toEqual({
+      privateKey: "0xabc",
+      rpc: "https://rpc.example.com",
+    });
   });
 });

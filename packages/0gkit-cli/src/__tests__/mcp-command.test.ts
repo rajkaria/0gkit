@@ -32,10 +32,13 @@ const AGENTS = ["cursor", "claude", "windsurf", "codex"] as const;
 type AgentName = (typeof AGENTS)[number];
 
 const PATHS: Record<AgentName, { project: string; global: string }> = {
-  cursor:   { project: ".cursor/mcp.json",   global: ".cursor/mcp.json" },
-  claude:   { project: ".mcp.json",          global: ".claude/mcp.json" },
-  windsurf: { project: ".windsurf/mcp.json", global: ".codeium/windsurf/mcp_config.json" },
-  codex:    { project: ".codex/mcp.json",    global: ".codex/mcp.json" },
+  cursor: { project: ".cursor/mcp.json", global: ".cursor/mcp.json" },
+  claude: { project: ".mcp.json", global: ".claude/mcp.json" },
+  windsurf: {
+    project: ".windsurf/mcp.json",
+    global: ".codeium/windsurf/mcp_config.json",
+  },
+  codex: { project: ".codex/mcp.json", global: ".codex/mcp.json" },
 };
 
 function stubBuildMcpConfig(opts: {
@@ -157,11 +160,18 @@ function makeDeps(over: Partial<ProgramDeps> = {}): {
       summarizeTrace: vi.fn(() => ({ id: "", spans: [] })),
     },
     fs: {
-      readFile: vi.fn(async () => { throw new Error("ENOENT"); }),
-      writeFile: vi.fn(async (p: string, d: string | Uint8Array) => {
-        writes.push({ path: p, data: typeof d === "string" ? d : new TextDecoder().decode(d) });
+      readFile: vi.fn(async () => {
+        throw new Error("ENOENT");
       }),
-      mkdir: vi.fn(async (p: string) => { mkdirs.push(p); }),
+      writeFile: vi.fn(async (p: string, d: string | Uint8Array) => {
+        writes.push({
+          path: p,
+          data: typeof d === "string" ? d : new TextDecoder().decode(d),
+        });
+      }),
+      mkdir: vi.fn(async (p: string) => {
+        mkdirs.push(p);
+      }),
       readdir: vi.fn(async () => []),
       exists: vi.fn(async () => false),
     },
@@ -204,8 +214,12 @@ function makeDeps(over: Partial<ProgramDeps> = {}): {
 // ---------------------------------------------------------------------------
 
 describe("0g mcp init", () => {
-  beforeEach(() => { process.exitCode = 0; });
-  afterEach(() => { process.exitCode = 0; });
+  beforeEach(() => {
+    process.exitCode = 0;
+  });
+  afterEach(() => {
+    process.exitCode = 0;
+  });
 
   it("writes .cursor/mcp.json with neutral npx server for 'cursor' (project scope)", async () => {
     const { d, lines, writes, mkdirs } = makeDeps();
@@ -247,7 +261,10 @@ describe("0g mcp init", () => {
     await p.parseAsync(["mcp", "init", "vscode", "--json"], { from: "user" });
 
     expect(process.exitCode).toBe(1);
-    const payload = JSON.parse(lines.at(-1)!) as { ok: boolean; error: { message: string } };
+    const payload = JSON.parse(lines.at(-1)!) as {
+      ok: boolean;
+      error: { message: string };
+    };
     expect(payload.ok).toBe(false);
     expect(payload.error.message).toMatch(/vscode/);
     process.exitCode = 0;
@@ -287,7 +304,11 @@ describe("0g mcp init", () => {
       mcpServers: Record<string, { command: string; args: string[] }>;
     };
     expect(json.mcpServers["0gkit"].command).toBe("npm");
-    expect(json.mcpServers["0gkit"].args).toEqual(["--prefix", "/fake/project", "start"]);
+    expect(json.mcpServers["0gkit"].args).toEqual([
+      "--prefix",
+      "/fake/project",
+      "start",
+    ]);
 
     const output = lines.join("\n");
     expect(output).toContain("agent-memory");

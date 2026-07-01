@@ -682,7 +682,9 @@ describe("src/kits.ts aggregator (mcp-agent base)", () => {
     expect(result.filesWritten).toContain("src/kits.ts");
 
     const content = readFileSync(kitsPath, "utf8");
-    expect(content).toContain('import { mcpToolPlugin as agentMemoryPlugin } from "./tools/memory.js"');
+    expect(content).toContain(
+      'import { mcpToolPlugin as agentMemoryPlugin } from "./tools/memory.js"'
+    );
     expect(content).toContain("agentMemoryPlugin(process.env)");
     expect(content).toContain("export const kitPlugins");
   });
@@ -710,8 +712,12 @@ describe("src/kits.ts aggregator (mcp-agent base)", () => {
 
     const content = readFileSync(join(dest, "src", "kits.ts"), "utf8");
     // Both imports must be present
-    expect(content).toContain('import { mcpToolPlugin as agentMemoryPlugin } from "./tools/memory.js"');
-    expect(content).toContain('import { mcpToolPlugin as aiOraclePlugin } from "./tools/oracle.js"');
+    expect(content).toContain(
+      'import { mcpToolPlugin as agentMemoryPlugin } from "./tools/memory.js"'
+    );
+    expect(content).toContain(
+      'import { mcpToolPlugin as aiOraclePlugin } from "./tools/oracle.js"'
+    );
     expect(content).toContain("agentMemoryPlugin(process.env)");
     expect(content).toContain("aiOraclePlugin(process.env)");
   });
