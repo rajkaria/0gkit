@@ -169,13 +169,15 @@ function copyDir(src, dest) {
  * composition closure — including composed dependencies — so this helper must
  * correctly copy ANY kit's files, not just the originally-requested one.
  *
- * File layout:
- *   lib/<path>              → tmpDir/<path>
- *   adapters/<base>/<path>  → tmpDir/<path>   (all bases; engine picks what it needs)
- *   ui/<path>               → tmpDir/<path>
+ * File layout — MUST mirror the real giget overlay (tier-prefixed), because
+ * the engine's `resolveTierFiles` reads sources at `adapters/<base>/…` and
+ * `ui/…` (only `lib` values already carry their `lib/` prefix):
+ *   lib/<path>              → tmpDir/lib/<path>
+ *   adapters/<base>/<path>  → tmpDir/adapters/<base>/<path>
+ *   ui/<path>               → tmpDir/ui/<path>
  */
 function copyKitTiersToOverlay(kitDir, manifest, tmpDir) {
-  // lib/* — copy directly
+  // lib/* — manifest values already carry the `lib/` prefix (src === dest).
   for (const relPath of manifest.tiers.lib ?? []) {
     const src = join(kitDir, "lib", relPath.replace(/^lib\//, ""));
     const dest = join(tmpDir, relPath);
@@ -183,20 +185,20 @@ function copyKitTiersToOverlay(kitDir, manifest, tmpDir) {
     if (existsSync(src)) copyFileSync(src, dest);
   }
 
-  // adapters/<base>/<relPath> — copy to tmpDir/<relPath>
+  // adapters/<base>/<relPath> — stage under the same prefix the engine reads.
   for (const [base, files] of Object.entries(manifest.tiers.adapters ?? {})) {
     for (const relPath of files) {
       const src = join(kitDir, "adapters", base, relPath);
-      const dest = join(tmpDir, relPath);
+      const dest = join(tmpDir, "adapters", base, relPath);
       mkdirSync(dirname(dest), { recursive: true });
       if (existsSync(src)) copyFileSync(src, dest);
     }
   }
 
-  // ui/* — copy with ui/ prefix stripped
+  // ui/<relPath> — stage under the `ui/` prefix the engine reads.
   for (const relPath of manifest.tiers.ui ?? []) {
     const src = join(kitDir, "ui", relPath);
-    const dest = join(tmpDir, relPath);
+    const dest = join(tmpDir, "ui", relPath);
     mkdirSync(dirname(dest), { recursive: true });
     if (existsSync(src)) copyFileSync(src, dest);
   }
