@@ -3,8 +3,17 @@ export {
   __resetDeprecationWarning,
   type ComputeConfig,
   type ChatMessage,
+  type InferenceArgs,
   type InferenceResult,
+  type RouterArgs,
+  type RouterResult,
 } from "./compute.js";
+export {
+  selectProviders,
+  pickProviderAddress,
+  toProviderInfo,
+  type ProviderInfo,
+} from "./router-select.js";
 export {
   countTokens,
   makeComputeEstimate,
