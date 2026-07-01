@@ -294,9 +294,7 @@ const deps: ProgramDeps = {
     readProjectPins: async (cwd: string) => {
       const pins: Record<string, string> = {};
       try {
-        const pkg = JSON.parse(
-          readFileSync(join(cwd, "package.json"), "utf8")
-        ) as {
+        const pkg = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")) as {
           dependencies?: Record<string, string>;
           devDependencies?: Record<string, string>;
         };

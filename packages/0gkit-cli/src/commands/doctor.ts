@@ -115,18 +115,12 @@ export function registerDoctor(program: Command, deps: ProgramDeps): void {
         const fixerDeps: DoctorFixDeps = {
           fs: {
             exists: deps.fs.exists,
-            writeFile: (p, data) =>
-              deps.fs.writeFile(p, data as string),
+            writeFile: (p, data) => deps.fs.writeFile(p, data as string),
           },
           loadProjectConfig:
-            deps.doctorFix?.loadProjectConfig ??
-            (async (_cwd) => null), // Production: honest null (D85)
-          readProjectPins:
-            deps.doctorFix?.readProjectPins ??
-            (async (_cwd) => ({})),
-          latestVersion:
-            deps.doctorFix?.latestVersion ??
-            (async (_pkg) => "0.0.0"),
+            deps.doctorFix?.loadProjectConfig ?? (async (_cwd) => null), // Production: honest null (D85)
+          readProjectPins: deps.doctorFix?.readProjectPins ?? (async (_cwd) => ({})),
+          latestVersion: deps.doctorFix?.latestVersion ?? (async (_pkg) => "0.0.0"),
         };
 
         for (const probe of [
@@ -243,9 +237,7 @@ export function registerDoctor(program: Command, deps: ProgramDeps): void {
             ok
               ? `all required checks passed`
               : `${failed.length} required check(s) failed`,
-            ...(fixLines.length
-              ? ["", "fixes applied:", ...fixLines]
-              : []),
+            ...(fixLines.length ? ["", "fixes applied:", ...fixLines] : []),
           ],
           json: { network: ctx.network, ok, checks: jsonChecks },
         };

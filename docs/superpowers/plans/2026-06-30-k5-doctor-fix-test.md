@@ -23,11 +23,11 @@ against the real tree (the same discipline that caught K1's fictional-API gap)
 surfaced two must-fix drifts and one wiring note. **Execute the revised tasks, not
 the original pseudocode where they differ.**
 
-| Original plan assumed | Reality on `main` | Resolution |
-| --- | --- | --- |
-| Decisions **D81–D83** | D81–D83 are already K1's (recorded in Foundryprotocol CLAUDE.md + `.changeset/kits-verifiable-ai.md`). Canonical `docs/DECISIONS.md` stops at **D80** — K1's decisions were never backfilled. | K5 uses **D84–D86**. T8 also **backfills D81–D83 (K1)** into `docs/DECISIONS.md` so the log has no hole (D80 → D84). |
-| `0g test --kits` reads `.0gkit/kits.json` "written by `applyKit` in K0" | **No such file exists.** `applyKit` (`packages/0gkit-kits/src/apply.ts`) writes `package.json` + `.env.example` only; `ApplyResult` (`applied`/`filesWritten`/`envAdded`/`notes`/`token`) is returned in-memory and never persisted. `0g add` prints it and drops it. | **T5 first adds the persistence:** `applyKit` writes `.0gkit/kits.json` = `{ applied: string[], base: string, at: string }` (via injected `writeFile`, honoring `dryRun`). Only then does `0g test --kits` read it. New decision **D86**. |
-| `makeCompute().inference({ messages }) → { output }` maps to a real `Compute.inference` | Real compute is broker-based: `packages/0gkit-compute` exposes `broker.inference.*` (provider-addressed), not a bare `inference({messages})`. | Suites stay **mock-injected** (`mockComputeClient` from `0gkit-testing/src/mocks/compute.ts`) so CI is offline. The live `conformanceDeps.makeCompute` **wraps** the real broker to the `{ inference }` factory shape. `SuiteDeps` abstraction is unchanged. |
+| Original plan assumed                                                                   | Reality on `main`                                                                                                                                                                                                                                                     | Resolution                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Decisions **D81–D83**                                                                   | D81–D83 are already K1's (recorded in Foundryprotocol CLAUDE.md + `.changeset/kits-verifiable-ai.md`). Canonical `docs/DECISIONS.md` stops at **D80** — K1's decisions were never backfilled.                                                                         | K5 uses **D84–D86**. T8 also **backfills D81–D83 (K1)** into `docs/DECISIONS.md` so the log has no hole (D80 → D84).                                                                                                                                         |
+| `0g test --kits` reads `.0gkit/kits.json` "written by `applyKit` in K0"                 | **No such file exists.** `applyKit` (`packages/0gkit-kits/src/apply.ts`) writes `package.json` + `.env.example` only; `ApplyResult` (`applied`/`filesWritten`/`envAdded`/`notes`/`token`) is returned in-memory and never persisted. `0g add` prints it and drops it. | **T5 first adds the persistence:** `applyKit` writes `.0gkit/kits.json` = `{ applied: string[], base: string, at: string }` (via injected `writeFile`, honoring `dryRun`). Only then does `0g test --kits` read it. New decision **D86**.                    |
+| `makeCompute().inference({ messages }) → { output }` maps to a real `Compute.inference` | Real compute is broker-based: `packages/0gkit-compute` exposes `broker.inference.*` (provider-addressed), not a bare `inference({messages})`.                                                                                                                         | Suites stay **mock-injected** (`mockComputeClient` from `0gkit-testing/src/mocks/compute.ts`) so CI is offline. The live `conformanceDeps.makeCompute` **wraps** the real broker to the `{ inference }` factory shape. `SuiteDeps` abstraction is unchanged. |
 
 Confirmed present, no drift (use as-is): `DefinedConfig.envExample()`
 (`0gkit-core/src/define-config.ts:14`), `ConfigError` (`0gkit-core/src/errors.ts:36`),
@@ -35,7 +35,8 @@ Confirmed present, no drift (use as-is): `DefinedConfig.envExample()`
 `src/mocks/`), `CommandResult = { human: string[]; json: Record<string,unknown> }`
 (`0gkit-cli/src/output.ts:1`), `da.publish(payload) → { digest }` + `da.verify(payload, digest): boolean`
 (`0gkit-da/src/da.ts:81,143`), `Check { name, ok, required, detail, hint }` + `runCommand(deps, this, cb)`
-+ `registerDoctor`/`registerCost` (`0gkit-cli/src/commands/doctor.ts`, `program.ts:299–309`).
+
+- `registerDoctor`/`registerCost` (`0gkit-cli/src/commands/doctor.ts`, `program.ts:299–309`).
 
 ## Goal
 
@@ -386,16 +387,16 @@ export function rpcFallbackCmd(network: string): string {
 > (T5b) needs a durable record of which kits are applied. Add it here.
 
 - [ ] **Failing test** — `packages/0gkit-kits/src/__tests__/apply.test.ts` (extend): after
-  `applyKit({ kit: "agent-memory", dest, base, deps })`, a `.0gkit/kits.json` is written to
-  `dest` whose parsed JSON has `applied` including `"agent-memory"` (and any composed kits,
-  deps-first order), a `base` field, and an `at` ISO-timestamp string; re-applying a second
-  kit **merges** (union, no dup) rather than clobbering; `dryRun: true` writes nothing.
+      `applyKit({ kit: "agent-memory", dest, base, deps })`, a `.0gkit/kits.json` is written to
+      `dest` whose parsed JSON has `applied` including `"agent-memory"` (and any composed kits,
+      deps-first order), a `base` field, and an `at` ISO-timestamp string; re-applying a second
+      kit **merges** (union, no dup) rather than clobbering; `dryRun: true` writes nothing.
 - [ ] **Run** — `pnpm --filter @foundryprotocol/0gkit-kits test` → red.
 - [ ] **Implement** — in `apply.ts`, after the package.json/env writes, write
-  `${dest}/.0gkit/kits.json`. Read any existing manifest first and union `applied`. Use the
-  injected write path (mirror the existing `writeFileSync` usage; gate on `!dryRun`). The `at`
-  timestamp is injectable (default `new Date().toISOString()`) so the test is deterministic.
-  Keep the engine neutral — no `@foundryprotocol/*`-app import (D78 / `boundary:check`).
+      `${dest}/.0gkit/kits.json`. Read any existing manifest first and union `applied`. Use the
+      injected write path (mirror the existing `writeFileSync` usage; gate on `!dryRun`). The `at`
+      timestamp is injectable (default `new Date().toISOString()`) so the test is deterministic.
+      Keep the engine neutral — no `@foundryprotocol/*`-app import (D78 / `boundary:check`).
 - [ ] **Run** → green. **Commit**: `feat(kits): applyKit persists .0gkit/kits.json applied-kit manifest (D86)`.
 
 ### T5b — `0g test --kits` reads the manifest + runs each kit's conformance (K0 synergy)

@@ -115,7 +115,14 @@ function resolveCompositionClosure(
 // ---------------------------------------------------------------------------
 
 export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
-  const { kit: kitName, dest, base, dryRun = false, deps = {}, now = () => new Date().toISOString() } = opts;
+  const {
+    kit: kitName,
+    dest,
+    base,
+    dryRun = false,
+    deps = {},
+    now = () => new Date().toISOString(),
+  } = opts;
 
   const {
     fetchOverlay = fetchKitOverlay as (name: string, dir: string) => Promise<void>,

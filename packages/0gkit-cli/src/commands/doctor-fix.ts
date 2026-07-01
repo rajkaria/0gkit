@@ -19,9 +19,7 @@ export interface DoctorFixDeps {
    * honest and returns `null` (see `defaultLoadProjectConfig` in cli.ts): the
    * CLI cannot type-check + import an arbitrary project TS config at runtime.
    */
-  loadProjectConfig: (
-    cwd: string
-  ) => Promise<{ envExample: () => string } | null>;
+  loadProjectConfig: (cwd: string) => Promise<{ envExample: () => string } | null>;
   /** Merged `dependencies` + `devDependencies` from the project's package.json. */
   readProjectPins: (cwd: string) => Promise<Record<string, string>>;
   /** Latest published version of a package as reported by the registry. */

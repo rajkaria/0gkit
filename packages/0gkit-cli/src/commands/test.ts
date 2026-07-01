@@ -44,7 +44,11 @@ export function registerTest(program: Command, deps: ProgramDeps): void {
         // real lazy import is the production path.
         const runConformanceFn =
           deps.runConformance ??
-          (async (o: Parameters<typeof import("@foundryprotocol/0gkit-testing")["runConformance"]>[0]) => {
+          (async (
+            o: Parameters<
+              (typeof import("@foundryprotocol/0gkit-testing"))["runConformance"]
+            >[0]
+          ) => {
             const spec = "@foundryprotocol/0gkit-testing";
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const mod = await import(/* @vite-ignore */ spec as string);
@@ -72,13 +76,23 @@ export function registerTest(program: Command, deps: ProgramDeps): void {
 
         const suites = rawSuites as SuiteName[] | undefined;
 
-        const suiteDeps =
-          deps.conformanceDeps?.({ network: ctx.network, local: opts.local }) ?? {
-            makeStorage: () => { throw new Error("no conformanceDeps"); },
-            makeCompute: () => { throw new Error("no conformanceDeps"); },
-            makeDA: () => { throw new Error("no conformanceDeps"); },
-            testWallet: () => { throw new Error("no conformanceDeps"); },
-          };
+        const suiteDeps = deps.conformanceDeps?.({
+          network: ctx.network,
+          local: opts.local,
+        }) ?? {
+          makeStorage: () => {
+            throw new Error("no conformanceDeps");
+          },
+          makeCompute: () => {
+            throw new Error("no conformanceDeps");
+          },
+          makeDA: () => {
+            throw new Error("no conformanceDeps");
+          },
+          testWallet: () => {
+            throw new Error("no conformanceDeps");
+          },
+        };
 
         const results = await runConformanceFn({ suites, deps: suiteDeps });
 
@@ -154,9 +168,7 @@ export async function defaultRunKitConformance(cwd: string): Promise<string[]> {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         const result = (await runFn()) as { ok: boolean; detail: string } | undefined;
         if (result && typeof result === "object") {
-          notes.push(
-            `  ${result.ok ? "✓" : "✗"} ${kit}: ${result.detail}`
-          );
+          notes.push(`  ${result.ok ? "✓" : "✗"} ${kit}: ${result.detail}`);
         } else {
           notes.push(`  • ${kit}: conformance ran (no result shape)`);
         }

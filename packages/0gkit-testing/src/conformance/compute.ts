@@ -1,8 +1,9 @@
 import type { SuiteResult, SuiteDeps } from "./index.js";
 
-const PROBE_MESSAGES = [
-  { role: "user" as const, content: "ping" },
-] satisfies { role: "system" | "user" | "assistant"; content: string }[];
+const PROBE_MESSAGES = [{ role: "user" as const, content: "ping" }] satisfies {
+  role: "system" | "user" | "assistant";
+  content: string;
+}[];
 
 export async function computeSuite(
   deps: Pick<SuiteDeps, "makeCompute">

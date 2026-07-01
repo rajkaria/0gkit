@@ -2,9 +2,7 @@ import type { SuiteResult, SuiteDeps } from "./index.js";
 
 const PROBE_BYTES = new Uint8Array([1, 2, 3, 4]);
 
-export async function daSuite(
-  deps: Pick<SuiteDeps, "makeDA">
-): Promise<SuiteResult> {
+export async function daSuite(deps: Pick<SuiteDeps, "makeDA">): Promise<SuiteResult> {
   const da = deps.makeDA();
   const { digest } = await da.publish(PROBE_BYTES);
   // Real mock signature: verify(digest, bytes) — not (bytes, digest)

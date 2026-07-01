@@ -237,7 +237,9 @@ describe("0g test", () => {
     const { d, lines } = makeDeps();
     const p = buildProgram(d);
     p.exitOverride();
-    await p.parseAsync(["test", "--suite", "storage,bogus", "--json"], { from: "user" });
+    await p.parseAsync(["test", "--suite", "storage,bogus", "--json"], {
+      from: "user",
+    });
 
     expect(process.exitCode).toBe(1);
     expect(d.runConformance).not.toHaveBeenCalled();
@@ -279,9 +281,7 @@ describe("0g test --kits", () => {
 
   it("includes kit conformance note lines in the human output", async () => {
     const { d, lines } = makeDeps({
-      runKitConformance: vi.fn(async () => [
-        "  ✓ agent-memory: remember→recall ok",
-      ]),
+      runKitConformance: vi.fn(async () => ["  ✓ agent-memory: remember→recall ok"]),
     });
     const p = buildProgram(d);
     p.exitOverride();
@@ -295,9 +295,7 @@ describe("0g test --kits", () => {
 
   it("when no kits applied runKitConformance returns the informational note", async () => {
     const { d, lines } = makeDeps({
-      runKitConformance: vi.fn(async () => [
-        "no kits applied — run `0g add <kit>`",
-      ]),
+      runKitConformance: vi.fn(async () => ["no kits applied — run `0g add <kit>`"]),
     });
     const p = buildProgram(d);
     p.exitOverride();

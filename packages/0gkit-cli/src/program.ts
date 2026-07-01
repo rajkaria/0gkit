@@ -219,9 +219,7 @@ export interface ProgramDeps {
    * Optional: when omitted, `--fix` degrades to printing the `fixCmd` hints.
    */
   doctorFix?: {
-    loadProjectConfig: (
-      cwd: string
-    ) => Promise<{ envExample: () => string } | null>;
+    loadProjectConfig: (cwd: string) => Promise<{ envExample: () => string } | null>;
     readProjectPins: (cwd: string) => Promise<Record<string, string>>;
     latestVersion: (pkg: string) => Promise<string>;
   };

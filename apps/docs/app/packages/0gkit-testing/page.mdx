@@ -57,12 +57,12 @@ it does not affect CLI cold-start.
 
 ### Suites
 
-| Suite | What it checks |
-|-------|----------------|
+| Suite     | What it checks                                                           |
+| --------- | ------------------------------------------------------------------------ |
 | `storage` | Upload a byte buffer then download it back; asserts round-trip identity. |
-| `compute` | Send a minimal inference request; asserts a non-empty `output` string. |
-| `da` | Publish bytes to the DA layer; verifies the returned digest matches. |
-| `wallet` | Sign a message with `testWallet`; recovers the signer address via viem. |
+| `compute` | Send a minimal inference request; asserts a non-empty `output` string.   |
+| `da`      | Publish bytes to the DA layer; verifies the returned digest matches.     |
+| `wallet`  | Sign a message with `testWallet`; recovers the signer address via viem.  |
 
 ### Flags
 
@@ -74,25 +74,30 @@ it does not affect CLI cold-start.
 0g test --kits                 # also run each applied kit's conformance module
 ```
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--suite <list>` | `string` | all | Comma-separated subset: `storage`, `compute`, `da`, `wallet` |
-| `--local` | boolean | false | Use the local `0g dev` devnet at `http://127.0.0.1:8545` |
-| `--galileo` | boolean | true | Use the live galileo testnet (explicit; same as the default) |
-| `--kits` | boolean | false | Run each applied kit's `conformance.ts` in `.0gkit/kits/<kit>/` |
+| Flag             | Type     | Default | Description                                                     |
+| ---------------- | -------- | ------- | --------------------------------------------------------------- |
+| `--suite <list>` | `string` | all     | Comma-separated subset: `storage`, `compute`, `da`, `wallet`    |
+| `--local`        | boolean  | false   | Use the local `0g dev` devnet at `http://127.0.0.1:8545`        |
+| `--galileo`      | boolean  | true    | Use the live galileo testnet (explicit; same as the default)    |
+| `--kits`         | boolean  | false   | Run each applied kit's `conformance.ts` in `.0gkit/kits/<kit>/` |
 
 ### `runConformance`
 
 ```ts
-import { runConformance, type SuiteName, type SuiteDeps, type SuiteResult } from "@foundryprotocol/0gkit-testing";
+import {
+  runConformance,
+  type SuiteName,
+  type SuiteDeps,
+  type SuiteResult,
+} from "@foundryprotocol/0gkit-testing";
 
 const results: SuiteResult[] = await runConformance({
-  suites: ["storage", "da"],  // omit for all four suites
+  suites: ["storage", "da"], // omit for all four suites
   deps: {
     makeStorage: () => storageClient,
     makeCompute: () => computeClient,
-    makeDA:      () => daClient,
-    testWallet:  () => wallet,
+    makeDA: () => daClient,
+    testWallet: () => wallet,
   },
 });
 // SuiteResult: { name: string; ok: boolean; detail: string }
@@ -107,13 +112,13 @@ for use in downstream validators.
 cannot fix automatically. It never installs packages or mutates network state
 (D85).
 
-| Check | What `--fix` does |
-|-------|-------------------|
-| `storage-indexer` unreachable | Calls `genEnvFromConfig` — regenerates `.env.example` from `define0GConfig().envExample()` and seeds `.env.local` if it does not exist. |
-| `da-encoder` unreachable | Same `.env` regeneration via `genEnvFromConfig`. |
-| Stale `@foundryprotocol/0gkit-*` pins | Calls `bumpStalePins` — prints `npm install <pkg>@latest …` for each stale package. **Prints a command; does not run it.** |
-| `rpc` unreachable | Prints `0g dev   # then re-run with --network local` via `rpcFallbackCmd`. |
-| `signer` missing or unfunded | Prints `export ZEROG_PRIVATE_KEY=<key>` or a faucet `open` command. |
+| Check                                 | What `--fix` does                                                                                                                       |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `storage-indexer` unreachable         | Calls `genEnvFromConfig` — regenerates `.env.example` from `define0GConfig().envExample()` and seeds `.env.local` if it does not exist. |
+| `da-encoder` unreachable              | Same `.env` regeneration via `genEnvFromConfig`.                                                                                        |
+| Stale `@foundryprotocol/0gkit-*` pins | Calls `bumpStalePins` — prints `npm install <pkg>@latest …` for each stale package. **Prints a command; does not run it.**              |
+| `rpc` unreachable                     | Prints `0g dev   # then re-run with --network local` via `rpcFallbackCmd`.                                                              |
+| `signer` missing or unfunded          | Prints `export ZEROG_PRIVATE_KEY=<key>` or a faucet `open` command.                                                                     |
 
 The `.env` regeneration is idempotent: `.env.example` is always rewritten
 with the same bytes; `.env.local` is only created when it does not already

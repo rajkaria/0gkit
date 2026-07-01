@@ -665,4 +665,76 @@ A kit's `kit.json` may declare `composes: ["other-kit"]` to auto-apply dependenc
 
 **Why:** Without `composes`, a user applying `agent-memory-with-ui` would have to know to also apply `agent-memory` first — leaking implementation details. Without dedup, applying two kits that both compose a shared base kit would double-apply files. `KitError` on conflict prevents silent breakage when two kits patch the same files incompatibly. Putting 0gkit deps in `dependencies` (not `requires`) means the overlay is always self-sufficient: a future kit author won't have to separately document "also run `npm install @foundryprotocol/0gkit-storage`" — the `mergePackageJson` step handles it.
 
+---
+
+## D81 — K1 attestation = honest signed inference receipt; no TEE-quote verification
+
+**Date:** 2026-06-30 · **SP:** K1
+
+`0gkit-attestation` provides EIP-191 signed-envelope verification over an eval-result schema — not TEE quote verification. K1's `ai-oracle` and `sealed-inference` kits frame this honestly: the attestation badge reads "✓ signature verified", never "TEE attested". The `Attestor` interface is injected (not hard-coded) so a real TEE-quote verifier can slot in later without changing consumer code.
+
+**Why:** The stack has no TEE quote verification. Labelling an EIP-191 signature check as "TEE attestation" would be fabricated behavior — a direct violation of the honesty rule. The `Attestor` seam preserves the upgrade path while keeping current claims accurate.
+
+**How to apply:** Never display "TEE attested" or "hardware-verified" unless a real quote verifier is wired in. The badge text must be "✓ signature verified". When adding a new attestation path, implement the `Attestor` interface and inject it — do not hard-code a verifier strategy.
+
+---
+
+## D82 — K1 anchor = 0G Storage by default; opt-in on-chain via `Anchor.sol`
+
+**Date:** 2026-06-30 · **SP:** K1
+
+K1 ships two anchor strategies. The default is **0G Storage anchor**: the inference result is uploaded to 0G Storage and the content-addressed `root` hash is the commitment. The opt-in is **on-chain anchor**: a bundled `Anchor.sol` contract (via `0gkit-contracts.createTypedContract`) records the root on-chain, enabled by the env flag `OG_ANCHOR_ONCHAIN=1`.
+
+**Why:** No `chain.anchor` primitive exists in the stack. Rather than fabricating one, K1 uses what is real: 0G Storage's content-addressed root is already a cryptographic commitment. The on-chain anchor is additive and opt-in — it does not block users on chains without a deployed contract.
+
+**How to apply:** Default to the 0G Storage anchor. Gate on-chain anchoring behind `OG_ANCHOR_ONCHAIN=1`. When deploying `Anchor.sol`, pass the address via `ANCHOR_CONTRACT_ADDRESS`. Mirror the `templates/nft-with-storage` pattern for contract wiring.
+
+---
+
+## D83 — `gen-registry.mjs` prettier-formats its generated output
+
+**Date:** 2026-06-30 · **SP:** K0 (codegen hygiene fix, landed with K1 reconciliation)
+
+`packages/0gkit-kits/scripts/gen-registry.mjs` now pipes its generated `registry.generated.ts` through prettier before writing. Previously the script emitted raw `JSON.stringify` output that never matched prettier's style — every CI run produced a `format:check` diff on the generated file.
+
+**Why:** A generated file that perpetually drifts from the formatter is worse than no formatter gate: it trains contributors to ignore `format:check` failures. Formatting at codegen time makes the output idempotent with respect to the formatter and eliminates the drift permanently.
+
+**How to apply:** Any codegen script that emits TypeScript or JSON must pass its output through `prettier.format()` (with the project's config) before writing the file. Add a graceful cold-build fallback (write raw output if prettier is not yet installed) so the script is safe to run before `pnpm install`.
+
+---
+
+## D84 — `0g test` lazy-imports `0gkit-testing`; conformance suites are offline-safe
+
+**Date:** 2026-07-01 · **SP:** K5
+
+The `0g test` CLI command loads `@foundryprotocol/0gkit-testing` via a computed dynamic `import()` specifier (reusing the D39 lazy-import pattern). This keeps `0gkit-testing` out of the CLI cold-start path. The conformance suites (`storage`, `compute`, `da`, `wallet`) are pure functions over injected factory objects — they do not open live sockets or call the 0G network directly, so they run fully offline in CI without depending on Aristotle or any other live node.
+
+**Why:** `0gkit-testing` pulls in test-framework peer deps that are inappropriate in the CLI's runtime. The D39 pattern keeps CLI startup fast. Offline-safe suites mean `pnpm test` in CI never races against network availability.
+
+**How to apply:** Every new conformance suite must accept all network clients as injected parameters (never import them at module scope). `0g test` must resolve the `0gkit-testing` specifier at call time, not import it at the top of `cli.ts`. To add a new suite, export it from `0gkit-testing/suites` and register it in the `SUITES` map in `cli/src/commands/test.ts`.
+
+---
+
+## D85 — `0g doctor --fix` is advisory-only; it never auto-installs or mutates network state
+
+**Date:** 2026-07-01 · **SP:** K5
+
+`0g doctor --fix` applies exactly three classes of fix: (1) writes a missing `.env` file from a safe template, (2) prints the `npm install @foundryprotocol/0gkit-*@<latest>` command for stale pins (never runs it), (3) prints the `0g dev --network <fallback>` command when the primary RPC is unreachable (never switches the active network). Without `--fix`, every check that has a remediation prints a `→ run <cmd> to fix` hint. Checks that have no safe automatic fix always print the hint and never attempt a fix even with `--fix`.
+
+**Why:** Auto-installing packages in a production project can silently upgrade unrelated deps, break lockfiles, and violate change-management policies. Auto-switching networks can cause a running application to silently switch chains. Advisory output keeps the doctor safe to run in any environment.
+
+**How to apply:** New doctor checks must expose a `fixCmd` string (or `null`). The check runner prints `→ run <fixCmd> to fix` regardless of `--fix`. If `--fix` is set and `fixCmd` is a known safe mutation (`.env` write), the runner may execute it directly and print "✓ fixed". Never add a new check whose fix auto-runs `npm install`, `pnpm install`, or any network-mutating command.
+
+---
+
+## D86 — `applyKit` persists `.0gkit/kits.json`; `0g test --kits` reads it; missing manifest = informational note
+
+**Date:** 2026-07-01 · **SP:** K5
+
+After every successful `applyKit` call, the engine writes (or merges into) `.0gkit/kits.json` in the target project root. The schema is `{ applied: string[], base: string, at: string (ISO timestamp) }`. `0g test --kits` reads this manifest to discover which kits are installed and runs only those suites. If the manifest file does not exist or lists no kits, the command prints an informational note and exits 0 — it is never treated as a test failure.
+
+**Why:** K0 shipped `applyKit` without recording what was applied, so there was no machine-readable way to know which kits a project uses. This closed that gap. The "no manifest = informational" rule prevents `0g test --kits` from becoming a gate that breaks projects that were scaffolded before K5.
+
+**How to apply:** Do not delete or gitignore `.0gkit/kits.json` from project roots. When adding a new kit, ensure `applyKit` merges the new kit name into the `applied` array (never overwrites). If writing a script that uses kit state, read `.0gkit/kits.json` — do not infer kit presence from file existence heuristics.
+
 **How to apply:** In `kit.json`, use `composes` for "apply these kits first" and `conflicts` for "fail loudly if this kit is already applied." Put `@foundryprotocol/0gkit-*` package version pins in `dependencies` (not `requires`) so `mergePackageJson` injects them automatically. `requires` is reserved for non-0gkit peer checks (e.g. "the project must already have `react` as a dep").
