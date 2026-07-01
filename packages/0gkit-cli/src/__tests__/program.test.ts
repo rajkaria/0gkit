@@ -126,6 +126,7 @@ describe("buildProgram", () => {
         "jobs",
         "kits",
         "storage",
+        "test",
         "traces",
       ].sort()
     );

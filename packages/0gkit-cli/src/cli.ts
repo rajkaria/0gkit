@@ -41,7 +41,9 @@ import {
 } from "@foundryprotocol/0gkit-observability";
 import { buildProgram, VERSION as CLI_VERSION, type ProgramDeps } from "./program.js";
 import { loadFoundry } from "./foundry-loader.js";
+import { defaultRunKitConformance } from "./commands/test.js";
 import type { JobsBackendFactory, JobBackendLike } from "./commands/jobs.js";
+import type { SuiteDeps } from "@foundryprotocol/0gkit-testing";
 
 /**
  * Optional jobs-backend loader. `@foundryprotocol/0gkit-jobs` is NOT a static
@@ -278,6 +280,93 @@ const deps: ProgramDeps = {
   writeErr: (line) => process.stderr.write(line + "\n"),
   packageVersions: readPackageVersions,
   now: () => new Date(),
+  /**
+   * K5-C — builds SuiteDeps for the conformance runner from CLI context.
+   *
+   * Compute honesty note (D81): the real Compute class is broker-based.
+   * `broker.inference.*` requires an ethers Wallet + a registered 0G provider
+   * address.  We wrap `Compute.inference()` into the `{ inference }` factory
+   * shape SuiteDeps expects, but the live suite will report `ok:false` with a
+   * truthful detail if the broker is not configured — never a fake pass.
+   */
+  conformanceDeps: ({ network, local }): SuiteDeps => {
+    const rpcUrl = local ? "http://127.0.0.1:8545" : undefined;
+    const privateKey = process.env.ZEROG_PRIVATE_KEY;
+
+    return {
+      makeStorage: () => {
+        const s = new Storage({ network: network as never, rpcUrl });
+        return {
+          upload: (b) => s.upload(b),
+          download: (r) => s.download(r),
+        };
+      },
+      makeCompute: () => {
+        // Compute is broker-based — wraps Compute.inference into SuiteDeps shape.
+        // If no private key or broker, the suite will catch and report ok:false.
+        const c = new Compute({
+          network: network as never,
+          brokerRpc: rpcUrl,
+          ...(privateKey ? { brokerKey: privateKey } : {}),
+        });
+        return {
+          inference: (a) => c.inference(a).then((r) => ({ output: r.output })),
+        };
+      },
+      makeDA: () => {
+        const d = new DA({ network: network as never });
+        return {
+          publish: (b) => d.publish(b).then((r) => ({ digest: r.digest })),
+          // SuiteDeps signature: (digest, bytes) => Promise<boolean>
+          // Real DA.verify signature: (payload, expectedDigest) => boolean (sync)
+          verify: (digest, b) => Promise.resolve(d.verify(b, digest)),
+        };
+      },
+      testWallet: () => {
+        // testWallet from @foundryprotocol/0gkit-testing uses a deterministic
+        // mnemonic — safe for testnet/local, not production keys.
+        // Uses the SAME deterministic mnemonic as the testing package offline.
+        // Inline a simple viem-based wallet so we don't need a sync require().
+        const { generatePrivateKey, privateKeyToAccount } = (() => {
+          // We cannot use a sync require() here (ESM package). Return a
+          // deterministic key instead — the same test mnemonic path #0.
+          // The conformance wallet suite only needs sign → recover, so any
+          // stable key works for the offline path.
+          return {
+            generatePrivateKey: (): `0x${string}` =>
+              "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+            privateKeyToAccount: (k: `0x${string}`) => {
+              // Simple inline shim — the real path loads viem at runtime.
+              return { privateKey: k };
+            },
+          };
+        })();
+        // Honesty: the live wallet suite signs with viem — this is a
+        // deterministic fixture key (anvil account #0). For live testnet
+        // conformance, the suite will use viem's recoverMessageAddress which
+        // is available in `@foundryprotocol/0gkit-wallet`.
+        const key = generatePrivateKey();
+        void privateKeyToAccount(key); // no-op in the shim above
+        // Actual implementation: lazy import viem at call time.
+        return {
+          address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" as `0x${string}`,
+          signMessage: async (message: string): Promise<`0x${string}`> => {
+            // D39: computed specifier — never statically bundled.
+            const viemSpec = "viem/accounts";
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const viemAccounts = await import(/* @vite-ignore */ viemSpec as string);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            const account = viemAccounts.privateKeyToAccount(
+              "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as `0x${string}`
+            );
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            return account.signMessage({ message });
+          },
+        };
+      },
+    };
+  },
+  runKitConformance: defaultRunKitConformance,
 };
 
 try {
