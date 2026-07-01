@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-mcp",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "The neutral 0G MCP server — every 0G primitive (storage, compute, da, chain, attestation) as an MCP tool for Claude / Cursor / Cline / any agent runtime. Foundry is a separate opt-in plugin.",
   "license": "MIT",
   "homepage": "https://0gkit.com",

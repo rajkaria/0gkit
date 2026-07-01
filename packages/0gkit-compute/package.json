@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-compute",
-  "version": "1.5.0",
+  "version": "1.9.0",
   "description": "Neutral 0G Compute client — provider discovery, broker inference, OpenAI-compatible shim.",
   "license": "MIT",
   "homepage": "https://0gkit.com",
