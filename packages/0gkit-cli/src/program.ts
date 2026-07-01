@@ -208,6 +208,23 @@ export interface ProgramDeps {
   packageVersions: () => Array<{ name: string; version: string }>;
   /** Injected for deterministic timestamps in issue-context. */
   now: () => Date;
+  /**
+   * K5-D (D85) — the three impure seams the `0g doctor --fix` fixers need:
+   * load the project's `0g.config.ts` (`define0GConfig` result), read its
+   * package.json pins, and resolve the latest registry version. Injected so
+   * tests stay offline; the production wiring (in cli.ts) is honest —
+   * `loadProjectConfig` returns `null` (the CLI can't type-check + import an
+   * arbitrary project TS config at runtime). `--fix` only ever writes `.env*`
+   * or prints commands — it never installs or touches network state (D85).
+   * Optional: when omitted, `--fix` degrades to printing the `fixCmd` hints.
+   */
+  doctorFix?: {
+    loadProjectConfig: (
+      cwd: string
+    ) => Promise<{ envExample: () => string } | null>;
+    readProjectPins: (cwd: string) => Promise<Record<string, string>>;
+    latestVersion: (pkg: string) => Promise<string>;
+  };
 }
 
 /** Build the resolved context + output sink for one command invocation. */

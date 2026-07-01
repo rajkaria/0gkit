@@ -244,7 +244,7 @@ describe("0g doctor --fix / fixCmd (K5-D)", () => {
     p.exitOverride();
     await p.parseAsync(["doctor", "--fix"], { from: "user" });
     // Only .env* files may be written — never package.json or node_modules.
-    for (const call of writeFile.mock.calls) {
+    for (const call of writeFile.mock.calls as unknown as [string, string][]) {
       expect(String(call[0])).toMatch(/\.env(\.\w+)?$/);
     }
     process.exitCode = 0;
