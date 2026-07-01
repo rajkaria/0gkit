@@ -9,6 +9,7 @@
     "estimate": "tsx src/estimate.ts",
     "start": "tsx src/index.ts",
     "test": "vitest run",
+    "test:conformance": "0g test",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

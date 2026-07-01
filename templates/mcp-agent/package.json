@@ -6,6 +6,7 @@
   "description": "Wire the neutral @foundryprotocol/0gkit-mcp server into an agent runtime (Claude Desktop, Cursor, programmatic).",
   "scripts": {
     "start": "tsx src/index.ts",
+    "test": "0g test",
     "typecheck": "tsc --noEmit"
   },
   "engines": {

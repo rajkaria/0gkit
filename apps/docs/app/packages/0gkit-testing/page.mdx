@@ -28,18 +28,93 @@ pnpm add @foundryprotocol/0gkit-testing
 - `MockStorageEstimateBreakdown`
 - `MockStorageOptions`
 - `MockUploadResult`
+- `SUITE_NAMES`
 - `TEST_MNEMONIC`
 - `fixtureAttestation`
 - `fixtureReceipt`
 - `mockComputeClient`
 - `mockDAClient`
 - `mockStorageClient`
+- `runConformance`
 - `setupLocalDevnet`
 - `testWallet`
 - `type DevnetTestHandle`
 - `type SetupLocalDevnetOptions`
+- `type SuiteDeps`
+- `type SuiteName`
+- `type SuiteResult`
 - `type TestWalletOptions`
 
 See the package README and source in
 [`packages/0gkit-testing/`](https://github.com/rajkaria/0gkit/tree/main/packages/0gkit-testing)
 for usage examples.
+
+## Conformance + `0g test`
+
+The `0g test` CLI command runs the built-in conformance suites against a 0G
+network. It lazy-loads `@foundryprotocol/0gkit-testing` at runtime (D39) so
+it does not affect CLI cold-start.
+
+### Suites
+
+| Suite | What it checks |
+|-------|----------------|
+| `storage` | Upload a byte buffer then download it back; asserts round-trip identity. |
+| `compute` | Send a minimal inference request; asserts a non-empty `output` string. |
+| `da` | Publish bytes to the DA layer; verifies the returned digest matches. |
+| `wallet` | Sign a message with `testWallet`; recovers the signer address via viem. |
+
+### Flags
+
+```bash
+0g test                        # run all four suites against galileo (default)
+0g test --suite storage,da     # run a subset of suites (comma-separated)
+0g test --local                # target the running `0g dev` stack (127.0.0.1:8545)
+0g test --galileo              # explicit galileo testnet (default when no flag)
+0g test --kits                 # also run each applied kit's conformance module
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--suite <list>` | `string` | all | Comma-separated subset: `storage`, `compute`, `da`, `wallet` |
+| `--local` | boolean | false | Use the local `0g dev` devnet at `http://127.0.0.1:8545` |
+| `--galileo` | boolean | true | Use the live galileo testnet (explicit; same as the default) |
+| `--kits` | boolean | false | Run each applied kit's `conformance.ts` in `.0gkit/kits/<kit>/` |
+
+### `runConformance`
+
+```ts
+import { runConformance, type SuiteName, type SuiteDeps, type SuiteResult } from "@foundryprotocol/0gkit-testing";
+
+const results: SuiteResult[] = await runConformance({
+  suites: ["storage", "da"],  // omit for all four suites
+  deps: {
+    makeStorage: () => storageClient,
+    makeCompute: () => computeClient,
+    makeDA:      () => daClient,
+    testWallet:  () => wallet,
+  },
+});
+// SuiteResult: { name: string; ok: boolean; detail: string }
+```
+
+`SUITE_NAMES` is the tuple `["storage", "compute", "da", "wallet"]` exported
+for use in downstream validators.
+
+## `0g doctor --fix` repair table
+
+`0g doctor --fix` applies safe auto-fixes and prints commands for things it
+cannot fix automatically. It never installs packages or mutates network state
+(D85).
+
+| Check | What `--fix` does |
+|-------|-------------------|
+| `storage-indexer` unreachable | Calls `genEnvFromConfig` — regenerates `.env.example` from `define0GConfig().envExample()` and seeds `.env.local` if it does not exist. |
+| `da-encoder` unreachable | Same `.env` regeneration via `genEnvFromConfig`. |
+| Stale `@foundryprotocol/0gkit-*` pins | Calls `bumpStalePins` — prints `npm install <pkg>@latest …` for each stale package. **Prints a command; does not run it.** |
+| `rpc` unreachable | Prints `0g dev   # then re-run with --network local` via `rpcFallbackCmd`. |
+| `signer` missing or unfunded | Prints `export ZEROG_PRIVATE_KEY=<key>` or a faucet `open` command. |
+
+The `.env` regeneration is idempotent: `.env.example` is always rewritten
+with the same bytes; `.env.local` is only created when it does not already
+exist (never clobbered).

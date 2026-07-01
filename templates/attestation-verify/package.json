@@ -6,6 +6,7 @@
   "description": "Parse and verify a 0G TEE attestation envelope with @foundryprotocol/0gkit-attestation (pure crypto, no network).",
   "scripts": {
     "start": "tsx src/index.ts",
+    "test": "0g test",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
