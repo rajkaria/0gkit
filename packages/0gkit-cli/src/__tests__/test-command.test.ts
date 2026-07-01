@@ -219,6 +219,34 @@ describe("0g test", () => {
     );
   });
 
+  it("--suite=bogus surfaces a ConfigError (exitCode=1) without touching runConformance", async () => {
+    const { d } = makeDeps();
+    const p = buildProgram(d);
+    p.exitOverride();
+
+    // The ConfigError is caught by runCommand which sets exitCode=1; it does NOT
+    // throw from parseAsync — runCommand swallows it and renders the failure.
+    await p.parseAsync(["test", "--suite", "bogus"], { from: "user" });
+
+    expect(process.exitCode).toBe(1);
+    // runConformance must never be called — validation fires before the lazy import.
+    expect(d.runConformance).not.toHaveBeenCalled();
+  });
+
+  it("--suite=storage,bogus lists the invalid name in the error output", async () => {
+    const { d, lines } = makeDeps();
+    const p = buildProgram(d);
+    p.exitOverride();
+    await p.parseAsync(["test", "--suite", "storage,bogus", "--json"], { from: "user" });
+
+    expect(process.exitCode).toBe(1);
+    expect(d.runConformance).not.toHaveBeenCalled();
+    const out = JSON.parse(lines.at(-1)!);
+    expect(out.ok).toBe(false);
+    expect(out.error.message).toMatch(/bogus/);
+    expect(out.error.message).toMatch(/storage, compute, da, wallet/);
+  });
+
   it("human output includes per-suite checkmarks and the network header", async () => {
     const { d, lines } = makeDeps({
       runConformance: vi.fn(async () => [

@@ -304,6 +304,11 @@ const deps: ProgramDeps = {
       makeCompute: () => {
         // Compute is broker-based — wraps Compute.inference into SuiteDeps shape.
         // If no private key or broker, the suite will catch and report ok:false.
+        //
+        // Finding 2 (known deferral): `{ brokerKey }` is deprecated in favour of
+        // `{ signer }`.  Building a signer here would require importing
+        // @foundryprotocol/0gkit-wallet synchronously at factory-construction time.
+        // Deferred until 0gkit-wallet exposes a sync `signerFromKey` helper (post-K1).
         const c = new Compute({
           network: network as never,
           brokerRpc: rpcUrl,
@@ -323,31 +328,9 @@ const deps: ProgramDeps = {
         };
       },
       testWallet: () => {
-        // testWallet from @foundryprotocol/0gkit-testing uses a deterministic
-        // mnemonic — safe for testnet/local, not production keys.
-        // Uses the SAME deterministic mnemonic as the testing package offline.
-        // Inline a simple viem-based wallet so we don't need a sync require().
-        const { generatePrivateKey, privateKeyToAccount } = (() => {
-          // We cannot use a sync require() here (ESM package). Return a
-          // deterministic key instead — the same test mnemonic path #0.
-          // The conformance wallet suite only needs sign → recover, so any
-          // stable key works for the offline path.
-          return {
-            generatePrivateKey: (): `0x${string}` =>
-              "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-            privateKeyToAccount: (k: `0x${string}`) => {
-              // Simple inline shim — the real path loads viem at runtime.
-              return { privateKey: k };
-            },
-          };
-        })();
-        // Honesty: the live wallet suite signs with viem — this is a
-        // deterministic fixture key (anvil account #0). For live testnet
-        // conformance, the suite will use viem's recoverMessageAddress which
-        // is available in `@foundryprotocol/0gkit-wallet`.
-        const key = generatePrivateKey();
-        void privateKeyToAccount(key); // no-op in the shim above
-        // Actual implementation: lazy import viem at call time.
+        // Uses a deterministic fixture key (anvil account #0) — safe for
+        // testnet/local conformance.  signMessage lazy-imports viem at call time
+        // (D39: computed specifier — never statically bundled).
         return {
           address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" as `0x${string}`,
           signMessage: async (message: string): Promise<`0x${string}`> => {

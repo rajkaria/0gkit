@@ -10,7 +10,13 @@
  */
 
 import type { Command } from "commander";
+import { ConfigError } from "@foundryprotocol/0gkit-core";
+import type { SuiteName } from "@foundryprotocol/0gkit-testing";
 import { runCommand, type ProgramDeps } from "../program.js";
+
+// D39: keep this local — do NOT import the *value* from @foundryprotocol/0gkit-testing
+// (that would break the lazy-import invariant).  `import type { SuiteName }` above is fine.
+const SUITE_NAMES = ["storage", "compute", "da", "wallet"] as const;
 
 export function registerTest(program: Command, deps: ProgramDeps): void {
   program
@@ -46,9 +52,25 @@ export function registerTest(program: Command, deps: ProgramDeps): void {
             return mod.runConformance(o);
           });
 
-        const suites = opts.suite
+        const rawSuites = opts.suite
           ? opts.suite.split(",").map((s) => s.trim())
           : undefined;
+
+        // Finding 1: explicit CLI-level validation so unknown suite names surface
+        // as a ConfigError here, not deep inside the lazy-imported runConformance.
+        if (rawSuites !== undefined) {
+          const invalid = rawSuites.filter(
+            (s) => !(SUITE_NAMES as readonly string[]).includes(s)
+          );
+          if (invalid.length > 0) {
+            throw new ConfigError(
+              `Unknown suite(s): ${invalid.join(", ")}. Valid values: ${SUITE_NAMES.join(", ")}.`,
+              `Pass a comma-separated list of valid suites, e.g. --suite=storage,da`
+            );
+          }
+        }
+
+        const suites = rawSuites as SuiteName[] | undefined;
 
         const suiteDeps =
           deps.conformanceDeps?.({ network: ctx.network, local: opts.local }) ?? {
@@ -58,7 +80,7 @@ export function registerTest(program: Command, deps: ProgramDeps): void {
             testWallet: () => { throw new Error("no conformanceDeps"); },
           };
 
-        const results = await runConformanceFn({ suites: suites as never, deps: suiteDeps });
+        const results = await runConformanceFn({ suites, deps: suiteDeps });
 
         const failed = results.filter((r: { ok: boolean }) => !r.ok);
         if (failed.length > 0) process.exitCode = 1;
@@ -81,7 +103,12 @@ export function registerTest(program: Command, deps: ProgramDeps): void {
               ? `${failed.length} suite(s) failed`
               : "all conformance suites passed",
           ],
-          json: { network, results, kits: kitNotes },
+          // Finding 4: only include `kits` key when --kits was explicitly passed.
+          json: {
+            network,
+            results,
+            ...(opts.kits ? { kits: kitNotes } : {}),
+          },
         };
       });
     });
