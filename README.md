@@ -126,6 +126,25 @@ apps/docs          the documentation site (private, Vercel-deployable)
 templates/         degit-able starter projects
 ```
 
+## Community
+
+Come build in the open — [**GitHub Discussions**](https://github.com/rajkaria/0gkit/discussions):
+
+- **[Q&A](https://github.com/rajkaria/0gkit/discussions/categories/q-a)** — get
+  unstuck. Start with the pinned _"How to ask great questions"_ post: re-run your
+  failing command with `--copy-issue-context` and paste the redacted block.
+- **[Show and tell](https://github.com/rajkaria/0gkit/discussions/categories/show-and-tell)** —
+  what you built on 0gkit.
+- **[Ideas](https://github.com/rajkaria/0gkit/discussions/categories/ideas)** —
+  propose features (problem-first).
+- **RFCs** — design changes to a package's public surface (additive-only, D13).
+- **Show your kit** — share a kit others can `0g add`. Built one for reuse? See
+  [Authoring a kit](https://0gkit.com/kits/authoring) and post it here — solid
+  community kits are exactly what the general engine is for.
+
+No paid tiers. Reach the maintainer on [Telegram](https://t.me/rajkaria) or
+[X](https://x.com/rajkaria_).
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md). Every change to a published package

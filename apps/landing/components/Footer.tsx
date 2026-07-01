@@ -130,6 +130,10 @@ export function Footer() {
               label: "Discussions",
               href: "https://github.com/rajkaria/0gkit/discussions",
             },
+            {
+              label: "Show your kit",
+              href: "https://github.com/rajkaria/0gkit/discussions/categories/show-your-kit",
+            },
             { label: "Issues", href: "https://github.com/rajkaria/0gkit/issues" },
             {
               label: "Contributing",

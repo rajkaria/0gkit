@@ -808,3 +808,23 @@ The three compute-calling base templates (`inference-app`, `ai-agent`, `tee-atte
 **Why:** The honesty rule requires wiring the confirmed real endpoint (the correct `/open/api` base, verified by probe on both networks) rather than the plan's assumed `/api` — and requires surfacing "not verified" as an honest, actionable error rather than inventing an ABI. Keyless-by-default matches the documented behaviour; the optional key is additive for rate-limit relief.
 
 **How to apply:** Never point ABI fetch at `${explorer}/api` (SPA HTML). Use `${explorer}/open/api` with Etherscan-compatible `module=contract&action=getabi`. Treat `status !== "1"` as "not verified" and route the user to `--abi`. Do not require an API key; append `OG_EXPLORER_API_KEY` only when the user sets it.
+
+## D94 — Community surface = GitHub Discussions (Q&A / Show and tell / Ideas / RFCs / Show your kit) + landing footer; Discord deferred; no paid tiers
+
+**Date:** 2026-07-01 · **SP:** K11
+
+The community surface is **GitHub Discussions** on `rajkaria/0gkit` with five load-bearing categories — **Q&A** (answerable), **Show and tell**, **Ideas**, **RFCs**, and **Show your kit** — plus the landing footer Community column (which now links **Show your kit** directly). Seed posts live in `docs/community/` (`HOW_TO_ASK.md` + `seeds/*.md`) and are posted by the idempotent `scripts/setup-discussions.sh`. **Discord is deferred** until Discussions traction warrants it; **no paid tiers** (standing invariant). The **"Show your kit"** category is the K4-authoring funnel — it makes community kits an ownable GTM surface because the engine is general (D77–D80), not `@foundryprotocol/*`-specific.
+
+**Why:** Discussions is zero-infra, searchable, and lives next to the code and issues; a second chat platform (Discord) is overhead with no audience yet. Numbering: the K11 plan drafted this as "D93–D94", but the log was already through D93 (K8) — renumbered to D94–D95 at execution time (the recurring plan-vs-reality reconciliation; see also the create-app + category-API catches below).
+
+**How to apply:** Route community growth through Discussions + `docs/community/`; keep `setup-discussions.sh` the runbook. Add a new category only with a matching seed body and footer/README link. Do not add Discord or any paid tier without revisiting this decision.
+
+## D95 — Discussion categories and pins are UI-only (no `createDiscussionCategory`/`pinDiscussion` mutation); the seed script is honest about it; support routes through `--copy-issue-context`
+
+**Date:** 2026-07-01 · **SP:** K11
+
+GitHub's GraphQL/REST API exposes **`createDiscussion`** but **no** `createDiscussionCategory` and **no** `pinDiscussion` mutation (introspection confirmed: only `pinIssue`/`pinIssueComment`/`pinEnvironment` exist). So `setup-discussions.sh` seeds welcome posts into **existing** categories idempotently (skips a title that already exists) and **prints exact one-time UI steps** for the two actions it cannot automate: creating the `RFCs` + `Show your kit` categories, and pinning the Q&A intro. The pinned "How to ask great questions" post (Q&A) routes all support through the shipped **`--copy-issue-context`** flag (SP15) for clean, redacted, reproducible reports; the discussion form templates (`.github/DISCUSSION_TEMPLATE/q-and-a.yml`, `show-your-kit.yml`) reinforce the same flow and link `AUTHORING.md`.
+
+**Why:** The plan assumed a `createDiscussionCategory` mutation and API pinning — both fictional. Honesty (and idempotency) means seeding what the API allows and handing off the two clicks the API forbids, rather than silently doing three of five and claiming "done". Routing support through `--copy-issue-context` is the highest-leverage etiquette because it makes every report reproducible and secret-free by construction.
+
+**How to apply:** Never assume a discussions category/pin can be created via API — those stay UI-only in the runbook's printed steps. Keep the seed script idempotent (skip existing titles; skip missing categories with instructions). Any "how to ask / report a bug" guidance must point at `--copy-issue-context`.
