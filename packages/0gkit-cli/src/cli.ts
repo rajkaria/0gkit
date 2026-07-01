@@ -41,7 +41,9 @@ import {
 } from "@foundryprotocol/0gkit-observability";
 import { buildProgram, VERSION as CLI_VERSION, type ProgramDeps } from "./program.js";
 import { loadFoundry } from "./foundry-loader.js";
+import { defaultRunKitConformance } from "./commands/test.js";
 import type { JobsBackendFactory, JobBackendLike } from "./commands/jobs.js";
+import type { SuiteDeps } from "@foundryprotocol/0gkit-testing";
 
 /**
  * Optional jobs-backend loader. `@foundryprotocol/0gkit-jobs` is NOT a static
@@ -278,6 +280,121 @@ const deps: ProgramDeps = {
   writeErr: (line) => process.stderr.write(line + "\n"),
   packageVersions: readPackageVersions,
   now: () => new Date(),
+  /**
+   * K5-D — production seam for `0g doctor --fix`. Reads real project pins from
+   * package.json and the latest published versions from the npm registry so
+   * `bumpStalePins` is live (not a no-op). `loadProjectConfig` stays honest:
+   * the CLI cannot type-check + import an arbitrary project TS config at
+   * runtime, so env-gen from a project's define0GConfig is intentionally null.
+   * All fixers only write `.env*` or return command strings — never install
+   * or mutate network state (D85).
+   */
+  doctorFix: {
+    loadProjectConfig: async () => null,
+    readProjectPins: async (cwd: string) => {
+      const pins: Record<string, string> = {};
+      try {
+        const pkg = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")) as {
+          dependencies?: Record<string, string>;
+          devDependencies?: Record<string, string>;
+        };
+        for (const group of [pkg.dependencies, pkg.devDependencies]) {
+          for (const [name, ver] of Object.entries(group ?? {})) {
+            if (name.startsWith("@foundryprotocol/0gkit-")) pins[name] = ver;
+          }
+        }
+      } catch {
+        // no / unreadable package.json → no pins (bumpStalePins returns null)
+      }
+      return pins;
+    },
+    latestVersion: async (pkg: string) => {
+      // On any failure return "0.0.0" so the pin is treated as up-to-date —
+      // never a false "stale" claim (e.g. offline / registry unreachable).
+      try {
+        const res = await fetch(
+          `https://registry.npmjs.org/${encodeURIComponent(pkg)}/latest`
+        );
+        if (!res.ok) return "0.0.0";
+        const body = (await res.json()) as { version?: string };
+        return body.version ?? "0.0.0";
+      } catch {
+        return "0.0.0";
+      }
+    },
+  },
+  /**
+   * K5-C — builds SuiteDeps for the conformance runner from CLI context.
+   *
+   * Compute honesty note: the real Compute class is broker-based.
+   * `broker.inference.*` requires an ethers Wallet + a registered 0G provider
+   * address.  We wrap `Compute.inference()` into the `{ inference }` factory
+   * shape SuiteDeps expects. If the broker is not configured the live client
+   * throws; since the suites don't swallow errors and `runConformance` uses
+   * `Promise.all`, that surfaces as a loud command-level failure (exitCode=1)
+   * — never a fabricated pass. Offline CI exercises the mock-injected path.
+   */
+  conformanceDeps: ({ network, local }): SuiteDeps => {
+    const rpcUrl = local ? "http://127.0.0.1:8545" : undefined;
+    const privateKey = process.env.ZEROG_PRIVATE_KEY;
+
+    return {
+      makeStorage: () => {
+        const s = new Storage({ network: network as never, rpcUrl });
+        return {
+          upload: (b) => s.upload(b),
+          download: (r) => s.download(r),
+        };
+      },
+      makeCompute: () => {
+        // Compute is broker-based — wraps Compute.inference into SuiteDeps shape.
+        // If no private key or broker, the suite will catch and report ok:false.
+        //
+        // Finding 2 (known deferral): `{ brokerKey }` is deprecated in favour of
+        // `{ signer }`.  Building a signer here would require importing
+        // @foundryprotocol/0gkit-wallet synchronously at factory-construction time.
+        // Deferred until 0gkit-wallet exposes a sync `signerFromKey` helper (post-K1).
+        const c = new Compute({
+          network: network as never,
+          brokerRpc: rpcUrl,
+          ...(privateKey ? { brokerKey: privateKey } : {}),
+        });
+        return {
+          inference: (a) => c.inference(a).then((r) => ({ output: r.output })),
+        };
+      },
+      makeDA: () => {
+        const d = new DA({ network: network as never });
+        return {
+          publish: (b) => d.publish(b).then((r) => ({ digest: r.digest })),
+          // SuiteDeps signature: (digest, bytes) => Promise<boolean>
+          // Real DA.verify signature: (payload, expectedDigest) => boolean (sync)
+          verify: (digest, b) => Promise.resolve(d.verify(b, digest)),
+        };
+      },
+      testWallet: () => {
+        // Uses a deterministic fixture key (anvil account #0) — safe for
+        // testnet/local conformance.  signMessage lazy-imports viem at call time
+        // (D39: computed specifier — never statically bundled).
+        return {
+          address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" as `0x${string}`,
+          signMessage: async (message: string): Promise<`0x${string}`> => {
+            // D39: computed specifier — never statically bundled.
+            const viemSpec = "viem/accounts";
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const viemAccounts = await import(/* @vite-ignore */ viemSpec as string);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            const account = viemAccounts.privateKeyToAccount(
+              "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as `0x${string}`
+            );
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            return account.signMessage({ message });
+          },
+        };
+      },
+    };
+  },
+  runKitConformance: defaultRunKitConformance,
 };
 
 try {

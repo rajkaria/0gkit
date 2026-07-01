@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "0g test",
     "typecheck": "tsc --noEmit"
   },
   "engines": {

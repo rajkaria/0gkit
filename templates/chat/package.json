@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
+    "test:conformance": "0g test",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

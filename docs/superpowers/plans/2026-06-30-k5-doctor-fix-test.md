@@ -16,6 +16,28 @@ depends_on: [K0]
 
 # K5 — `0g doctor --fix` + `0g test` conformance runner
 
+## Reality check (revised 2026-07-01 — reconciled against merged K0–K4 + published 1.6.0)
+
+This plan was written 2026-06-30, before K1–K4 landed. A pre-build API inventory
+against the real tree (the same discipline that caught K1's fictional-API gap)
+surfaced two must-fix drifts and one wiring note. **Execute the revised tasks, not
+the original pseudocode where they differ.**
+
+| Original plan assumed                                                                   | Reality on `main`                                                                                                                                                                                                                                                     | Resolution                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Decisions **D81–D83**                                                                   | D81–D83 are already K1's (recorded in Foundryprotocol CLAUDE.md + `.changeset/kits-verifiable-ai.md`). Canonical `docs/DECISIONS.md` stops at **D80** — K1's decisions were never backfilled.                                                                         | K5 uses **D84–D86**. T8 also **backfills D81–D83 (K1)** into `docs/DECISIONS.md` so the log has no hole (D80 → D84).                                                                                                                                         |
+| `0g test --kits` reads `.0gkit/kits.json` "written by `applyKit` in K0"                 | **No such file exists.** `applyKit` (`packages/0gkit-kits/src/apply.ts`) writes `package.json` + `.env.example` only; `ApplyResult` (`applied`/`filesWritten`/`envAdded`/`notes`/`token`) is returned in-memory and never persisted. `0g add` prints it and drops it. | **T5 first adds the persistence:** `applyKit` writes `.0gkit/kits.json` = `{ applied: string[], base: string, at: string }` (via injected `writeFile`, honoring `dryRun`). Only then does `0g test --kits` read it. New decision **D86**.                    |
+| `makeCompute().inference({ messages }) → { output }` maps to a real `Compute.inference` | Real compute is broker-based: `packages/0gkit-compute` exposes `broker.inference.*` (provider-addressed), not a bare `inference({messages})`.                                                                                                                         | Suites stay **mock-injected** (`mockComputeClient` from `0gkit-testing/src/mocks/compute.ts`) so CI is offline. The live `conformanceDeps.makeCompute` **wraps** the real broker to the `{ inference }` factory shape. `SuiteDeps` abstraction is unchanged. |
+
+Confirmed present, no drift (use as-is): `DefinedConfig.envExample()`
+(`0gkit-core/src/define-config.ts:14`), `ConfigError` (`0gkit-core/src/errors.ts:36`),
+`mockStorageClient`/`mockDAClient`/`testWallet` (`0gkit-testing/src/index.ts` +
+`src/mocks/`), `CommandResult = { human: string[]; json: Record<string,unknown> }`
+(`0gkit-cli/src/output.ts:1`), `da.publish(payload) → { digest }` + `da.verify(payload, digest): boolean`
+(`0gkit-da/src/da.ts:81,143`), `Check { name, ok, required, detail, hint }` + `runCommand(deps, this, cb)`
+
+- `registerDoctor`/`registerCost` (`0gkit-cli/src/commands/doctor.ts`, `program.ts:299–309`).
+
 ## Goal
 
 Turn `0g doctor` from a diagnose-only command into a **diagnose-and-repair**
@@ -94,13 +116,15 @@ packages/0gkit-cli/src/__tests__/test-command.test.ts
 
 ```
 packages/0gkit-testing/src/index.ts              # export conformance surface
+packages/0gkit-kits/src/apply.ts                 # T5a: write .0gkit/kits.json manifest (dryRun-safe)
+packages/0gkit-kits/src/__tests__/apply.test.ts  # T5a: manifest persisted + merged + dryRun no-op
 packages/0gkit-cli/src/commands/doctor.ts        # Check.fixCmd + --fix flag + fixers
-packages/0gkit-cli/src/program.ts                # registerTest(program) + test deps
+packages/0gkit-cli/src/program.ts                # registerTest(program) + test deps + runKitConformance
 packages/0gkit-cli/src/__tests__/program.test.ts # `0g test` registered
 templates/*/package.json                          # "test": "0g test" canonical CI step (9 templates)
 apps/docs/app/packages/0gkit-testing/page.mdx     # conformance + `0g test` docs
-.changeset/k5-doctor-fix-test.md                  # testing minor + cli minor
-docs/DECISIONS.md                                 # D81–D83
+.changeset/k5-doctor-fix-test.md                  # testing minor + cli minor + kits patch
+docs/DECISIONS.md                                 # backfill D81–D83 (K1) + add D84–D86 (K5)
 ```
 
 ## Task graph
@@ -116,7 +140,8 @@ T1 conformance suites (storage/compute/da/wallet) ──┐
                   (lazy-import, D39)                      (.env / pins / rpc)
                           │                                       │
                           ▼                                       ▼
-                  T5 0g test --kits synergy            T6 doctor --fix wiring
+                  T5a persist .0gkit/kits.json         T6 doctor --fix wiring
+                  T5b 0g test --kits synergy
                           └──────────────────────────┬───────────┘
                                                      ▼
                               T7 templates adopt `0g test` + docs
@@ -356,11 +381,29 @@ export function rpcFallbackCmd(network: string): string {
 
 - [ ] **Run** → green. **Commit**: `feat(cli): doctor fixers — .env gen, stale-pin bump, rpc fallback`.
 
-### T5 — `0g test --kits` synergy (K0)
+### T5a — persist applied-kit state in `applyKit` (K0 gap fix — prerequisite for T5b)
 
-- [ ] **Failing test** — `test-command.test.ts`: with a stub `runKitConformance` returning `["  ✓ agent-memory: remember→recall ok"]`, `0g test --kits` includes that line; with no applied kits the note reads `no kits applied — run \`0g add <kit>\``.
+> **Reality-check delta:** `applyKit` currently persists nothing. `0g test --kits`
+> (T5b) needs a durable record of which kits are applied. Add it here.
+
+- [ ] **Failing test** — `packages/0gkit-kits/src/__tests__/apply.test.ts` (extend): after
+      `applyKit({ kit: "agent-memory", dest, base, deps })`, a `.0gkit/kits.json` is written to
+      `dest` whose parsed JSON has `applied` including `"agent-memory"` (and any composed kits,
+      deps-first order), a `base` field, and an `at` ISO-timestamp string; re-applying a second
+      kit **merges** (union, no dup) rather than clobbering; `dryRun: true` writes nothing.
+- [ ] **Run** — `pnpm --filter @foundryprotocol/0gkit-kits test` → red.
+- [ ] **Implement** — in `apply.ts`, after the package.json/env writes, write
+      `${dest}/.0gkit/kits.json`. Read any existing manifest first and union `applied`. Use the
+      injected write path (mirror the existing `writeFileSync` usage; gate on `!dryRun`). The `at`
+      timestamp is injectable (default `new Date().toISOString()`) so the test is deterministic.
+      Keep the engine neutral — no `@foundryprotocol/*`-app import (D78 / `boundary:check`).
+- [ ] **Run** → green. **Commit**: `feat(kits): applyKit persists .0gkit/kits.json applied-kit manifest (D86)`.
+
+### T5b — `0g test --kits` reads the manifest + runs each kit's conformance (K0 synergy)
+
+- [ ] **Failing test** — `test-command.test.ts`: with a stub `runKitConformance` returning `["  ✓ agent-memory: remember→recall ok"]`, `0g test --kits` includes that line; with no applied kits (no `.0gkit/kits.json`) the note reads `no kits applied — run \`0g add <kit>\``.
 - [ ] **Run** → red.
-- [ ] **Implement** — `runKitConformance(cwd)` in `program.ts` deps: read `.0gkit/kits.json` (the K0 `ApplyResult` manifest); for each applied kit, dynamic-import `./0gkit/kits/<kit>/conformance.ts` if it exists and collect its `ok`/`detail`; otherwise emit the no-kits note. Pure additive; no kit present ⇒ single informational line, never a failure.
+- [ ] **Implement** — `runKitConformance(cwd)` in `program.ts` deps: read `${cwd}/.0gkit/kits.json` (the T5a manifest); for each `applied` kit, dynamic-import `./0gkit/kits/<kit>/conformance.ts` if it exists and collect its `ok`/`detail`; otherwise emit the no-kits note. Pure additive; no manifest / no kit present ⇒ single informational line, never a failure.
 - [ ] **Run** → green. **Commit**: `feat(cli): 0g test --kits runs applied-kit conformance (K0 synergy)`.
 
 ### T6 — `doctor --fix` wiring + `→ run <cmd>` on every check
@@ -378,13 +421,17 @@ export function rpcFallbackCmd(network: string): string {
 
 ### T8 — changeset + decisions + full gate
 
-- [ ] **Implement** — `.changeset/k5-doctor-fix-test.md`: `@foundryprotocol/0gkit-testing` minor (conformance surface) + `0gkit-cli` minor (`0g test`, `doctor --fix`).
-- [ ] **Implement** — `docs/DECISIONS.md` D81–D83:
-  - **D81** — `0g test` lazy-imports `0gkit-testing` via computed specifier (D39); conformance suites are pure functions over injected factories so they run offline in CI and never gate on Aristotle (D10).
-  - **D82** — `0g doctor --fix` only ever writes `.env*`, prints an `npm install` line for stale `@foundryprotocol/0gkit-*` pins, and prints the `0g dev` fallback command — it never auto-installs or mutates network state. Every check exposes a `fixCmd` shown with or without `--fix`.
-  - **D83** — `0g test --kits` is additive: reads `.0gkit/kits.json` (K0 `ApplyResult`); no applied kits ⇒ informational note, never a failure.
-- [ ] **Run** — full gate: `pnpm lint typecheck build test boundary:check templates:check format:check` → all green. (`0gkit-testing` imports `0gkit-core` only; no neutrality breach.)
-- [ ] **Commit**: `chore(k5): changeset + D81–D83`. Open PR `K5 — doctor --fix + 0g test`. Squash-merge on green CI.
+- [ ] **Implement** — `.changeset/k5-doctor-fix-test.md`: `@foundryprotocol/0gkit-testing` minor (conformance surface) + `0gkit-cli` minor (`0g test`, `doctor --fix`) + `@foundryprotocol/0gkit-kits` **patch** (T5a `.0gkit/kits.json` persistence).
+- [ ] **Implement (backfill)** — `docs/DECISIONS.md` is stale at **D80**; K1's D81–D83 (recorded only in CLAUDE.md + `.changeset/kits-verifiable-ai.md`) were never landed. Backfill them verbatim so the log has no hole before adding K5's:
+  - **D81 (K1)** — attestation = honest **signed inference receipt** (no TEE-quote verification exists in the stack); badge "✓ signature verified" backed by `recoverSigner`; injected `Attestor` seam for a future real verifier.
+  - **D82 (K1)** — anchor = **0G Storage by default** (content-addressed `root` = commitment) + **opt-in on-chain** via bundled `Anchor.sol` (`0gkit-contracts`), env-flag-gated (`OG_ANCHOR_ONCHAIN=1`).
+  - **D83 (K1)** — `0gkit-kits/scripts/gen-registry.mjs` prettier-formats its generated `registry.generated.ts` (kills perpetual `format:check` drift).
+- [ ] **Implement** — `docs/DECISIONS.md` D84–D86 (K5):
+  - **D84** — `0g test` lazy-imports `0gkit-testing` via computed specifier (D39); conformance suites are pure functions over injected factories so they run offline in CI and never gate on Aristotle (D10).
+  - **D85** — `0g doctor --fix` only ever writes `.env*`, prints an `npm install` line for stale `@foundryprotocol/0gkit-*` pins, and prints the `0g dev` fallback command — it never auto-installs or mutates network state. Every check exposes a `fixCmd` shown with or without `--fix`.
+  - **D86** — `0g test --kits` is additive and reads `.0gkit/kits.json`, a manifest **now written by `applyKit`** (`{ applied, base, at }`; T5a closed the K0 gap where applied-kit state was never persisted). No manifest / no kits ⇒ informational note, never a failure.
+- [ ] **Run** — full gate: `pnpm lint typecheck build test boundary:check templates:check format:check` → all green. (`0gkit-testing` imports `0gkit-core` only; `0gkit-kits` stays `@foundryprotocol/*`-app-free — no neutrality breach.)
+- [ ] **Commit**: `chore(k5): changeset + D84–D86 (+ backfill D81–D83)`. Open PR `K5 — doctor --fix + 0g test`. Squash-merge on green CI.
 
 ## Self-review checklist
 
@@ -393,6 +440,7 @@ export function rpcFallbackCmd(network: string): string {
 - [ ] `0g doctor --fix` is idempotent — re-running writes identical `.env*` and proposes no churn.
 - [ ] Every doctor check renders `→ run <cmd> to fix` (or `ok`); `--json` carries `fixCmd`.
 - [ ] `--local` uses `0g dev` infra; `--galileo`/default uses galileo; no path requires Aristotle (D10).
-- [ ] `0g test --kits` degrades to a single note when no kits are applied (no false failure).
-- [ ] Changeset covers `0gkit-testing` + `0gkit-cli`; D81–D83 recorded.
-- [ ] No `@foundryprotocol/*`-app import added to any `0gkit-*` package (boundary:check green).
+- [ ] `applyKit` persists `.0gkit/kits.json` (`{applied,base,at}`), merges on re-apply, writes nothing under `dryRun` (T5a).
+- [ ] `0g test --kits` reads that manifest and degrades to a single note when no kits are applied / no manifest (no false failure).
+- [ ] Changeset covers `0gkit-testing` (minor) + `0gkit-cli` (minor) + `0gkit-kits` (patch); **D84–D86 recorded and K1's D81–D83 backfilled** into `docs/DECISIONS.md` (no D-number hole, no collision).
+- [ ] No `@foundryprotocol/*`-app import added to any `0gkit-*` package — engine stays neutral (boundary:check green).

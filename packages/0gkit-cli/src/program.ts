@@ -47,11 +47,13 @@ import { registerJobs, type JobsBackendFactory } from "./commands/jobs.js";
 import { registerCost } from "./commands/cost.js";
 import { registerTraces } from "./commands/traces.js";
 import { registerKits, type KitsEngineLike } from "./commands/kits.js";
+import { registerTest, defaultRunKitConformance } from "./commands/test.js";
 import type {
   TraceFileEntry,
   TraceFileSummary,
   TraceRecord,
 } from "@foundryprotocol/0gkit-observability";
+import type { SuiteResult, SuiteDeps } from "@foundryprotocol/0gkit-testing";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -181,10 +183,46 @@ export interface ProgramDeps {
    * unaffected. Tests inject a fake to avoid any real import or network call.
    */
   loadKitsEngine?: () => Promise<KitsEngineLike>;
+  /**
+   * K5-C (D84) — injected so tests stub runConformance without importing
+   * `@foundryprotocol/0gkit-testing`.  The production CLI uses a lazy computed
+   * specifier inside commands/test.ts.  Optional: undefined means fall through
+   * to the lazy import in the command.
+   */
+  runConformance?: (opts: {
+    suites?: string[];
+    deps: SuiteDeps;
+  }) => Promise<SuiteResult[]>;
+  /**
+   * K5-C — builds the SuiteDeps for conformance suites from CLI context.
+   * Injected for tests; the production wiring lives in buildProgram().
+   */
+  conformanceDeps?: (ctx: { network: string; local?: boolean }) => SuiteDeps;
+  /**
+   * K5-C (T5b) — reads `.0gkit/kits.json` and runs each applied kit's
+   * conformance module if it exists.  Returns an array of human-readable
+   * note lines.  Injected so tests never touch the real filesystem.
+   */
+  runKitConformance?: (cwd: string) => Promise<string[]>;
   /** Resolves installed `@foundryprotocol/0gkit-*` versions for issue-context. */
   packageVersions: () => Array<{ name: string; version: string }>;
   /** Injected for deterministic timestamps in issue-context. */
   now: () => Date;
+  /**
+   * K5-D (D85) — the three impure seams the `0g doctor --fix` fixers need:
+   * load the project's `0g.config.ts` (`define0GConfig` result), read its
+   * package.json pins, and resolve the latest registry version. Injected so
+   * tests stay offline; the production wiring (in cli.ts) is honest —
+   * `loadProjectConfig` returns `null` (the CLI can't type-check + import an
+   * arbitrary project TS config at runtime). `--fix` only ever writes `.env*`
+   * or prints commands — it never installs or touches network state (D85).
+   * Optional: when omitted, `--fix` degrades to printing the `fixCmd` hints.
+   */
+  doctorFix?: {
+    loadProjectConfig: (cwd: string) => Promise<{ envExample: () => string } | null>;
+    readProjectPins: (cwd: string) => Promise<Record<string, string>>;
+    latestVersion: (pkg: string) => Promise<string>;
+  };
 }
 
 /** Build the resolved context + output sink for one command invocation. */
@@ -307,6 +345,7 @@ export function buildProgram(deps: ProgramDeps): Command {
   registerEstimate(program, deps);
   registerJobs(program, deps);
   registerCost(program, deps);
+  registerTest(program, deps);
   registerTraces(program, deps);
   registerKits(program, deps);
   registerFoundry(program, deps);

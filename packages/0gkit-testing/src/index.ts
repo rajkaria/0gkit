@@ -31,3 +31,10 @@ export {
   type SetupLocalDevnetOptions,
   type DevnetTestHandle,
 } from "./setup-devnet.js";
+export {
+  runConformance,
+  SUITE_NAMES,
+  type SuiteName,
+  type SuiteResult,
+  type SuiteDeps,
+} from "./conformance/index.js";

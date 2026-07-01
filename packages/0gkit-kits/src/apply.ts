@@ -67,6 +67,8 @@ export interface ApplyKitOptions {
   pm?: string;
   dryRun?: boolean;
   deps?: ApplyDeps;
+  /** Injectable clock — defaults to `() => new Date().toISOString()`. Override in tests for determinism. */
+  now?: () => string;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +115,14 @@ function resolveCompositionClosure(
 // ---------------------------------------------------------------------------
 
 export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
-  const { kit: kitName, dest, base, dryRun = false, deps = {} } = opts;
+  const {
+    kit: kitName,
+    dest,
+    base,
+    dryRun = false,
+    deps = {},
+    now = () => new Date().toISOString(),
+  } = opts;
 
   const {
     fetchOverlay = fetchKitOverlay as (name: string, dir: string) => Promise<void>,
@@ -267,6 +276,43 @@ export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
     if (currentEnvContent.length > 0) {
       writeFileSync(envExamplePath, currentEnvContent, "utf8");
     }
+
+    // Write .0gkit/kits.json — union-merge with any existing manifest
+    const manifestDir = join(dest, ".0gkit");
+    const manifestPath = join(manifestDir, "kits.json");
+
+    let existingApplied: string[] = [];
+    if (existsSync(manifestPath)) {
+      try {
+        const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as unknown;
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          "applied" in parsed &&
+          Array.isArray((parsed as Record<string, unknown>)["applied"])
+        ) {
+          existingApplied = (parsed as { applied: string[] }).applied;
+        }
+      } catch {
+        // ignore parse errors — treat as empty
+      }
+    }
+
+    // Union: preserve first-seen order from existing, append any new names
+    const unionApplied = [...existingApplied];
+    for (const name of appliedNames) {
+      if (!unionApplied.includes(name)) {
+        unionApplied.push(name);
+      }
+    }
+
+    mkdirSync(manifestDir, { recursive: true });
+    writeFileSync(
+      manifestPath,
+      JSON.stringify({ applied: unionApplied, base, at: now() }, null, 2) + "\n",
+      "utf8"
+    );
+    filesWritten.push(".0gkit/kits.json");
   }
 
   return {

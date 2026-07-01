@@ -6,6 +6,7 @@
   "description": "Run an OpenAI-compatible chat completion on a 0G Compute provider with @foundryprotocol/0gkit-compute.",
   "scripts": {
     "start": "tsx src/index.ts",
+    "test": "0g test",
     "typecheck": "tsc --noEmit"
   },
   "engines": {

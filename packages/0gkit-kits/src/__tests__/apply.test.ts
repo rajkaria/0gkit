@@ -493,3 +493,116 @@ describe("result shape", () => {
     expect(Array.isArray(result.notes)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// .0gkit/kits.json manifest persistence
+// ---------------------------------------------------------------------------
+
+describe(".0gkit/kits.json manifest", () => {
+  const FIXED_TS = "2026-07-01T00:00:00.000Z";
+  const fixedNow = () => FIXED_TS;
+
+  it("writes .0gkit/kits.json after applying a kit", async () => {
+    await applyKit({
+      kit: "dep-kit",
+      dest,
+      base: "node",
+      deps: makeDeps(),
+      now: fixedNow,
+    });
+
+    const manifestPath = join(dest, ".0gkit", "kits.json");
+    expect(existsSync(manifestPath)).toBe(true);
+
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+      applied: string[];
+      base: string;
+      at: string;
+    };
+
+    expect(manifest.applied).toContain("dep-kit");
+    expect(manifest.base).toBe("node");
+    expect(manifest.at).toBe(FIXED_TS);
+  });
+
+  it("manifest.applied includes all kits in composition (deps-first order)", async () => {
+    await applyKit({
+      kit: "main-kit",
+      dest,
+      base: "react-app",
+      deps: makeDeps(),
+      now: fixedNow,
+    });
+
+    const manifest = JSON.parse(
+      readFileSync(join(dest, ".0gkit", "kits.json"), "utf8")
+    ) as { applied: string[] };
+
+    expect(manifest.applied).toContain("dep-kit");
+    expect(manifest.applied).toContain("main-kit");
+
+    const depIdx = manifest.applied.indexOf("dep-kit");
+    const mainIdx = manifest.applied.indexOf("main-kit");
+    expect(depIdx).toBeLessThan(mainIdx);
+  });
+
+  it("union-merges on re-apply — no duplicates, preserves first-seen order", async () => {
+    // First apply: dep-kit
+    await applyKit({
+      kit: "dep-kit",
+      dest,
+      base: "node",
+      deps: makeDeps(),
+      now: fixedNow,
+    });
+
+    // Second apply: main-kit (which also composes dep-kit)
+    const SECOND_TS = "2026-07-01T01:00:00.000Z";
+    await applyKit({
+      kit: "main-kit",
+      dest,
+      base: "node",
+      deps: makeDeps(),
+      now: () => SECOND_TS,
+    });
+
+    const manifest = JSON.parse(
+      readFileSync(join(dest, ".0gkit", "kits.json"), "utf8")
+    ) as { applied: string[]; at: string };
+
+    // dep-kit must appear exactly once (union, no dup)
+    const depCount = manifest.applied.filter((n) => n === "dep-kit").length;
+    expect(depCount).toBe(1);
+
+    // main-kit is added
+    expect(manifest.applied).toContain("main-kit");
+
+    // at updated to latest run
+    expect(manifest.at).toBe(SECOND_TS);
+  });
+
+  it("filesWritten includes .0gkit/kits.json", async () => {
+    const result = await applyKit({
+      kit: "dep-kit",
+      dest,
+      base: "node",
+      deps: makeDeps(),
+      now: fixedNow,
+    });
+
+    expect(result.filesWritten).toContain(".0gkit/kits.json");
+  });
+
+  it("dryRun: true writes NO .0gkit/kits.json", async () => {
+    await applyKit({
+      kit: "dep-kit",
+      dest,
+      base: "node",
+      dryRun: true,
+      deps: makeDeps(),
+      now: fixedNow,
+    });
+
+    expect(existsSync(join(dest, ".0gkit", "kits.json"))).toBe(false);
+  });
+});
