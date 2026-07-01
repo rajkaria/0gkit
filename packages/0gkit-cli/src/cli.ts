@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, readdir, access } from "node:fs/promises";
+import { readFile, writeFile, mkdir, mkdtemp, readdir, access } from "node:fs/promises";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -185,8 +185,11 @@ const deps: ProgramDeps = {
     writeTempAbi: async (abi, name) => {
       // Wrap the bare explorer ABI in the `{ abi, contractName }` Foundry-artifact
       // shape that `generate()`→`parseFoundryArtifact` requires, then persist it.
+      // A unique temp dir (mkdtemp) keeps concurrent imports of the same name
+      // from racing on one path.
       const safe = (name ?? "Contract").replace(/[^a-zA-Z0-9_-]/g, "_");
-      const path = join(tmpdir(), `0gkit-import-${safe}.json`);
+      const dir = await mkdtemp(join(tmpdir(), "0gkit-import-"));
+      const path = join(dir, `${safe}.json`);
       await writeFile(path, JSON.stringify({ abi, contractName: name }), "utf-8");
       return path;
     },
