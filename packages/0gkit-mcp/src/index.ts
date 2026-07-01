@@ -24,3 +24,14 @@ export {
 } from "./foundry-plugin.js";
 export { type ToolCallResult } from "./context.js";
 export { collectToolPlugin, type McpToolPlugin, type McpServerLike } from "./plugin.js";
+export {
+  buildMcpConfig,
+  readAppliedKits,
+  AGENTS,
+  type AgentName,
+  type McpScope,
+  type AppliedKits,
+  type McpServerEntry,
+  type BuiltMcpConfig,
+  type KitsReader,
+} from "./config-init.js";
