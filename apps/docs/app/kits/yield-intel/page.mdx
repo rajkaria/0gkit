@@ -21,7 +21,8 @@ On each analysis run the kit:
 
 1. Accepts a list of `Position` objects (protocol, asset, amount, APY) from
    the caller — read-only input, no on-chain read is performed by the lib.
-2. Calls `@foundryprotocol/0gkit-compute` `Compute.inference` with a structured
+2. Calls `@foundryprotocol/0gkit-compute` via `compute.router()` (K7 — routed
+   provider selection with a client-side fallback) with a structured
    analysis prompt asking for per-position scores (0–100) and one-sentence
    rationale. The model is instructed: no trading instructions, no profit
    guarantees, no risk-free claims.
@@ -58,6 +59,53 @@ npm create 0gkit-app -- --kits yield-intel
 | `OG_PRIVATE_KEY`   | `0x...`                                       | Operator key for signing decision receipts and 0G Storage transactions                             |
 | `OG_RPC_URL`       | `https://evmrpc-testnet.0g.ai`                | 0G chain RPC endpoint (Galileo testnet default)                                                    |
 | `OG_COMPUTE_MODEL` | `neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8` | Model for yield analysis inference (optional — uses provider default if omitted)                   |
+
+## Quick start
+
+```bash
+0g add yield-intel
+```
+
+`analyze(positions, deps)` returns a ranked, read-only `AnalysisItem[]`.
+`logDecision(decision, deps)` records the user's **intended** action as a signed
+receipt on 0G Storage — it does **not** execute anything:
+
+```ts
+import { Compute } from "@foundryprotocol/0gkit-compute";
+import { Storage } from "@foundryprotocol/0gkit-storage";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+import { analyze, type Position } from "./lib/yield.js";
+import { logDecision, type Attestor } from "./lib/decisionLog.js";
+
+const privateKey = process.env.OG_PRIVATE_KEY as `0x${string}`;
+const signer = await fromPrivateKey(privateKey);
+const compute = new Compute({ signer });
+
+const positions: Position[] = [
+  { id: "p1", protocol: "Aave", asset: "USDC", amount: 5000, apy: 4.2 },
+  { id: "p2", protocol: "Uniswap V3", asset: "ETH/USDC", amount: 3000, apy: 11.8 },
+];
+
+const items = await analyze(positions, {
+  compute: {
+    async infer({ prompt, model }) {
+      const r = await compute.router({
+        messages: [{ role: "user" as const, content: prompt }],
+        ...(model ? { model } : {}),
+      });
+      return { output: r.output };
+    },
+  },
+  model: process.env.OG_COMPUTE_MODEL,
+}); // AnalysisItem[] ranked by descending score; [] on malformed output
+console.log(items);
+```
+
+> **Honesty caveat:** `yield-intel` is execution-free by design — the public API
+> has **no** `execute` / `trade` / `swap` / `send` / `transfer` (enforced by a
+> negative test). `logDecision` records an intention with a **signed receipt**
+> (not a TEE-quote); the user acts manually. Testnet-default; mainnet and
+> automated execution are intentionally out of scope.
 
 ## Tiers
 

@@ -47,6 +47,68 @@ npm create 0gkit-app -- --kits sealed-inference
 | `OG_RPC_URL`          | `https://evmrpc-testnet.0g.ai`                | 0G chain RPC endpoint                                        |
 | `OG_ATTESTOR_ADDRESS` | `0x...`                                       | Expected signer address that `recoverSigner` checks against  |
 
+## Quick start
+
+```bash
+0g add sealed-inference
+```
+
+`sealedInfer(deps, prompt, expectedSigner)` runs inference, signs the receipt,
+verifies it against `expectedSigner`, and returns a `verified` boolean the UI
+badge reflects. The default wiring uses the same signed-receipt attestor as
+[`ai-oracle`](/kits/ai-oracle) — `OG_ATTESTOR_ADDRESS` is the expected signer:
+
+```ts
+import { Compute } from "@foundryprotocol/0gkit-compute";
+import { digestJson } from "@foundryprotocol/0gkit-core";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+import { recoverSigner } from "@foundryprotocol/0gkit-attestation";
+import { sealedInfer, type Attestor } from "./lib/sealed.js";
+
+const signer = await fromPrivateKey(process.env.OG_PRIVATE_KEY as `0x${string}`);
+const compute = new Compute({ signer });
+
+const infer = {
+  async infer({ prompt, model }: { prompt: string; model?: string }) {
+    const r = await compute.router({
+      messages: [{ role: "user" as const, content: prompt }],
+      ...(model ? { model } : {}),
+    });
+    return { output: r.output };
+  },
+};
+
+const attestor: Attestor = {
+  async sign(receipt) {
+    const digest = digestJson(receipt);
+    return { digest, signature: await signer.signMessage({ raw: digest }) };
+  },
+  async verify(receipt, signed, expectedSigner) {
+    const match = digestJson(receipt).toLowerCase() === signed.digest.toLowerCase();
+    const recovered = await recoverSigner({
+      digest: signed.digest as `0x${string}`,
+      signature: signed.signature as `0x${string}`,
+    });
+    return {
+      ok: match && recovered.toLowerCase() === expectedSigner.toLowerCase(),
+      signer: recovered,
+    };
+  },
+};
+
+const result = await sealedInfer(
+  { infer, attestor, model: process.env.OG_COMPUTE_MODEL },
+  "Summarize the 0G network in one sentence.",
+  process.env.OG_ATTESTOR_ADDRESS!
+);
+console.log(result.text, result.verified); // verified: true | false
+```
+
+> **Honesty caveat:** `verified` is a **signed-receipt** check — the expected
+> operator key signed this exact receipt — **not** a TEE-quote verification.
+> `sealedInfer` never throws on a tampered signature; it returns
+> `verified: false` so the badge shows the real outcome (never hardcoded green).
+
 ## Tiers
 
 - **lib** — `lib/sealed.ts` (portable `SealedInference`, `SealedEnvelope`

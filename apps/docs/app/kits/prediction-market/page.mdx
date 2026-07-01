@@ -55,6 +55,73 @@ Inherits all `ai-oracle` env vars, plus:
 | `OG_ANCHOR_ADDRESS`    | `0x...`                                       | Deployed `Anchor.sol` address — required when `OG_ANCHOR_ONCHAIN=1`     |
 | `OG_STORAGE_NAMESPACE` | `prediction-market`                           | Namespace prefix for market blobs in 0G Storage                         |
 
+## Quick start
+
+```bash
+0g add prediction-market   # composes ai-oracle — applied automatically first
+```
+
+`openMarket` / `placeBet` / `resolveMarket` drive the lifecycle over an injected
+`MarketStorage`. `resolveMarket` delegates to the composed
+[`ai-oracle`](/kits/ai-oracle) `resolveOracle` for the settlement answer:
+
+```ts
+import { Storage } from "@foundryprotocol/0gkit-storage";
+import {
+  createMarketStore,
+  openMarket,
+  placeBet,
+  resolveMarket,
+  type MarketStorage,
+} from "./lib/market.js";
+import { resolveOracle } from "./lib/oracle.js"; // co-located by composition
+
+const storage = new Storage({
+  privateKey: process.env.OG_PRIVATE_KEY as `0x${string}`,
+  rpcUrl: process.env.OG_RPC_URL!,
+});
+// Content-addressed → mutable-namespace bridge (persist `roots` in production).
+const roots = new Map<string, string>();
+const marketStorage: MarketStorage = {
+  async putBlob(ns, data) {
+    const { root } = await storage.upload(new TextEncoder().encode(data));
+    roots.set(ns, root);
+  },
+  async getBlob(ns) {
+    const root = roots.get(ns);
+    if (!root) return undefined;
+    const bytes = await storage.download(root);
+    return bytes ? new TextDecoder().decode(bytes) : undefined;
+  },
+};
+
+const store = createMarketStore(marketStorage);
+const market = await openMarket(store, {
+  question: "Will 0G mainnet launch in 2026?",
+  closesAt: Date.now() + 86_400_000,
+});
+await placeBet(store, {
+  marketId: market.id,
+  bettor: "0xYou",
+  prediction: "YES",
+  amount: 10,
+});
+
+// `oracleDeps` = { infer, attestor, anchor, model } — see the ai-oracle quick start.
+const boundOracle = (_deps: unknown, question: string) =>
+  resolveOracle(oracleDeps, question);
+const { market: settled, receipt } = await resolveMarket(
+  { resolveOracle: boundOracle, storage: marketStorage },
+  market.id
+);
+console.log(settled.state, receipt.answer, receipt.commitment);
+```
+
+> **Honesty caveat:** resolution uses the composed `ai-oracle` **signed receipt**
+> (operator key signs `digestJson(receipt)`, verified via `recoverSigner`) —
+> **not** a TEE-quote. Settle is folded into `resolveMarket`; there is no separate
+> `settleMarket`.
+
 ## Tiers
 
 - **lib** — `lib/market.ts` (portable `Market`, `Bet`, `Resolution` types,

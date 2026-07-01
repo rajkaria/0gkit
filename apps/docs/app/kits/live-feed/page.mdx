@@ -60,6 +60,70 @@ npm create 0gkit-app -- --kits live-feed
 | `OG_FEED_CONTRACT_ADDRESS` | `0xYourDeployedFeedEventsContract` | **Required for reorg-safety.** Deployed `FeedEvents` contract. Without it, adapter runs in storage-only mode. |
 | `OG_FEED_NAMESPACE`        | `live-feed`                        | Storage namespace prefix for feed blobs (default: `live-feed`)                                                |
 
+## Quick start
+
+```bash
+0g add live-feed
+```
+
+`createFeed` takes an injected `FeedStorage` (0G Storage) and a `FeedCursor`
+(ordering / reorg source). `post()` uploads the payload and appends a cursor
+entry; `stream(cb)` flushes existing posts then streams new ones, flagging
+reorg-orphaned posts with `isOrphan=true`:
+
+```ts
+import { Storage } from "@foundryprotocol/0gkit-storage";
+import {
+  createFeed,
+  type FeedStorage,
+  type FeedCursor,
+  type FeedPost,
+} from "./lib/feed.js";
+
+const og = new Storage({
+  privateKey: process.env.OG_PRIVATE_KEY as `0x${string}`,
+  rpcUrl: process.env.OG_RPC_URL!,
+});
+const storage: FeedStorage = {
+  upload: (data) => og.upload(data),
+  download: (root) => og.download(root),
+};
+
+// In-process cursor. With OG_FEED_CONTRACT_ADDRESS set, the adapter drives
+// reorg-drop from the 0gkit-indexer onReorg callback (isReorg=true) instead.
+const posts: FeedPost[] = [];
+const listeners: Array<(p: FeedPost[], reorg: boolean) => void> = [];
+const cursor: FeedCursor = {
+  async append(post) {
+    posts.push(post);
+    listeners.forEach((fn) => fn([post], false));
+  },
+  subscribe(onBatch) {
+    listeners.push(onBatch);
+    return () => listeners.splice(listeners.indexOf(onBatch), 1);
+  },
+  async list() {
+    return [...posts];
+  },
+};
+
+const feed = createFeed({ storage, cursor });
+const unsubscribe = feed.stream((post, isOrphan) => {
+  if (isOrphan) console.log("reorg-dropped:", post.root);
+  else console.log("live:", post.author, post.content);
+});
+
+await feed.post({ content: "gm from 0G", author: "0xYou" });
+unsubscribe();
+```
+
+> **Reorg-safety caveat:** the reorg-drop guarantee only fires when the
+> `FeedCursor` emits `isReorg=true`. In the real adapter that signal comes from
+> the `0gkit-indexer` tracking on-chain `PostPublished` events, which needs a
+> deployed `FeedEvents` contract (`OG_FEED_CONTRACT_ADDRESS`). Without it the
+> feed runs in **storage-only mode** — posts are stored and streamed, no reorg
+> signal.
+
 ## Tiers
 
 - **lib** — `lib/feed.ts` (portable `createFeed`, `FeedStorage`, `FeedCursor`,

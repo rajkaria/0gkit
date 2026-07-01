@@ -96,6 +96,70 @@ Exit `1` only if a **required** check fails (i.e. RPC).
 0g doctor --json | jq '.checks[] | select(.ok==false)'
 ```
 
+### `0g doctor --fix`
+
+Pass `--fix` to apply the **safe** auto-fixes `doctor` can make without touching
+the network or installing anything (advisory-only by design — Decision D85):
+
+- Regenerates a missing `.env` / `.env.example` from your `define0GConfig`.
+- Prints the exact command to bump a stale package pin (it never edits your
+  `package.json` for you).
+
+```bash
+0g doctor --fix
+# ✓ wrote .env.example from 0g.config.ts
+# → stale pin: run `npm i @foundryprotocol/0gkit-cli@latest`
+```
+
+`--fix` never installs dependencies, never sends a transaction, and never mutates
+network state — it only writes local `.env*` files and prints next steps.
+
+## `0g dev`
+
+Spin up a **local 0G stack** (chain + storage + compute + DA) for offline
+development — no testnet funds, no RPC latency.
+
+| Subcommand         | What                                              |
+| ------------------ | ------------------------------------------------- |
+| `0g dev` / `start` | Start the local devnet (default subcommand).      |
+| `0g dev stop`      | Stop the running devnet.                          |
+| `0g dev status`    | Inspect the running devnet (ports, pids, health). |
+| `0g dev reset`     | Stop the devnet **and wipe** its state directory. |
+
+Common `start` flags: `--port-chain <n>` (default `8545`), `--port-da <n>`
+(default `5680`), `--mnemonic <phrase>`, `--state-dir <path>` (default
+`~/.0g-dev`), `--detach` (exit once services are up — for tests/CI).
+
+```bash
+0g dev --detach                       # start in the background
+0g test --local                       # run conformance against it (see below)
+0g dev status
+0g dev reset                          # tear down + wipe state
+```
+
+## `0g test`
+
+Run the **offline conformance suites** — storage / DA / and other primitive
+round-trips — to prove your install and config work before you ship. Lazy-loads
+[`@foundryprotocol/0gkit-testing`](/packages/0gkit-testing) so it never bloats
+cold-start (Decision D39).
+
+| Flag             | Meaning                                                                   |
+| ---------------- | ------------------------------------------------------------------------- |
+| `--suite <list>` | Comma-separated subset, e.g. `--suite=storage,da` (default: all).         |
+| `--galileo`      | Run against the live galileo testnet (**default**).                       |
+| `--local`        | Run against the running `0g dev` stack (`http://127.0.0.1:8545`).         |
+| `--kits`         | Also run each applied kit's conformance check (reads `.0gkit/kits.json`). |
+
+```bash
+0g test                       # all suites, galileo
+0g test --suite=storage,da    # just these two
+0g test --local --kits        # local stack + every applied kit's check
+0g test --json | jq '.ok'
+```
+
+Exit `1` if any suite fails — wire it as a CI gate before deploy.
+
 ## `0g chain`
 
 Native-chain helpers.
@@ -179,6 +243,39 @@ TEE attestation. Operates on a `SignedEnvelope` JSON file
 0g attest report signed.json --json
 ```
 
+## `0g contracts`
+
+Generate a **typed TypeScript client** from a contract ABI — either an off-chain
+Foundry artifact or a verified ABI fetched from the chain explorer.
+
+| Subcommand                      | What                                                                                                                       |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `0g contracts generate`         | Codegen from a local Foundry artifact JSON. `--abi <path>` + `--out <dir>` required; `--name` overrides the contract name. |
+| `0g contracts import [address]` | Fetch a **verified** ABI from the explorer (or `--abi <path>`) → codegen. `--out` defaults to `./0gkit/contracts`.         |
+| `0g contracts list`             | List the bundled standard 0G contracts and their pinned addresses.                                                         |
+| `0g contracts info <name>`      | Show the ABI summary for a bundled standard contract.                                                                      |
+
+`import` fetches the ABI from 0G ChainScan's Etherscan-compatible `/open/api`
+(keyless; set `OG_EXPLORER_API_KEY` only for rate-limit relief). **`--name` is
+required when importing by address** — the explorer's `getabi` carries no
+contract name. An unverified contract, an HTTP error, or a malformed payload
+throws a `ConfigError` pointing you at `--abi <path>.json` — it **never**
+fabricates an ABI.
+
+```bash
+# From a verified on-chain contract (galileo default):
+0g contracts import 0xAbc…DEF --name MyToken
+# → wrote ./0gkit/contracts/MyToken.ts
+
+# From a local Foundry artifact:
+0g contracts generate --abi ./out/MyToken.sol/MyToken.json --out ./src/contracts
+
+0g contracts list --json
+```
+
+The generated client is fully typed and wraps `@foundryprotocol/0gkit-contracts`
+— see the [contracts package docs](/packages/0gkit-contracts).
+
 ## `0g cost`
 
 Cost forecasting across 0G primitives. Two modes — synthesise estimates from
@@ -251,6 +348,25 @@ OTLP collector that exports the Jaeger JSON format.
 Pass `-` as the file path to read a Jaeger envelope from stdin — pipes
 cleanly from `0g traces inspect <id> --json` (see below).
 
+## `0g estimate`
+
+Quick per-op cost estimates for a **concrete** input (a real file, a prompt, a
+byte size). Where `0g cost forecast` sums hypothetical or trace-aggregated
+workloads, `estimate` answers "what will _this one_ op cost?"
+
+| Subcommand                   | What                                                                                                                                      |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `0g estimate storage <file>` | Estimate the cost to upload `<file>` to 0G Storage.                                                                                       |
+| `0g estimate compute`        | Estimate a chat completion. `-p, --prompt <text>`, `--model <name>`, `--max-output <n>` (default 512).                                    |
+| `0g estimate da [file]`      | Estimate a 0G DA publish. `[file]` or `--bytes <n>`.                                                                                      |
+| `0g estimate contracts`      | Estimate gas + fee for a contract write. Required: `--abi <path>`, `--address <0x>`, `--method <name>`; optional `--args '<json array>'`. |
+
+```bash
+0g estimate storage ./model.bin --json
+0g estimate compute -p "Summarize 0G" --model llama-3.1-8b --max-output 256
+0g estimate da --bytes 4096
+```
+
 ## `0g traces`
 
 Inspect local 0gkit trace JSONL files written by the `OGKIT_TRACE_DIR`
@@ -281,6 +397,65 @@ export OGKIT_TRACE_DIR=.0gkit/traces
 Both subcommands accept `--dir <path>` to override `OGKIT_TRACE_DIR` for a
 one-off look at a directory copied from a teammate. `--json` is supported
 on both for piping into other tooling.
+
+## `0g kits`
+
+Compose your app from **kits** — overlays that drop in a portable `lib/`,
+per-base `adapters/`, and (for React bases) a `ui/` tier, deduping dependencies
+as they apply. See the [kits guide](/kits) and
+[authoring guide](/kits/authoring).
+
+| Subcommand           | What                                                               |
+| -------------------- | ------------------------------------------------------------------ |
+| `0g add <kit...>`    | Apply one or more kits to the current project.                     |
+| `0g kits list`       | List kits compatible with the detected (or `--base`) project base. |
+| `0g kits info <kit>` | Show a kit's description, tiers, deps, and env.                    |
+
+`0g add` flags: `--base <name>` (force the base: `react-app` \| `mcp-agent` \|
+`node` \| …), `--pm <pnpm|npm|yarn>` (which package manager appears in the
+printed install hint), `--dry-run` (preview what would be written, touch
+nothing). Kits are fetched from the template registry via `giget` at apply-time.
+
+```bash
+0g kits list --base react-app
+0g kits info agent-memory
+0g add agent-memory live-feed        # applies both (composed deps resolved first)
+0g add ai-oracle --dry-run           # preview only
+```
+
+## `0g jobs`
+
+Inspect `@foundryprotocol/0gkit-jobs` queues.
+
+| Subcommand            | What                                      |
+| --------------------- | ----------------------------------------- |
+| `0g jobs status <id>` | Print the `JobRecord` for a given job id. |
+
+Flags: `--backend <memory|sqlite>` (default `sqlite`), `--path <path>` (sqlite
+file, default `./.jobs.db`).
+
+```bash
+0g jobs status job_abc123 --backend sqlite --path ./.jobs.db --json
+```
+
+## `0g mcp init <agent>`
+
+Wire the 0gkit tool set into your AI editor. Writes the MCP server config for the
+given agent — one of `cursor`, `claude`, `windsurf`, `codex`. In a kitted
+`mcp-agent` project it also surfaces your applied kits' tools.
+
+| Flag       | Meaning                                                      |
+| ---------- | ------------------------------------------------------------ |
+| `--global` | Install to the agent's user-level config (default: project). |
+
+```bash
+0g mcp init cursor            # writes project-level MCP config
+0g mcp init claude --global   # user-level config
+# → restart the agent to pick up the 0gkit tools
+```
+
+Writes editor config only — it never mutates network state. See the
+[MCP guide](/mcp).
 
 ## `0g foundry …` (opt-in, hidden)
 

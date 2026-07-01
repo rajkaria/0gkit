@@ -86,14 +86,15 @@ cat out.txt
 Every entrypoint reads the same environment variables. Flags always override
 env; env overrides the preset default.
 
-| Variable            | Purpose                                                        |
-| ------------------- | -------------------------------------------------------------- |
-| `ZEROG_NETWORK`     | `galileo` (default), `aristotle`, or `local`.                  |
-| `ZEROG_RPC_URL`     | Override the preset JSON-RPC URL.                              |
-| `ZEROG_PRIVATE_KEY` | Signer key — funds storage upload transactions.                |
-| `ZEROG_BROKER_KEY`  | Funded 0G compute broker key for inference.                    |
-| `ZEROG_PROVIDER`    | Default 0G inference provider address.                         |
-| `ZEROG_FOUNDRY`     | `1` to enable the opt-in Foundry plugin (MCP). Off by default. |
+| Variable            | Purpose                                                                                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ZEROG_NETWORK`     | `galileo` (default), `aristotle`, or `local`.                                                                                                                         |
+| `ZEROG_RPC_URL`     | Override the preset JSON-RPC URL.                                                                                                                                     |
+| `ZEROG_PRIVATE_KEY` | Signer key — funds storage upload transactions.                                                                                                                       |
+| `ZEROG_BROKER_KEY`  | Funded 0G compute broker key for inference.                                                                                                                           |
+| `ZEROG_PROVIDER`    | Default 0G inference provider address (for `direct()`).                                                                                                               |
+| `ROUTER_API_KEY`    | 0G Router key from [pc.0g.ai](https://pc.0g.ai) — enables the managed endpoint in `Compute.router()`. Optional; without it `router()` selects a provider client-side. |
+| `ZEROG_FOUNDRY`     | `1` to enable the opt-in Foundry plugin (MCP). Off by default.                                                                                                        |
 
 > Keys fund real transactions. Use a **testnet** key on `galileo` while
 > developing — you never need real funds there. See
