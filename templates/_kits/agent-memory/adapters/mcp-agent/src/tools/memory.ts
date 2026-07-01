@@ -26,8 +26,12 @@
 // The constraint (0gkit packages must NOT import @foundryprotocol/*) applies to
 // the engine package only.
 import { Storage, type StorageConfig } from "@foundryprotocol/0gkit-storage";
+import { collectToolPlugin, type McpServerLike } from "@foundryprotocol/0gkit-mcp";
 
 import { createMemory, type MemoryStorage } from "../../lib/agent-memory.js";
+
+// Re-export McpServerLike so existing code using this file's type still works.
+export type { McpServerLike };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,17 +44,6 @@ export interface MemoryToolOptions {
   rpc: string;
   /** Namespace used as blob key in 0G Storage. Defaults to "agent-memory". */
   namespace?: string;
-}
-
-/** Minimal subset of the MCP Server interface needed to register tools. */
-export interface McpServerLike {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tool(
-    name: string,
-    description: string,
-    schema: object,
-    handler: (args: any) => Promise<any>
-  ): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -184,3 +177,23 @@ export function registerMemoryTools(
     }
   );
 }
+
+// ---------------------------------------------------------------------------
+// mcpToolPlugin factory — additive export for use with create0gMcpServer
+// ---------------------------------------------------------------------------
+
+/**
+ * Build an McpToolPlugin from the agent-memory kit.
+ *
+ * Usage:
+ *   import { mcpToolPlugin } from "./src/tools/memory.js";
+ *   const server = await create0gMcpServer({ plugins: [mcpToolPlugin(process.env)] });
+ */
+export const mcpToolPlugin = (env: Record<string, string | undefined>) =>
+  collectToolPlugin("agent-memory", (s) =>
+    registerMemoryTools(s, {
+      privateKey: env.OG_PRIVATE_KEY ?? "",
+      rpc: env.OG_RPC_URL ?? "",
+      namespace: env.OG_STORAGE_NAMESPACE,
+    })
+  );

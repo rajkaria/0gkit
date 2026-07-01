@@ -31,9 +31,13 @@ import { digestJson } from "@foundryprotocol/0gkit-core";
 import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 import { recoverSigner } from "@foundryprotocol/0gkit-attestation";
 import { createTypedContract } from "@foundryprotocol/0gkit-contracts";
+import { collectToolPlugin, type McpServerLike } from "@foundryprotocol/0gkit-mcp";
 
 import { resolveOracle, type Attestor, type Anchor } from "../../lib/oracle.js";
 import { ANCHOR_ABI } from "../../lib/anchor-abi.js";
+
+// Re-export McpServerLike so existing code using this file's type still works.
+export type { McpServerLike };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,17 +54,6 @@ export interface OracleToolOptions {
   anchorOnchain?: boolean;
   /** Deployed Anchor contract address (required when anchorOnchain=true). */
   anchorAddress?: string;
-}
-
-/** Minimal MCP Server interface needed to register tools. */
-export interface McpServerLike {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tool(
-    name: string,
-    description: string,
-    schema: object,
-    handler: (args: any) => Promise<any>
-  ): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -370,3 +363,25 @@ export function registerOracleTools(
     }
   );
 }
+
+// ---------------------------------------------------------------------------
+// mcpToolPlugin factory — additive export for use with create0gMcpServer
+// ---------------------------------------------------------------------------
+
+/**
+ * Build an McpToolPlugin from the ai-oracle kit.
+ *
+ * Usage:
+ *   import { mcpToolPlugin } from "./src/tools/oracle.js";
+ *   const server = await create0gMcpServer({ plugins: [mcpToolPlugin(process.env)] });
+ */
+export const mcpToolPlugin = (env: Record<string, string | undefined>) =>
+  collectToolPlugin("ai-oracle", (s) =>
+    registerOracleTools(s, {
+      privateKey: env.OG_PRIVATE_KEY ?? "",
+      rpc: env.OG_RPC_URL ?? "",
+      model: env.OG_COMPUTE_MODEL,
+      anchorOnchain: env.OG_ANCHOR_ONCHAIN === "1",
+      anchorAddress: env.OG_ANCHOR_ADDRESS,
+    })
+  );

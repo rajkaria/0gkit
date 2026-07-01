@@ -43,6 +43,7 @@ import { MemoryBackend } from "@foundryprotocol/0gkit-jobs/backends/memory";
 //   import { SqliteBackend } from "@foundryprotocol/0gkit-jobs/backends/sqlite";
 import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 import { Storage, type StorageConfig } from "@foundryprotocol/0gkit-storage";
+import { collectToolPlugin, type McpServerLike } from "@foundryprotocol/0gkit-mcp";
 
 import {
   defineAgent,
@@ -52,19 +53,8 @@ import {
 } from "../../agent.js";
 import { defaultPipeline } from "../../steps.js";
 
-// ---------------------------------------------------------------------------
-// McpServerLike (minimal interface — same pattern as other kits)
-// ---------------------------------------------------------------------------
-
-export interface McpServerLike {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tool(
-    name: string,
-    description: string,
-    schema: object,
-    handler: (args: any) => Promise<any>
-  ): void;
-}
+// Re-export McpServerLike so existing code using this file's type still works.
+export type { McpServerLike };
 
 // ---------------------------------------------------------------------------
 // Singleton Storage instance
@@ -349,3 +339,17 @@ export function registerAgentTools(server: McpServerLike): void {
     }
   );
 }
+
+// ---------------------------------------------------------------------------
+// mcpToolPlugin factory — additive export for use with create0gMcpServer
+// ---------------------------------------------------------------------------
+
+/**
+ * Build an McpToolPlugin from the durable-agent kit.
+ *
+ * Usage:
+ *   import { mcpToolPlugin } from "./src/tools/agent.js";
+ *   const server = await create0gMcpServer({ plugins: [mcpToolPlugin(process.env)] });
+ */
+export const mcpToolPlugin = (_env: Record<string, string | undefined>) =>
+  collectToolPlugin("durable-agent", (s) => registerAgentTools(s));
