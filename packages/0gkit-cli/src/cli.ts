@@ -281,6 +281,51 @@ const deps: ProgramDeps = {
   packageVersions: readPackageVersions,
   now: () => new Date(),
   /**
+   * K5-D — production seam for `0g doctor --fix`. Reads real project pins from
+   * package.json and the latest published versions from the npm registry so
+   * `bumpStalePins` is live (not a no-op). `loadProjectConfig` stays honest:
+   * the CLI cannot type-check + import an arbitrary project TS config at
+   * runtime, so env-gen from a project's define0GConfig is intentionally null.
+   * All fixers only write `.env*` or return command strings — never install
+   * or mutate network state (D85).
+   */
+  doctorFix: {
+    loadProjectConfig: async () => null,
+    readProjectPins: async (cwd: string) => {
+      const pins: Record<string, string> = {};
+      try {
+        const pkg = JSON.parse(
+          readFileSync(join(cwd, "package.json"), "utf8")
+        ) as {
+          dependencies?: Record<string, string>;
+          devDependencies?: Record<string, string>;
+        };
+        for (const group of [pkg.dependencies, pkg.devDependencies]) {
+          for (const [name, ver] of Object.entries(group ?? {})) {
+            if (name.startsWith("@foundryprotocol/0gkit-")) pins[name] = ver;
+          }
+        }
+      } catch {
+        // no / unreadable package.json → no pins (bumpStalePins returns null)
+      }
+      return pins;
+    },
+    latestVersion: async (pkg: string) => {
+      // On any failure return "0.0.0" so the pin is treated as up-to-date —
+      // never a false "stale" claim (e.g. offline / registry unreachable).
+      try {
+        const res = await fetch(
+          `https://registry.npmjs.org/${encodeURIComponent(pkg)}/latest`
+        );
+        if (!res.ok) return "0.0.0";
+        const body = (await res.json()) as { version?: string };
+        return body.version ?? "0.0.0";
+      } catch {
+        return "0.0.0";
+      }
+    },
+  },
+  /**
    * K5-C — builds SuiteDeps for the conformance runner from CLI context.
    *
    * Compute honesty note (D81): the real Compute class is broker-based.
