@@ -326,11 +326,13 @@ const deps: ProgramDeps = {
   /**
    * K5-C — builds SuiteDeps for the conformance runner from CLI context.
    *
-   * Compute honesty note (D81): the real Compute class is broker-based.
+   * Compute honesty note: the real Compute class is broker-based.
    * `broker.inference.*` requires an ethers Wallet + a registered 0G provider
    * address.  We wrap `Compute.inference()` into the `{ inference }` factory
-   * shape SuiteDeps expects, but the live suite will report `ok:false` with a
-   * truthful detail if the broker is not configured — never a fake pass.
+   * shape SuiteDeps expects. If the broker is not configured the live client
+   * throws; since the suites don't swallow errors and `runConformance` uses
+   * `Promise.all`, that surfaces as a loud command-level failure (exitCode=1)
+   * — never a fabricated pass. Offline CI exercises the mock-injected path.
    */
   conformanceDeps: ({ network, local }): SuiteDeps => {
     const rpcUrl = local ? "http://127.0.0.1:8545" : undefined;

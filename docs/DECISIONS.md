@@ -665,6 +665,8 @@ A kit's `kit.json` may declare `composes: ["other-kit"]` to auto-apply dependenc
 
 **Why:** Without `composes`, a user applying `agent-memory-with-ui` would have to know to also apply `agent-memory` first — leaking implementation details. Without dedup, applying two kits that both compose a shared base kit would double-apply files. `KitError` on conflict prevents silent breakage when two kits patch the same files incompatibly. Putting 0gkit deps in `dependencies` (not `requires`) means the overlay is always self-sufficient: a future kit author won't have to separately document "also run `npm install @foundryprotocol/0gkit-storage`" — the `mergePackageJson` step handles it.
 
+**How to apply:** In `kit.json`, use `composes` for "apply these kits first" and `conflicts` for "fail loudly if this kit is already applied." Put `@foundryprotocol/0gkit-*` package version pins in `dependencies` (not `requires`) so `mergePackageJson` injects them automatically. `requires` is reserved for non-0gkit peer checks (e.g. "the project must already have `react` as a dep").
+
 ---
 
 ## D81 — K1 attestation = honest signed inference receipt; no TEE-quote verification
@@ -736,5 +738,3 @@ After every successful `applyKit` call, the engine writes (or merges into) `.0gk
 **Why:** K0 shipped `applyKit` without recording what was applied, so there was no machine-readable way to know which kits a project uses. This closed that gap. The "no manifest = informational" rule prevents `0g test --kits` from becoming a gate that breaks projects that were scaffolded before K5.
 
 **How to apply:** Do not delete or gitignore `.0gkit/kits.json` from project roots. When adding a new kit, ensure `applyKit` merges the new kit name into the `applied` array (never overwrites). If writing a script that uses kit state, read `.0gkit/kits.json` — do not infer kit presence from file existence heuristics.
-
-**How to apply:** In `kit.json`, use `composes` for "apply these kits first" and `conflicts` for "fail loudly if this kit is already applied." Put `@foundryprotocol/0gkit-*` package version pins in `dependencies` (not `requires`) so `mergePackageJson` injects them automatically. `requires` is reserved for non-0gkit peer checks (e.g. "the project must already have `react` as a dep").
