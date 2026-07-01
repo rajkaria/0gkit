@@ -1,0 +1,48 @@
+title: "[Q] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for asking! The fastest path to an answer: re-run your failing
+        command with **`--copy-issue-context`** and paste the redacted block
+        below. See the pinned **"How to ask great questions"** post for the full
+        recipe.
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do, and what happened?
+      description: One question per thread. Include what you expected vs. what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: What did you try?
+      description: Paste the output of `<your 0g command> --copy-issue-context` (secrets are already redacted), plus a minimal repro if you have one.
+      placeholder: |
+        ```md
+        <paste the redacted `--copy-issue-context` block here>
+        ```
+      render: markdown
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      options:
+        - galileo (testnet)
+        - local devnet
+        - mainnet
+        - not sure / N/A
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `0g --version` and `npm ls @foundryprotocol/0gkit-cli` (or the relevant package).
+      placeholder: "0g 1.10.0 · 0gkit-cli@1.10.0 · node v24.x"
+    validations:
+      required: true

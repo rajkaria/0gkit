@@ -22,20 +22,20 @@ epic (K0–K4)** is the new priority; the **7 carried-over post-v1 sprints
 
 ## Full sequence
 
-| #   | Sprint                                | Theme                                                   | Plan                                                             | Status                                      |
-| --- | ------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------- |
-| K0  | Kits engine + `agent-memory`          | overlay engine, `0g add`, `--kits`, `kits:check`        | [k0-kits-engine](2026-06-30-k0-kits-engine.md)                   | ready                                       |
-| K1  | Verifiable AI + flagship              | `ai-oracle`, `sealed-inference`, `prediction-market`    | [k1-verifiable-ai-market](2026-06-30-k1-verifiable-ai-market.md) | ready                                       |
-| K2  | Durability + live data                | `durable-agent`, `live-feed`                            | [k2-durability-live-data](2026-06-30-k2-durability-live-data.md) | ready                                       |
-| K3  | Assets + honest DeFi                  | `inft-studio`, `yield-intel`                            | [k3-assets-honest-defi](2026-06-30-k3-assets-honest-defi.md)     | ready                                       |
-| K4  | Docs / GTM / publish                  | `/kits` docs, landing, authoring, publish               | [k4-docs-gtm-publish](2026-06-30-k4-docs-gtm-publish.md)         | ready                                       |
-| K5  | (old SP17) `doctor --fix` + `0g test` | conformance runner + auto-fix                           | [k5-doctor-fix-test](2026-06-30-k5-doctor-fix-test.md)           | ready                                       |
-| K6  | (old SP18) `0g mcp init <agent>`      | cursor/claude/windsurf/codex MCP wiring                 | [k6-mcp-init](2026-06-30-k6-mcp-init.md)                         | ready                                       |
-| K7  | (old SP19) First-class Compute Router | `Compute.router()` (real 0G Router endpoint + fallback) | [k7-compute-router](2026-06-30-k7-compute-router.md)             | **done+published (compute/cli/mcp @1.9.0)** |
+| #   | Sprint                                | Theme                                                   | Plan                                                             | Status                                                   |
+| --- | ------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------- |
+| K0  | Kits engine + `agent-memory`          | overlay engine, `0g add`, `--kits`, `kits:check`        | [k0-kits-engine](2026-06-30-k0-kits-engine.md)                   | ready                                                    |
+| K1  | Verifiable AI + flagship              | `ai-oracle`, `sealed-inference`, `prediction-market`    | [k1-verifiable-ai-market](2026-06-30-k1-verifiable-ai-market.md) | ready                                                    |
+| K2  | Durability + live data                | `durable-agent`, `live-feed`                            | [k2-durability-live-data](2026-06-30-k2-durability-live-data.md) | ready                                                    |
+| K3  | Assets + honest DeFi                  | `inft-studio`, `yield-intel`                            | [k3-assets-honest-defi](2026-06-30-k3-assets-honest-defi.md)     | ready                                                    |
+| K4  | Docs / GTM / publish                  | `/kits` docs, landing, authoring, publish               | [k4-docs-gtm-publish](2026-06-30-k4-docs-gtm-publish.md)         | ready                                                    |
+| K5  | (old SP17) `doctor --fix` + `0g test` | conformance runner + auto-fix                           | [k5-doctor-fix-test](2026-06-30-k5-doctor-fix-test.md)           | ready                                                    |
+| K6  | (old SP18) `0g mcp init <agent>`      | cursor/claude/windsurf/codex MCP wiring                 | [k6-mcp-init](2026-06-30-k6-mcp-init.md)                         | ready                                                    |
+| K7  | (old SP19) First-class Compute Router | `Compute.router()` (real 0G Router endpoint + fallback) | [k7-compute-router](2026-06-30-k7-compute-router.md)             | **done+published (compute/cli/mcp @1.9.0)**              |
 | K8  | (old SP20) `0g contracts import`      | chain-explorer ABI → typed client                       | [k8-contracts-import](2026-06-30-k8-contracts-import.md)         | **done+published (contracts/cli/indexer/react @1.10.0)** |
-| K9  | (old SP21) Foundry SDK refresh        | `@foundryprotocol/sdk` → `0gkit-* ^1.x` (cross-repo)    | [k9-foundry-sdk-refresh](2026-06-30-k9-foundry-sdk-refresh.md)   | ready                                       |
-| K10 | (old SP22) Showcase app               | one public app on the published v1.x surface            | [k10-showcase-app](2026-06-30-k10-showcase-app.md)               | ready                                       |
-| K11 | (old SP23) Community surface          | GitHub Discussions + landing footer                     | [k11-community](2026-06-30-k11-community.md)                     | ready                                       |
+| K9  | (old SP21) Foundry SDK refresh        | `@foundryprotocol/sdk` → `0gkit-* ^1.x` (cross-repo)    | [k9-foundry-sdk-refresh](2026-06-30-k9-foundry-sdk-refresh.md)   | ready                                                    |
+| K10 | (old SP22) Showcase app               | one public app on the published v1.x surface            | [k10-showcase-app](2026-06-30-k10-showcase-app.md)               | ready                                                    |
+| K11 | (old SP23) Community surface          | GitHub Discussions + landing footer                     | [k11-community](2026-06-30-k11-community.md)                     | ready                                                    |
 
 ## Carryover scope (unchanged — pointers into the post-v1 roadmap)
 

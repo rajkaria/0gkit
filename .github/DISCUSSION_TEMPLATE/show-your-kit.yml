@@ -1,0 +1,50 @@
+title: "[KIT] "
+labels: ["show-your-kit"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share a kit you built for others to apply with `0g add <kit>`. New to
+        the kit format? See **[Authoring a kit](https://0gkit.com/kits/authoring)**
+        (`docs/kits/AUTHORING.md`) — `kit.json`, the three tiers, and the
+        composition rules.
+  - type: input
+    id: kit-name
+    attributes:
+      label: Kit name
+      placeholder: my-awesome-kit
+    validations:
+      required: true
+  - type: textarea
+    id: about
+    attributes:
+      label: What does it do?
+      description: The problem it solves, in a sentence or two.
+    validations:
+      required: true
+  - type: input
+    id: bases
+    attributes:
+      label: Which bases does it target?
+      description: The bases your `adapters/` cover.
+      placeholder: react-app, chat, mcp-agent
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Link
+      placeholder: GitHub repo, template, or the `0g add` line to try it
+    validations:
+      required: true
+  - type: input
+    id: builds-on
+    attributes:
+      label: Which 0gkit packages does it build on?
+      placeholder: 0gkit-storage + 0gkit-compute (router())
+  - type: checkboxes
+    id: upstream
+    attributes:
+      label: Contributing upstream
+      options:
+        - label: I'd be open to landing this in `templates/_kits/` upstream (see AUTHORING.md)
