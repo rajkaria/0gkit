@@ -42,7 +42,7 @@ export default function KitsPage() {
               style={{ marginBottom: "1.8rem", display: "inline-flex" }}
             >
               <span className="pill-dot" />
-              0gkit Kits — now in K0 · 8 kits · K1 coming
+              0gkit Kits · 8 kits · author your own
             </div>
 
             <h1
@@ -131,6 +131,9 @@ export default function KitsPage() {
               <a href="#kits" className="btn btn-primary">
                 Browse kits
                 <Arrow />
+              </a>
+              <a href="https://docs.0gkit.com/kits/authoring" className="btn btn-ghost">
+                Publish your own kit
               </a>
               <a
                 href="https://docs.0gkit.com/packages/0gkit-kits"

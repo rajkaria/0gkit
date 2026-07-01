@@ -3,6 +3,7 @@ import { Nav } from "@/components/Nav";
 import { Hero } from "@/components/Hero";
 import { TrustSignals } from "@/components/TrustSignals";
 import { ValueProps } from "@/components/ValueProps";
+import { KitsHighlight } from "@/components/KitsHighlight";
 import { CodeSamples } from "@/components/CodeSamples";
 import { PackageMap } from "@/components/PackageMap";
 import { Comparison } from "@/components/Comparison";
@@ -23,6 +24,7 @@ export default async function HomePage() {
         <Hero />
         <TrustSignals />
         <ValueProps />
+        <KitsHighlight />
         <CodeSamples />
         <PackageMap />
         <Comparison />

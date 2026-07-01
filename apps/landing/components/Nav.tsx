@@ -66,6 +66,13 @@ export async function Nav() {
           >
             Docs
           </a>
+          <a
+            href="/kits"
+            className="hover:!text-white"
+            style={{ color: "var(--color-accent-2)", fontWeight: 600 }}
+          >
+            Kits
+          </a>
           <a href="#packages" className="hover:!text-white">
             Packages
           </a>

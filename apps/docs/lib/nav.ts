@@ -104,7 +104,7 @@ export const NAV: NavSection[] = [
       { title: "Live Feed", href: "/kits/live-feed" },
       { title: "iNFT Studio", href: "/kits/inft-studio" },
       { title: "Yield Intelligence", href: "/kits/yield-intel" },
-      { title: "Authoring a kit", href: "/kits/authoring" },
+      { title: "Build & publish a kit", href: "/kits/authoring" },
     ],
   },
   {

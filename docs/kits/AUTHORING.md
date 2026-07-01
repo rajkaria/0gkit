@@ -1,10 +1,33 @@
-# Authoring a kit
+# Build & publish a kit
 
-This document explains how to add a new kit to `templates/_kits/` so it can
-be applied via `0g add <kit>` or `npm create 0gkit-app -- --kits <kit>`.
+Kits are the **shared skills repo for 0G**: package a reusable pattern once,
+publish it to the catalog, and every project on 0gkit can install it with
+`0g add <kit>`. This document explains how to add a new kit to
+`templates/_kits/` so it can be applied via `0g add <kit>` or
+`npm create 0gkit-app -- --kits <kit>`.
 
 The same content is available as a rendered docs page at
 [https://0gkit.com/kits/authoring](https://0gkit.com/kits/authoring).
+
+## Quickstart — `0g kits new`
+
+The fastest path is the scaffolder. It writes a registry-valid `kit.json`, a
+dependency-injected portable core, one adapter per base, and (for React-capable
+bases) a UI component + hook:
+
+```bash
+0g kits new my-feature \
+  --title "My Feature" \
+  --domain agent-infra \
+  --summary "Does a useful thing on 0G." \
+  --bases react-app,mcp-agent
+```
+
+Run inside a clone of `rajkaria/0gkit` and it writes into
+`templates/_kits/<name>/`, drops a docs-page stub under
+`apps/docs/app/kits/<name>/`, and prints the exact `nav.ts` line to register.
+Then fill in the core + adapters, run `pnpm kits:check`, and open a PR. The rest
+of this document is the reference behind what the scaffolder generates.
 
 ## Directory structure
 
