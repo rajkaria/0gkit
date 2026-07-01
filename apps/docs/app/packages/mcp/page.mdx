@@ -46,6 +46,27 @@ Also exported: `TOOLS`, `makeHandlers`, `defaultDeps`, `loadFoundryPlugin`,
 and the `McpDeps` / `ZeroGMcpOptions` / `FoundryPlugin` / `ToolCallResult`
 types for embedding and testing.
 
+### Plugin seam
+
+`create0gMcpServer({ plugins })` accepts extra `McpToolPlugin`s
+(`{ name, tools, call }`) that are merged into the tool list alongside the nine
+neutral `og_*` tools — the same seam the Foundry plugin rides. `collectToolPlugin(name, register, opts?)`
+adapts any `register(server: McpServerLike, opts?)` function (the high-level
+`server.tool(...)` shape a kit adapter uses) into an `McpToolPlugin`, so a
+project can expose its kit tools without the neutral server ever importing a
+kit. See [Concepts → MCP](/concepts/mcp).
+
+### `0g mcp init` config writer
+
+`buildMcpConfig({ agent, scope, home, cwd, applied? })` returns the
+`{ path, json, mode, kits }` an editor config should be written to — `AGENTS`
+(`"cursor" | "claude" | "windsurf" | "codex"`, the `AgentName` union) drives the
+per-agent paths, `McpScope` is `"project" | "global"`, and the result carries a
+`McpServerEntry` under `mcpServers["0gkit"]`. `readAppliedKits(cwd, fs)` reads a
+project's `.0gkit/kits.json` (returning `AppliedKits | null`) so `mode` flips to
+`"local"` for a kitted `mcp-agent` project. These power the `0g mcp init <agent>`
+CLI command — full walkthrough in [Concepts → MCP](/concepts/mcp).
+
 The complete tool list, JSON arg schemas, and copy-paste client config for
 Claude Desktop / Cursor / Cline are in the dedicated **[MCP guide](/mcp)**.
 
@@ -61,3 +82,15 @@ Wraps every primitive. Full guide: **[MCP guide](/mcp)**. Template:
 - `type McpDeps`
 - `type ToolCallResult`
 - `type ZeroGMcpOptions`
+- `collectToolPlugin`
+- `type McpToolPlugin`
+- `type McpServerLike`
+- `buildMcpConfig`
+- `readAppliedKits`
+- `AGENTS`
+- `type AgentName`
+- `type McpScope`
+- `type AppliedKits`
+- `type McpServerEntry`
+- `type BuiltMcpConfig`
+- `type KitsReader`

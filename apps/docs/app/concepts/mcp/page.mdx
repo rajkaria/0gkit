@@ -1,0 +1,92 @@
+---
+title: MCP — make 0gkit native to your AI tool
+---
+
+# MCP — make 0gkit native to your AI tool
+
+`@foundryprotocol/0gkit-mcp` is the neutral 0G [Model Context
+Protocol](https://modelcontextprotocol.io) server: every 0G primitive —
+Storage, Compute (inference), Data Availability, native chain, and TEE
+attestation — is exposed as an `og_*` tool your AI editor can call directly.
+
+`0g mcp init <agent>` wires that server into your editor in one command. No
+copy-pasting JSON.
+
+```bash
+0g mcp init cursor        # writes .cursor/mcp.json
+0g mcp init claude        # writes ./.mcp.json  (project-scoped)
+0g mcp init windsurf      # writes .windsurf/mcp.json
+0g mcp init codex         # writes .codex/mcp.json
+```
+
+Restart the editor and the 0G tools show up. Project scope is the default so
+the config is committable and travels with the repo.
+
+## Where each agent's config lands
+
+| Agent      | `0g mcp init <agent>` (project)      | `--global` (user-level)                     |
+| ---------- | ------------------------------------ | ------------------------------------------- |
+| `cursor`   | `.cursor/mcp.json`                   | `~/.cursor/mcp.json`                        |
+| `claude`   | `./.mcp.json`                        | `~/.claude/mcp.json`                        |
+| `windsurf` | `.windsurf/mcp.json`                 | `~/.codeium/windsurf/mcp_config.json`       |
+| `codex`    | `.codex/mcp.json`                    | `~/.codex/mcp.json`                          |
+
+Add `--global` to install into the agent's user-level config instead of the
+project:
+
+```bash
+0g mcp init claude --global
+```
+
+`0g mcp init` only writes the editor config — it never installs a server. The
+generated config runs `npx -y @foundryprotocol/0gkit-mcp` on demand, so the
+server is always the published version with zero setup.
+
+## The neutral tool set
+
+Every generated config points at these nine tools:
+
+| Tool                | What it does                                   |
+| ------------------- | ---------------------------------------------- |
+| `og_storage_put`    | Upload bytes to 0G Storage → root hash         |
+| `og_storage_get`    | Download by root hash                          |
+| `og_storage_exists` | Check a root hash exists                        |
+| `og_infer`          | Run inference via the 0G Compute broker        |
+| `og_da_publish`     | Publish a blob to 0G Data Availability         |
+| `og_da_verify`      | Verify a DA commitment                         |
+| `og_chain_faucet`   | Request testnet funds                          |
+| `og_chain_balance`  | Read a native balance                          |
+| `og_attest_verify`  | Verify a signed inference receipt              |
+
+Set the server's environment (network, key, provider) in the generated config's
+`env` block — see the [`0gkit-mcp` package
+reference](/packages/mcp) for the full variable list.
+
+## Kits add tools to your own server
+
+Kits that ship an `mcp-agent` adapter (`agent-memory`, `ai-oracle`,
+`durable-agent`, `sealed-inference`) contribute **their own** MCP tools —
+`memory_remember`, `oracle_ask`, and friends. Those tools live in your project,
+not in the published neutral server, so `0g mcp init` wires them up honestly:
+
+When you run `0g mcp init` inside a project scaffolded from the **`mcp-agent`
+base** that has kits applied, it detects the applied kits (via
+`.0gkit/kits.json`) and points your editor at **your local project's server**
+(`npm --prefix <project> start`) instead of the published `npx` one. That local
+server — through an auto-generated `src/kits.ts` — exposes the nine neutral
+tools **plus** every applied kit's tools.
+
+```bash
+npm create 0gkit-app -- my-agent --template mcp-agent
+cd my-agent
+0g add agent-memory        # regenerates src/kits.ts wiring the kit's tools
+0g mcp init cursor         # → points Cursor at THIS project's server
+# Cursor now sees og_* AND memory_remember / memory_recall
+```
+
+The published `@foundryprotocol/0gkit-mcp` never imports a kit — the kit tools
+run in your project because your editor runs your project. Neutrality stays
+intact; the synergy is real, not faked with a flag.
+
+For a bare project (no kits, or not an `mcp-agent` base), `0g mcp init` writes
+the neutral `npx` config — exactly the nine tools, nothing more.
