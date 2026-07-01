@@ -15,7 +15,7 @@ function sequencedCompute(responses: string[]): StepDeps["compute"] {
       return output;
     },
   });
-  return { inference: (args) => client.inference(args) };
+  return { router: (args) => client.inference(args) };
 }
 
 interface Harness {
@@ -162,7 +162,7 @@ describe("runAgent", () => {
     const runner = new JobRunner({ backend, signer: testWallet({ index: 0 }) });
     const stepJob = buildStepJob({
       compute: {
-        inference: async () => {
+        router: async () => {
           throw new Error("compute provider unreachable");
         },
       },

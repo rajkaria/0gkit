@@ -62,6 +62,8 @@ async function main(): Promise<void> {
   const compute = new Compute({
     network: network as "galileo" | "aristotle",
     signer,
+    ...(env.MODEL ? { model: env.MODEL } : {}),
+    ...(env.ROUTER_API_KEY ? { routerApiKey: env.ROUTER_API_KEY } : {}),
   });
 
   // STUB attestation source. Replace with your provider's real envelope feed.

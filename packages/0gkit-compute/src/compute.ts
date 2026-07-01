@@ -6,10 +6,20 @@ import {
   type Signer,
 } from "@foundryprotocol/0gkit-core";
 import { makeComputeEstimate, type ComputeEstimate } from "./estimate.js";
+import { selectProviders, toProviderInfo, type ProviderInfo } from "./router-select.js";
 
 const DEFAULT_RPC = "https://evmrpc.0g.ai";
 const PKG_NEW = "@0gfoundation/0g-compute-ts-sdk";
 const PKG_OLD = "@0glabs/0g-serving-broker";
+
+// Real 0G Router endpoints (T0 research gate, VERIFIED —
+// docs/research/2026-07-01-0g-router-api.md). OpenAI-compatible HTTP.
+const ROUTER_URL_MAINNET = "https://router-api.0g.ai/v1";
+const ROUTER_URL_TESTNET = "https://router-api-testnet.integratenetwork.work/v1";
+
+function defaultRouterUrl(network?: "aristotle" | "galileo"): string {
+  return network === "aristotle" ? ROUTER_URL_MAINNET : ROUTER_URL_TESTNET;
+}
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -34,23 +44,70 @@ export interface ComputeConfig {
   brokerKey?: string;
   provider?: string;
   model?: string;
+  /**
+   * 0G Router API key (from the pc.0g.ai Web UI). When set, `router()` uses the
+   * real, OpenAI-compatible 0G Router endpoint. When unset, `router()` falls
+   * back to honest client-side selection over `listProviders()`.
+   */
+  routerApiKey?: string;
+  /**
+   * Override the 0G Router base URL. Defaults by `network`: galileo → testnet,
+   * aristotle → mainnet.
+   */
+  routerUrl?: string;
   fetch?: typeof fetch;
   loadBroker?: (name: string) => Promise<unknown>;
   loadEthers?: () => Promise<typeof import("ethers")>;
 }
 
+/** Arguments for {@link Compute.router}. */
+export interface RouterArgs {
+  /**
+   * Model to route to. Required when hitting the real 0G Router endpoint;
+   * optional on the client-side fallback (omit to try every provider in turn).
+   */
+  model?: string;
+  messages: ChatMessage[];
+  temperature?: number;
+  /** Pin a provider: hoisted to the head of the fallback candidate list. */
+  prefer?: string;
+  /** Routing knob passed to the real 0G Router endpoint (e.g. cheapest wins). */
+  sort?: "price";
+  /** Max candidates the client-side fallback will try before giving up. */
+  maxAttempts?: number;
+}
+
+/** Result of {@link Compute.router} — identical shape to `inference()`. */
+export type RouterResult = InferenceResult;
+
 /** @internal — exposed only for test isolation; not part of the public API. */
 export let __resetDeprecationWarning: () => void;
 
 let warnedBrokerKey = false;
+let warnedClientRouting = false;
 __resetDeprecationWarning = () => {
   warnedBrokerKey = false;
+  warnedClientRouting = false;
 };
 
 export interface InferenceResult {
   output: string;
   receipt: Receipt;
   raw: unknown;
+}
+
+/** Arguments for {@link Compute.inference} / {@link Compute.direct}. */
+export interface InferenceArgs {
+  /**
+   * Provider to call for this request. Overrides the constructor `provider`
+   * when set — `router()` uses this to try candidates in turn. Additive; the
+   * published `inference()` behaviour is unchanged when omitted (D13).
+   */
+  provider?: string;
+  model?: string;
+  messages: ChatMessage[];
+  temperature?: number;
+  maxOutputTokens?: number;
 }
 
 interface BrokerInference {
@@ -169,14 +226,15 @@ export class Compute {
     return this.broker;
   }
 
-  private requireProvider(): string {
-    if (!this.cfg.provider) {
+  private requireProvider(override?: string): string {
+    const provider = override ?? this.cfg.provider;
+    if (!provider) {
       throw new ConfigError(
         `Compute requires a provider address.`,
-        `Pass { provider } (the on-chain 0G inference provider address).`
+        `Pass { provider } (the on-chain 0G inference provider address), or use router() to select one.`
       );
     }
-    return this.cfg.provider;
+    return provider;
   }
 
   async listProviders(): Promise<unknown[]> {
@@ -193,28 +251,13 @@ export class Compute {
     }
   }
 
-  async inference(args: {
-    model?: string;
-    messages: ChatMessage[];
-    temperature?: number;
-    maxOutputTokens?: number;
-  }): Promise<InferenceResult>;
+  async inference(args: InferenceArgs): Promise<InferenceResult>;
   async inference(
-    args: {
-      model?: string;
-      messages: ChatMessage[];
-      temperature?: number;
-      maxOutputTokens?: number;
-    },
+    args: InferenceArgs,
     opts: { dryRun: true }
   ): Promise<DryRunResult<InferenceResult>>;
   async inference(
-    args: {
-      model?: string;
-      messages: ChatMessage[];
-      temperature?: number;
-      maxOutputTokens?: number;
-    },
+    args: InferenceArgs,
     opts?: { dryRun?: boolean }
   ): Promise<InferenceResult | DryRunResult<InferenceResult>> {
     if (opts?.dryRun) {
@@ -230,7 +273,7 @@ export class Compute {
     // is not forwarded to the broker SDK — the broker reads its own provider
     // metadata for actual generation limits.
     void args.maxOutputTokens;
-    const provider = this.requireProvider();
+    const provider = this.requireProvider(args.provider);
     const broker = await this.getBroker();
     try {
       await broker.inference.acknowledgeProviderSigner(provider);
@@ -308,6 +351,130 @@ export class Compute {
       receipt: { txHash, latencyMs: Date.now() - startedAt },
       raw,
     };
+  }
+
+  /**
+   * Model-first inference that picks a provider for you, with retries and
+   * fallback — so app code stops hard-coding a provider address.
+   *
+   * Primary path: if a `routerApiKey` is configured, this calls the real,
+   * OpenAI-compatible **0G Router** endpoint (`router-api.0g.ai/v1`), which
+   * selects a provider server-side and settles from a single balance.
+   *
+   * Fallback path: with no `routerApiKey`, it selects client-side over
+   * `listProviders()` and delegates to `inference()` across candidates with
+   * retry/fallback (honest — labelled at runtime and in the docs).
+   */
+  async router(args: RouterArgs): Promise<InferenceResult> {
+    // Resolve model + prefer once (per-call wins, then the constructor default)
+    // so templates that pin { model } / { provider } on the client don't repeat
+    // them per request. `prefer` only steers the client-side fallback ordering.
+    const resolved: RouterArgs = {
+      ...args,
+      model: args.model ?? this.cfg.model,
+      prefer: args.prefer ?? this.cfg.provider,
+    };
+    if (this.cfg.routerApiKey) {
+      return this.routeViaEndpoint(resolved, this.cfg.routerApiKey);
+    }
+    return this.routeClientSide(resolved);
+  }
+
+  /** Explicit-provider path — a thin alias for {@link inference} (D13: no rename). */
+  async direct(args: InferenceArgs): Promise<InferenceResult> {
+    return this.inference(args);
+  }
+
+  private async routeViaEndpoint(
+    args: RouterArgs,
+    apiKey: string
+  ): Promise<InferenceResult> {
+    if (!args.model) {
+      throw new ConfigError(
+        `router() needs a { model } when using the 0G Router endpoint.`,
+        `Pass a model (browse GET ${
+          this.cfg.routerUrl ?? defaultRouterUrl(this.cfg.network)
+        }/models), or unset ROUTER_API_KEY to select a provider client-side.`
+      );
+    }
+    const base = this.cfg.routerUrl ?? defaultRouterUrl(this.cfg.network);
+    const body = {
+      model: args.model,
+      messages: args.messages,
+      ...(args.temperature !== undefined ? { temperature: args.temperature } : {}),
+      ...(args.sort ? { sort: args.sort } : {}),
+    };
+    const startedAt = Date.now();
+    let res: Response;
+    try {
+      res = await this.fetchImpl(`${base}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      throw new NetworkError(
+        `0G Router request failed: ${err instanceof Error ? err.message : String(err)}`,
+        `Check the router endpoint (${base}) and your network connectivity.`
+      );
+    }
+    if (!res.ok) {
+      throw new NetworkError(
+        `0G Router returned HTTP ${res.status}.`,
+        `Verify ROUTER_API_KEY is valid and the router balance is funded (pc.0g.ai).`
+      );
+    }
+    const raw = (await res.json().catch(() => ({}))) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    return {
+      output: raw.choices?.[0]?.message?.content ?? "",
+      receipt: { latencyMs: Date.now() - startedAt },
+      raw,
+    };
+  }
+
+  private async routeClientSide(args: RouterArgs): Promise<InferenceResult> {
+    if (!warnedClientRouting) {
+      console.warn(
+        "@foundryprotocol/0gkit-compute: router() is selecting a provider " +
+          "client-side over listProviders().\n" +
+          "  Set ROUTER_API_KEY (from pc.0g.ai) to use the managed 0G Router " +
+          "endpoint with server-side selection + failover."
+      );
+      warnedClientRouting = true;
+    }
+    const raw = await this.listProviders();
+    const candidates = selectProviders(
+      raw.map(toProviderInfo).filter((p): p is ProviderInfo => p !== undefined),
+      { model: args.model, prefer: args.prefer }
+    );
+    if (candidates.length === 0) {
+      throw new NetworkError(
+        `No 0G compute provider is reachable${
+          args.model ? ` for model '${args.model}'` : ""
+        }.`,
+        `Run \`0g doctor\` to check the broker RPC, set ROUTER_API_KEY to use the 0G Router, or pass { prefer } with a known provider.`
+      );
+    }
+    const limit = Math.min(args.maxAttempts ?? candidates.length, candidates.length);
+    let lastErr: unknown;
+    for (let i = 0; i < limit; i++) {
+      try {
+        return await this.inference({
+          provider: candidates[i].provider,
+          model: args.model,
+          messages: args.messages,
+          temperature: args.temperature,
+        });
+      } catch (e) {
+        lastErr = e; // fall through to the next candidate
+      }
+    }
+    throw lastErr;
   }
 
   openai() {

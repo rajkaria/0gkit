@@ -1,14 +1,17 @@
 # inference-app
 
-A minimal Node + TypeScript starter that **discovers a
+A minimal Node + TypeScript starter that **routes to a
 [0G Compute](https://0g.ai) provider and runs an OpenAI-compatible chat
-completion** using
-[`@foundryprotocol/0gkit-compute`](https://www.npmjs.com/package/@foundryprotocol/0gkit-compute).
+completion** using `Compute.router()` from
+[`@foundryprotocol/0gkit-compute`](https://www.npmjs.com/package/@foundryprotocol/0gkit-compute) —
+no hard-coded provider address.
 
 ## Prerequisites
 
 - Node.js **>= 20.10**
-- A funded 0G **broker** private key (pays per-inference fees).
+- Either a **0G Router API key** (`ROUTER_API_KEY`, from
+  [pc.0g.ai](https://pc.0g.ai)) for the managed Router, **or** a funded 0G
+  **broker** private key (`BROKER_KEY`) for client-side routing.
 
 ## Clone
 
@@ -24,13 +27,14 @@ npm install
 cp .env.example .env
 ```
 
-| Var             | Purpose                                                       |
-| --------------- | ------------------------------------------------------------- |
-| `BROKER_KEY`    | Funded 0G broker key (64-char hex, `0x` optional)             |
-| `PROVIDER`      | Inference provider address — leave blank to auto-discover one |
-| `ZEROG_NETWORK` | `galileo` (testnet, default) or `aristotle` (mainnet)         |
-| `MODEL`         | Optional model name; the provider default is used if unset    |
-| `PROMPT`        | The question to ask                                           |
+| Var              | Purpose                                                           |
+| ---------------- | ----------------------------------------------------------------- |
+| `BROKER_KEY`     | Funded 0G broker key (64-char hex) — used for client-side routing |
+| `ROUTER_API_KEY` | 0G Router API key (pc.0g.ai) — set to use the managed Router      |
+| `PROVIDER`       | Pin a provider address — leave blank and the router picks one     |
+| `ZEROG_NETWORK`  | `galileo` (testnet, default) or `aristotle` (mainnet)             |
+| `MODEL`          | Model name; required with `ROUTER_API_KEY`, else provider default |
+| `PROMPT`         | The question to ask                                               |
 
 ## Run
 
@@ -41,9 +45,7 @@ npm start
 ## Expected output
 
 ```
-No PROVIDER set — discovering one from the 0G network…
-  Using provider 0xabc1…
-Asking the 0G provider: "In one sentence, what is the 0G network?"
+Asking the 0G network: "In one sentence, what is the 0G network?"
 
 --- answer ---
 0G is a modular AI-focused blockchain providing decentralized storage, compute, and data availability.
@@ -53,8 +55,12 @@ latency 1820ms  settlement tx 0x44ad…
 
 ## How it works
 
-`new Compute({ network, brokerKey, provider }).inference({ messages })`
-returns `{ output, receipt }`. A drop-in OpenAI shim is also available via
+`new Compute({ network, brokerKey, routerApiKey }).router({ messages })`
+picks a provider for you — the managed **0G Router** endpoint when
+`ROUTER_API_KEY` is set, otherwise **client-side** selection over the on-chain
+provider list with retry/fallback — and returns `{ output, receipt }`. Pass
+`{ prefer }` to pin a provider, or call `compute.direct({ provider, messages })`
+if you own a provider relationship. A drop-in OpenAI shim is also available via
 `compute.openai().chat.completions.create(...)`. See
 [`src/index.ts`](./src/index.ts).
 
@@ -73,5 +79,5 @@ env vars, and deploy in under 60 seconds on Fluid Compute.
 ## What next?
 
 1. **Deploy as a cron** — wrap `main()` in a Vercel Cron route; persist the result to KV or 0G Storage.
-2. **Extend to streaming** — swap `compute.inference` for `compute.inferenceStream` and pipe tokens to the client.
-3. **Migrate to mainnet** — `ZEROG_NETWORK=aristotle`, top up the broker, re-run.
+2. **Use the managed Router** — set `ROUTER_API_KEY` (pc.0g.ai) for server-side selection, failover, and a single pre-funded balance.
+3. **Migrate to mainnet** — `ZEROG_NETWORK=aristotle`, top up the broker (or Router balance), re-run.

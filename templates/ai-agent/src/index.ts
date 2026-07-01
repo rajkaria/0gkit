@@ -42,6 +42,7 @@ async function main(): Promise<void> {
     signer,
     ...(env.PROVIDER ? { provider: env.PROVIDER } : {}),
     ...(env.MODEL ? { model: env.MODEL } : {}),
+    ...(env.ROUTER_API_KEY ? { routerApiKey: env.ROUTER_API_KEY } : {}),
   });
 
   const tools = new ToolRegistry();

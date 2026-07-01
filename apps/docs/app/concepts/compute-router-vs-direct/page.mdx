@@ -1,0 +1,91 @@
+---
+title: Compute — router() vs direct()
+---
+
+# Compute — `router()` vs `direct()`
+
+`@foundryprotocol/0gkit-compute` gives you two ways to run an inference, and the
+right default is **`router()`** — you name a model, not a provider address.
+
+```ts
+import { Compute } from "@foundryprotocol/0gkit-compute";
+
+const compute = new Compute({
+  network: "galileo",
+  routerApiKey: process.env.ROUTER_API_KEY,
+});
+
+// Model-first: a provider is chosen for you, with retries + fallback.
+const { output } = await compute.router({
+  model: "llama-3.1-8b",
+  messages: [{ role: "user", content: "hi" }],
+});
+```
+
+## `router()` — pick a provider for me
+
+`router()` resolves a provider two ways depending on how you configure the client:
+
+- **Managed 0G Router (recommended).** Set `routerApiKey` (or the `ROUTER_API_KEY`
+  env var) — from the [pc.0g.ai](https://pc.0g.ai) dashboard — and `router()`
+  calls the real, OpenAI-compatible **0G Router** endpoint
+  (`router-api.0g.ai/v1`). The Router selects a provider **server-side** (lowest
+  latency, or `sort: "price"`), fails over to a healthy provider automatically,
+  and settles from a single pre-funded balance. No wallet signer required.
+- **Client-side routing (fallback).** With **no** `routerApiKey`, `router()`
+  lists on-chain providers (`listProviders()`), orders the ones serving your
+  `model` first, and tries them in turn — retrying the next candidate on
+  failure. This uses your wallet signer / broker key and needs no dashboard key.
+  It logs a one-time note so you know which path you're on.
+
+Either way the public surface is identical — only the internal resolver differs.
+
+```ts
+compute.router({
+  model, // required for the managed Router; optional for client-side
+  messages,
+  temperature, // optional
+  prefer: "0xProvider", // pin a provider (client-side: tried first)
+  sort: "price", // managed Router routing knob
+  maxAttempts: 3, // client-side retry cap
+});
+```
+
+If no provider is reachable, `router()` throws a typed `NetworkError` with a
+`0g doctor` hint — never a silent failure.
+
+## `direct()` — I own my provider relationship
+
+When you already know exactly which provider you want (you have a direct
+relationship, a negotiated rate, or a pinned enclave), skip routing:
+
+```ts
+const compute = new Compute({ network: "galileo", signer });
+const { output } = await compute.direct({
+  provider: "0xYourProvider",
+  messages: [{ role: "user", content: "hi" }],
+});
+```
+
+`direct()` is a thin alias for the explicit-provider `inference()` path — the
+published `Compute.inference()` signature and behaviour are unchanged; `direct()`
+and the optional per-call `{ provider }` are purely additive.
+
+## Which do I use?
+
+| Situation                                                           | Use                                                                       |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| You just want an answer and don't care which provider serves it     | **`router()`**                                                            |
+| You want managed failover, a single balance, and no wallet plumbing | **`router()`** with `ROUTER_API_KEY`                                      |
+| You have a specific provider (rate, enclave, relationship) to pin   | **`direct({ provider })`** — or `router({ prefer })` to pin-but-fall-back |
+| You're offline / testnet with a wallet and no Router key            | **`router()`** (client-side fallback)                                     |
+
+Templates default to `router()`. Kits that call compute (`ai-oracle`,
+`sealed-inference`, `yield-intel`, `prediction-market`) do too — so a scaffolded
+project runs without you hard-coding a provider address.
+
+> **Honesty note.** The managed 0G Router endpoint is real and OpenAI-compatible
+> ([0G docs](https://docs.0g.ai/developer-hub/building-on-0g/compute-network/router/overview));
+> its API keys are issued from the pc.0g.ai Web UI, so you bring a key. When no
+> key is set, 0gkit routes **client-side over the provider list** and labels it
+> as such — it does not pretend to be the managed Router.

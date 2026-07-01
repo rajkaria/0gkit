@@ -1,9 +1,12 @@
 /**
- * inference-app — discover a 0G Compute provider and run a chat completion.
+ * inference-app — run a chat completion without hard-coding a provider.
  *
- * 1. Construct a Compute client from a funded broker key.
- * 2. If no PROVIDER is set, list on-chain providers and pick the first.
- * 3. Run an OpenAI-compatible chat completion and print the answer.
+ * `Compute.router()` picks a provider for you:
+ *   - with ROUTER_API_KEY set, it calls the managed 0G Router endpoint
+ *     (server-side selection + failover);
+ *   - otherwise it selects client-side over the on-chain provider list and
+ *     retries/falls back across candidates.
+ * Set PROVIDER to pin a specific provider (passed as `prefer`).
  */
 import { Compute } from "@foundryprotocol/0gkit-compute";
 import {
@@ -13,18 +16,6 @@ import {
 } from "@foundryprotocol/0gkit-core";
 import { config } from "../0g.config.js";
 
-/** Best-effort extraction of a provider address from a listService() entry. */
-function pickProviderAddress(entry: unknown): string | undefined {
-  if (typeof entry === "string") return entry;
-  if (entry && typeof entry === "object") {
-    const o = entry as Record<string, unknown>;
-    for (const key of ["provider", "address", "0", "providerAddress"]) {
-      if (typeof o[key] === "string") return o[key] as string;
-    }
-  }
-  return undefined;
-}
-
 async function main(): Promise<void> {
   const env = config.server();
   let network: "galileo" | "aristotle" | "local" = env.ZEROG_NETWORK;
@@ -33,47 +24,30 @@ async function main(): Promise<void> {
     network = "local";
   }
 
-  const brokerKey = env.BROKER_KEY;
   const model = env.MODEL;
   const prompt = env.PROMPT;
 
-  let provider = env.PROVIDER;
-
-  if (!provider) {
-    console.log("No PROVIDER set — discovering one from the 0G network…");
-    // Compute SDK currently accepts only "aristotle" | "galileo"; "local" is
-    // surfaced through unchanged so users hit a clear SDK error rather than a
-    // silent retarget to mainnet.
-    const discovery = new Compute({
-      network: network as "galileo" | "aristotle",
-      brokerKey,
-    });
-    const services = await discovery.listProviders();
-    for (const s of services) {
-      const addr = pickProviderAddress(s);
-      if (addr) {
-        provider = addr;
-        break;
-      }
-    }
-    if (!provider) {
-      console.error("No 0G compute providers were discoverable. Set PROVIDER in .env.");
-      process.exit(1);
-    }
-    console.log(`  Using provider ${provider}`);
-  }
-
+  // Compute SDK currently accepts only "aristotle" | "galileo"; "local" is
+  // surfaced through unchanged so users hit a clear SDK error rather than a
+  // silent retarget to mainnet.
   const compute = new Compute({
     network: network as "galileo" | "aristotle",
-    brokerKey,
-    provider,
-    model,
+    brokerKey: env.BROKER_KEY,
+    ...(model ? { model } : {}),
+    ...(env.ROUTER_API_KEY ? { routerApiKey: env.ROUTER_API_KEY } : {}),
   });
 
-  console.log(`Asking the 0G provider: "${prompt}"`);
-  const { output, receipt } = await compute.inference({
+  console.log(`Asking the 0G network: "${prompt}"`);
+  const { output, receipt } = await compute.router({
     messages: [{ role: "user", content: prompt }],
+    ...(env.PROVIDER ? { prefer: env.PROVIDER } : {}),
   });
+
+  // Own a provider relationship? Skip routing and call it directly:
+  //   const { output } = await compute.direct({
+  //     provider: env.PROVIDER!,
+  //     messages: [{ role: "user", content: prompt }],
+  //   });
 
   console.log("\n--- answer ---");
   console.log(output.trim());
@@ -84,7 +58,7 @@ async function main(): Promise<void> {
   );
 
   printFirstSuccess({
-    op: "compute.inference",
+    op: "compute.router",
     id: receipt.txHash ?? "ok",
     note: `network=${network}`,
   });

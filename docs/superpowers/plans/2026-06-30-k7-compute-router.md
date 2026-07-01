@@ -14,6 +14,44 @@ depends_on: [K0]
 > superpowers:executing-plans to implement this plan task-by-task. Steps use
 > checkbox (`- [ ]`) syntax for tracking.
 
+## Reality check (2026-07-01) — read this first; it supersedes the fictional bits below
+
+This plan was written 2026-06-30 against assumed APIs. A pre-build reality-check
+(the K1/K5/K6 lesson) + the T0 research gate found **five drifts**. The
+corrections below govern; where the older task text conflicts, the correction wins.
+Research findings: [`docs/research/2026-07-01-0g-router-api.md`](../../research/2026-07-01-0g-router-api.md).
+
+| #   | Plan assumed                                                | Reality                                                                                                                                                                                                            | Correction                                                                                                                                                                                                                                          |
+| --- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `router()` = client-side list-and-select (no server Router) | **The 0G Router is a real server endpoint** — `router-api.0g.ai/v1`, OpenAI-compatible HTTP, `Bearer <ROUTER_API_KEY>`, server-side selection + failover (testnet: `router-api-testnet.integratenetwork.work/v1`). | **Wire the real endpoint** (honesty rule). Its auth (API key from pc.0g.ai Web UI) differs from our wallet-signer path, so add `routerApiKey`/`routerUrl` to `ComputeConfig`. Keep client-side select as an **honest fallback** when no key is set. |
+| 2   | `inference({ provider, … })` takes a per-call provider      | It does **not** — `inference()` reads `this.cfg.provider` via `requireProvider()`.                                                                                                                                 | Additively accept an optional `provider?` on `inference()` (D13-safe); `requireProvider(override?)` prefers it. Unblocks the fallback's per-candidate calls + `direct({ provider })`.                                                               |
+| 3   | Templates `chat`, `inference-app`, `ai-agent` call compute  | `templates/chat` has **no compute**. Real compute callers: `inference-app`, `ai-agent`, `tee-attested-api`.                                                                                                        | Migrate those three. `inference-app` is the flagship — it already hand-rolls `listProviders()`+pick, which `router()` replaces.                                                                                                                     |
+| 4   | Decisions D86–D88                                           | D86–D88 already exist (K5 = D86, K6 = D87–D88).                                                                                                                                                                    | Renumber to **D89–D91**.                                                                                                                                                                                                                            |
+| 5   | Kit "synergy" is vague/aspirational                         | Kit adapters build `new Compute({ signer })` with **no `provider`** → `inference()` throws today. `router()` genuinely fixes this. Real synergy lives in the adapter `infer` wrappers, not the kit `lib/*.ts`.     | Flip the compute-calling kit adapters (`ai-oracle`, `sealed-inference`, `yield-intel`, `prediction-market`) to `router()`. This both delivers the synergy **and** fixes a latent no-provider bug.                                                   |
+
+**Corrected public surface** (identical whether real endpoint or fallback resolves it):
+
+```ts
+compute.router({
+  model?: string,          // optional; when omitted the fallback tries all providers
+  messages: ChatMessage[],
+  temperature?: number,
+  prefer?: string,         // pin a provider — steers the client-side fallback only (the managed endpoint does its own selection; no verified pin field)
+  sort?: "price",          // real-endpoint routing knob (documented); ignored by the fallback
+  maxAttempts?: number,    // fallback retry cap
+}): Promise<InferenceResult>
+```
+
+Task-by-task deltas: **T0** → done (research doc written, endpoint VERIFIED).
+**T1** `selectProviders()` stands, plus a shared defensive `pickProviderAddress`/
+`toProviderInfo` mapper (real `listService()` entries are loose `unknown`).
+**T2** `router()` = real-endpoint-first, client-fallback-second (not the single
+strategy shown below). **T3** `direct()` alias + the per-call `provider` on
+`inference()` (drift #2). **T4** templates = `inference-app`/`ai-agent`/
+`tee-attested-api` (not `chat`). **T4b (new)** kit-adapter flip (drift #5).
+**T5** docs carry the real-endpoint-vs-fallback honesty note. **T6** changeset +
+**D89–D91**.
+
 # K7 — First-class Compute Router
 
 ## Goal

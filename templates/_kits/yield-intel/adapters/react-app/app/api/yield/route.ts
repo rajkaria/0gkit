@@ -124,11 +124,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const privateKey = getPrivateKey();
       const signer = await fromPrivateKey(privateKey);
-      const compute = new Compute({ signer });
+      const compute = new Compute({
+        signer,
+        ...(process.env.ROUTER_API_KEY
+          ? { routerApiKey: process.env.ROUTER_API_KEY }
+          : {}),
+      });
 
       const computeClient = {
         async infer(args: { prompt: string; model?: string }) {
-          const result = await compute.inference({
+          const result = await compute.router({
             messages: [{ role: "user" as const, content: args.prompt }],
             ...(args.model ? { model: args.model } : {}),
           });

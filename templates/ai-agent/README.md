@@ -22,7 +22,7 @@ runAgent(prompt) ──┐
             ┌───────────────────┐
             │ handler:          │
             │  1. compute.      │
-       ┌────│     inference     │────► InferenceResult { output, receipt }
+       ┌────│     router        │────► InferenceResult { output, receipt }
        │    │  2. verifyStep    │
        │    │     (attestation) │── false ─► verified: false ─► ABORT
        │    └─────────┬─────────┘

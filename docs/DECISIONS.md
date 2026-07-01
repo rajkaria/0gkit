@@ -758,3 +758,33 @@ After every successful `applyKit` call, the engine writes (or merges into) `.0gk
 **Why:** Project scope keeps the config committable and lets it travel with the repo. Local mode is the honest delivery of the kit-tool synergy (D87) — it only triggers where a local kitted server actually exists. `--global` cannot point at a specific project, so it stays neutral. Making `0gkit-mcp` a real dependency (not devDependency) fixes the case where a globally-installed CLI could not resolve the lazy import.
 
 **How to apply:** Add new agents by extending the `AGENTS` list and `PATHS` table in `0gkit-mcp/config-init.ts`. Keep `buildMcpConfig` pure (path/JSON only); do not have it install anything. Local mode must remain gated on project scope + `mcp-agent` base + applied kits.
+
+## D89 — `Compute.router()` wires the real 0G Router endpoint; client-side selection is the labelled fallback
+
+**Date:** 2026-07-01 · **SP:** K7
+
+The T0 research gate ([`docs/research/2026-07-01-0g-router-api.md`](research/2026-07-01-0g-router-api.md)) confirmed the **0G Router is a real, OpenAI-compatible server endpoint** — `router-api.0g.ai/v1` (mainnet) / `router-api-testnet.integratenetwork.work/v1` (testnet), `Authorization: Bearer <ROUTER_API_KEY>`, server-side selection + failover, `sort` routing knob, models at `/v1/models`. So `Compute.router()` **wires it**: with `cfg.routerApiKey` set it POSTs an OpenAI-compatible body to `${routerUrl}/chat/completions`; `routerUrl` defaults by network. With **no** key it falls back to honest client-side selection — `listProviders()` → pure `selectProviders()` (model-first, `prefer` head) → `inference({ provider })` across candidates with retry/fallback — and emits a one-time note. Zero reachable providers throws a typed `NetworkError`; the managed path without a model throws `ConfigError`.
+
+**Why:** The honesty rule requires wiring a confirmed endpoint rather than shipping a client-side stand-in and calling it "the Router." But the Router's auth (an API key from the pc.0g.ai Web UI) differs from our wallet-signer/broker path, and key issuance is Web-UI-only — so the user brings a key, and wallet-signer users still get a real, working router via the client-side fallback. Neither path fabricates provider fields; the fallback is explicitly labelled. `selectProviders`/`toProviderInfo` are pure and network-free (unit-tested, no Aristotle gating, D10).
+
+**How to apply:** Never fabricate a Router request field beyond the documented `sort`. If 0G ships programmatic key issuance or a provider-pin request field, extend the endpoint path only — the public `router()` surface stays fixed. Keep the client-side fallback's one-time "set ROUTER_API_KEY" note.
+
+## D90 — `router()`/`direct()` are additive; `inference()` gains an optional per-call `provider` (no rename)
+
+**Date:** 2026-07-01 · **SP:** K7
+
+`Compute.router()` and `Compute.direct()` are new methods; `Compute.inference()` keeps its published signature and behaviour. `inference()`/`InferenceArgs` gain an **optional** `provider?` that overrides `cfg.provider` (via `requireProvider(override?)`) — additive, so v1.x callers are unaffected. `direct()` is a thin forwarding alias for the explicit-provider path. `router()` resolves `model` from `args.model ?? cfg.model` and `prefer` from `args.prefer ?? cfg.provider`, so templates that pin a model/provider on the client don't repeat it per request. New config: `routerApiKey`, `routerUrl`. This honours D13 (no rename of the published `Compute` surface).
+
+**Why:** `inference()` reads a constructor-time `provider`; `router()`'s client-side fallback needs to try a _different_ provider per candidate, and `direct()` needs a per-call provider — both are impossible without the per-call override. Making it optional keeps the change additive. Defaulting `prefer`/`model` from config preserves the existing `PROVIDER`/`MODEL` pin semantics through the migration to `router()`.
+
+**How to apply:** Adding compute call-args is fine; never remove or rename `inference()`. New templates/kits default to `router()`; use `direct({ provider })` only for an owned provider relationship.
+
+## D91 — templates and compute-calling kits default to `router()`
+
+**Date:** 2026-07-01 · **SP:** K7
+
+The three compute-calling base templates (`inference-app`, `ai-agent`, `tee-attested-api`) and all 14 compute-calling kit adapters (`ai-oracle`, `sealed-inference`, `yield-intel`, `prediction-market`) call `compute.router()`, not `inference()`. `inference-app`'s hand-rolled `listProviders()`+pick is deleted in favour of `router()`. Each surfaces `ROUTER_API_KEY` (managed Router opt-in) alongside its wallet credential; `PROVIDER` becomes a `prefer` pin.
+
+**Why:** Every kit adapter and `ai-agent`/`tee` constructed `new Compute({ signer })` **without a provider**, so `inference()` would have thrown `ConfigError` at runtime — a latent bug. `router()` discovers/selects a provider, fixing them _and_ delivering the model-first default. This is real synergy, not a flag (contrast the K6 fiction, D87). Verified end-to-end by `kits:check` (27/27 kit×base combos type-check the router() adapters against real types) — which also fixed the K6 follow-up where `check-kits.mjs` staged the overlay flat instead of tier-prefixed.
+
+**How to apply:** New compute-calling templates/kit adapters call `router()` and pass `ROUTER_API_KEY` through. `kits:check` must stay green (`copyKitTiersToOverlay` mirrors the real giget tier-prefixed layout).

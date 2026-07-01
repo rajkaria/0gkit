@@ -67,7 +67,13 @@ export type StepOutput = z.infer<typeof StepOutputSchema>;
 
 export interface StepDeps {
   compute: {
-    inference(args: { messages: ChatMessage[] }): Promise<InferenceResult>;
+    /**
+     * `Compute.router()` — picks a provider for you (the managed 0G Router when
+     * ROUTER_API_KEY is set, else client-side selection + fallback). Each
+     * durable step routes independently, so a provider outage mid-run is
+     * survived by the next step's fallback.
+     */
+    router(args: { messages: ChatMessage[] }): Promise<InferenceResult>;
   };
   /**
    * Called after every compute step. Return false to abort the loop — production
@@ -86,7 +92,7 @@ export function buildStepJob(deps: StepDeps): JobDefinition<StepInput, StepOutpu
     input: StepInputSchema,
     output: StepOutputSchema,
     handler: async ({ input }) => {
-      const res = await deps.compute.inference({
+      const res = await deps.compute.router({
         messages: [{ role: "user", content: input.history }],
       });
       const verified = await deps.verifyStep(input.stepIndex, res);
