@@ -186,4 +186,21 @@ describe("create0gMcpServer (plugins[] seam)", () => {
     expect(parsed).toHaveProperty("address");
     expect(res.isError).toBeFalsy();
   });
+
+  it("unknown tool with plugins present lists known tools (not the foundry opt-in hint)", async () => {
+    const server = await create0gMcpServer({
+      deps: stubDeps(),
+      foundryPlugin: null,
+      plugins: [fakePlugin],
+    });
+    const client = await connect(server);
+    const res: any = await client.callTool({ name: "nope_tool", arguments: {} });
+    expect(res.isError).toBe(true);
+    const parsed = JSON.parse(res.content[0].text);
+    expect(parsed.error).toContain("nope_tool");
+    // plugins are wired, so the hint must enumerate known tools — including the
+    // plugin's — rather than telling the user to opt into Foundry.
+    expect(parsed.hint).toContain("x_tool");
+    expect(parsed.hint).not.toContain("ZEROG_FOUNDRY");
+  });
 });

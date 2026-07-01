@@ -350,6 +350,13 @@ export function registerAgentTools(server: McpServerLike): void {
  * Usage:
  *   import { mcpToolPlugin } from "./src/tools/agent.js";
  *   const server = await create0gMcpServer({ plugins: [mcpToolPlugin(process.env)] });
+ *
+ * NOTE: unlike the other kit adapters, `registerAgentTools` reads `process.env`
+ * directly (OG_PRIVATE_KEY / OG_RPC_URL / OG_STORAGE_NAMESPACE) via its
+ * module-scoped storage + job-runner singletons. The `_env` argument is
+ * accepted only for factory-signature symmetry with the other kits — it is NOT
+ * threaded through, so passing a custom env object here does not override
+ * `process.env`. Set the vars in the process environment.
  */
 export const mcpToolPlugin = (_env: Record<string, string | undefined>) =>
   collectToolPlugin("durable-agent", (s) => registerAgentTools(s));

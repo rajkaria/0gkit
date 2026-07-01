@@ -73,9 +73,13 @@ export async function create0gMcpServer(
           text: JSON.stringify(
             {
               error: `Unknown tool: ${name}`,
-              hint: foundry
-                ? `Known: ${tools.map((t) => t.name).join(", ")}`
-                : `Foundry tools are opt-in — set ZEROG_FOUNDRY=1 to enable them.`,
+              // List the known tools whenever any plugin (kit or foundry) is
+              // wired; only fall back to the foundry opt-in hint on a bare
+              // neutral server (no plugins at all).
+              hint:
+                allPlugins.length > 0
+                  ? `Known: ${tools.map((t) => t.name).join(", ")}`
+                  : `Foundry tools are opt-in — set ZEROG_FOUNDRY=1 to enable them.`,
             },
             null,
             2
