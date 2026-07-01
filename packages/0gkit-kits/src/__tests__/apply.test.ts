@@ -89,12 +89,28 @@ const nodeOnlyKit: KitManifest = KitManifestSchema.parse({
   },
 });
 
+/** A kit with an adapter tier — exercises the src≠dest tier-path mapping
+ *  (overlay `adapters/<base>/src/tools/adapter.ts` → project `src/tools/adapter.ts`). */
+const adapterKit: KitManifest = KitManifestSchema.parse({
+  name: "adapter-kit",
+  title: "Adapter Kit",
+  domain: "agent-infra",
+  summary: "A kit that ships an adapter tier.",
+  compatibleBases: ["node"],
+  tiers: {
+    lib: ["lib/adapter-core.ts"],
+    adapters: { node: ["src/tools/adapter.ts"] },
+  },
+  requires: [],
+});
+
 const TEST_REGISTRY: KitManifest[] = [
   depKit,
   mainKit,
   conflictKit,
   standaloneKit,
   nodeOnlyKit,
+  adapterKit,
 ];
 
 // ---------------------------------------------------------------------------
@@ -106,13 +122,19 @@ function makeFakeFetchOverlay(registry: KitManifest[]) {
     const manifest = registry.find((k) => k.name === name);
     if (!manifest) throw new Error(`fake fetchOverlay: unknown kit "${name}"`);
 
-    const allFiles = [
+    // Mirror the REAL published overlay layout (giget): tiers live under
+    // prefixed dirs — `lib/…` (already prefixed in the manifest value),
+    // `ui/…`, and `adapters/<base>/…`. Writing at the flat dest paths here
+    // would let a src≠dest copy bug pass unnoticed (see resolveTierFiles).
+    const srcFiles: string[] = [
       ...manifest.tiers.lib,
-      ...(manifest.tiers.ui ?? []),
-      ...Object.values(manifest.tiers.adapters ?? {}).flat(),
+      ...(manifest.tiers.ui ?? []).map((f) => `ui/${f}`),
+      ...Object.entries(manifest.tiers.adapters ?? {}).flatMap(([b, files]) =>
+        files.map((f) => `adapters/${b}/${f}`)
+      ),
     ];
 
-    for (const relPath of allFiles) {
+    for (const relPath of srcFiles) {
       const absPath = join(dir, relPath);
       const parentDir = absPath.substring(0, absPath.lastIndexOf("/"));
       mkdirSync(parentDir, { recursive: true });
@@ -247,6 +269,22 @@ describe("file writes", () => {
 
     expect(result.filesWritten).not.toContain("components/Main.tsx");
     expect(existsSync(join(dest, "components/Main.tsx"))).toBe(false);
+  });
+
+  it("copies an adapter-tier file from its overlay adapters/<base>/ path to the flat project dest", async () => {
+    // Regression: the overlay stores this under adapters/node/src/tools/adapter.ts,
+    // but it must land at src/tools/adapter.ts in the project. A src≡dest copy
+    // would ENOENT against the real overlay (see resolveTierFiles).
+    const result = await applyKit({
+      kit: "adapter-kit",
+      dest,
+      base: "node",
+      deps: makeDeps(),
+    });
+
+    expect(result.filesWritten).toContain("src/tools/adapter.ts");
+    expect(existsSync(join(dest, "src/tools/adapter.ts"))).toBe(true);
+    expect(existsSync(join(dest, "lib/adapter-core.ts"))).toBe(true);
   });
 });
 

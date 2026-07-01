@@ -10,7 +10,7 @@ import {
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import type { KitManifest } from "./manifest.js";
-import { getKit, resolveTiers } from "./registry.js";
+import { getKit, resolveTiers, resolveTierFiles } from "./registry.js";
 import { fetchKitOverlay } from "./fetch.js";
 import { mergePackageJson, appendEnv } from "./merge.js";
 import { KITS } from "./registry.generated.js";
@@ -210,14 +210,16 @@ export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
   let workingPkg = { ...destPkg } as Record<string, unknown>;
 
   for (const manifest of resolved) {
-    const tierFiles = resolveTiers(manifest, base);
+    // Each tier file carries its overlay `src` (tier-prefixed) and project
+    // `dest` — they differ for the `adapters`/`ui` tiers (see resolveTierFiles).
+    const tierFiles = resolveTierFiles(manifest, base);
 
     // Record kit as applied
     appliedNames.push(manifest.name);
 
     if (dryRun) {
       // In dry-run: just record what WOULD be written
-      filesWritten.push(...tierFiles);
+      filesWritten.push(...tierFiles.map((f) => f.dest));
     } else {
       // Fetch overlay into a temp directory
       const tmpDir = mkdtempSync(join(tmpdir(), `0gkit-kit-${manifest.name}-`));
@@ -225,17 +227,17 @@ export async function applyKit(opts: ApplyKitOptions): Promise<ApplyResult> {
       try {
         await fetchOverlay(manifest.name, tmpDir);
 
-        // Copy tier files from tmpDir -> dest
-        for (const relPath of tierFiles) {
-          const srcPath = join(tmpDir, relPath);
-          const dstPath = join(dest, relPath);
+        // Copy each tier file from its overlay src -> its project dest.
+        for (const { src, dest: relDest } of tierFiles) {
+          const srcPath = join(tmpDir, src);
+          const dstPath = join(dest, relDest);
 
           // Create parent directories if needed
           mkdirSync(dirname(dstPath), { recursive: true });
 
           // Copy (force-overwrite)
           copyFileSync(srcPath, dstPath);
-          filesWritten.push(relPath);
+          filesWritten.push(relDest);
         }
       } finally {
         // Clean up temp dir
