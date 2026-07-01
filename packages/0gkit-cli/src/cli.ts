@@ -1,4 +1,5 @@
 import { readFile, writeFile, mkdir, readdir, access } from "node:fs/promises";
+import { homedir as osHomedir } from "node:os";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -272,6 +273,7 @@ const deps: ProgramDeps = {
   readStdin,
   fetch: globalThis.fetch,
   cwd: () => process.cwd(),
+  homedir: () => osHomedir(),
   env: process.env as Record<string, string | undefined>,
   isTTY: process.stdout.isTTY === true,
   noColor: process.env.NO_COLOR != null,

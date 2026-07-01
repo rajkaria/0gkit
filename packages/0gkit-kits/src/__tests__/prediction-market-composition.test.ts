@@ -71,20 +71,22 @@ function makeFetchOverlay(kitsDir: string) {
       if (existsSync(src)) copyFileSync(src, dest);
     }
 
-    // adapters/<base>/<relPath> → tmpDir/<relPath>  (all bases)
+    // adapters/<base>/<relPath> → tmpDir/adapters/<base>/<relPath>  (all bases).
+    // The overlay mirrors the real giget layout verbatim; applyKit maps the
+    // prefixed src to its flat project dest (see resolveTierFiles).
     for (const [base, files] of Object.entries(manifest.tiers.adapters ?? {})) {
       for (const relPath of files as string[]) {
         const src = join(kitDir, "adapters", base, relPath);
-        const dest = join(tmpDir, relPath);
+        const dest = join(tmpDir, "adapters", base, relPath);
         mkdirSync(dirname(dest), { recursive: true });
         if (existsSync(src)) copyFileSync(src, dest);
       }
     }
 
-    // ui/* → tmpDir/<relPath>
+    // ui/* → tmpDir/ui/<relPath>
     for (const relPath of manifest.tiers.ui ?? []) {
       const src = join(kitDir, "ui", relPath);
-      const dest = join(tmpDir, relPath);
+      const dest = join(tmpDir, "ui", relPath);
       mkdirSync(dirname(dest), { recursive: true });
       if (existsSync(src)) copyFileSync(src, dest);
     }

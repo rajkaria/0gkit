@@ -738,3 +738,23 @@ After every successful `applyKit` call, the engine writes (or merges into) `.0gk
 **Why:** K0 shipped `applyKit` without recording what was applied, so there was no machine-readable way to know which kits a project uses. This closed that gap. The "no manifest = informational" rule prevents `0g test --kits` from becoming a gate that breaks projects that were scaffolded before K5.
 
 **How to apply:** Do not delete or gitignore `.0gkit/kits.json` from project roots. When adding a new kit, ensure `applyKit` merges the new kit name into the `applied` array (never overwrites). If writing a script that uses kit state, read `.0gkit/kits.json` — do not infer kit presence from file existence heuristics.
+
+## D87 — Kit MCP tools reach editors via the neutral plugin seam, wired inside the user's own project
+
+**Date:** 2026-07-01 · **SP:** K6
+
+`create0gMcpServer({ plugins })` merges any `McpToolPlugin` (`{ name, tools, call }`) into the neutral tool list — the same seam the Foundry plugin already used. A neutral, generic `collectToolPlugin(name, register, opts?)` adapts a kit adapter's high-level `register(server, opts)` (`server.tool(...)`) function into that plugin shape. Each `mcp-agent` kit adapter exports an additive `mcpToolPlugin` factory. When a project scaffolded from the `mcp-agent` base has kits applied, `applyKit` generates a `src/kits.ts` aggregator that imports each applied kit's `mcpToolPlugin` and passes them to `create0gMcpServer`. The published `@foundryprotocol/0gkit-mcp` imports **no** kit overlay and reads **no** `OGKIT_MCP_KITS` env — the kit tools run only because the user's own project server loads them.
+
+**Why:** The original K6 draft proposed making the published neutral server expose kit tools by writing an `OGKIT_MCP_KITS` env into the config. The reality-check found the server never read such a var (it serves a fixed `[...TOOLS]`), `adapters["mcp-agent"]` is a base-template adapter (not an "MCP tools" signal), and the kit adapters targeted the high-level `McpServer.tool()` API the low-level `Server` from `create0gMcpServer` never had — so the shipped adapters were not even wireable. Faking the env would have violated the honesty invariant. Routing kit tools through the real plugin seam, inside the user's project, is honest and preserves neutrality (D78).
+
+**How to apply:** To expose kit tools to an editor, run the kit's server locally (a kitted `mcp-agent` project) — do not expect `npx @foundryprotocol/0gkit-mcp` to serve them. New kit MCP adapters must export `mcpToolPlugin` and keep their `register*Tools` export. Never add a static kit import to `0gkit-mcp`; `boundary:check` must stay green.
+
+## D88 — `0g mcp init <agent>` writes editor config only; neutral by default, local for kitted mcp-agent projects
+
+**Date:** 2026-07-01 · **SP:** K6
+
+`0g mcp init <agent>` writes the MCP config for `cursor | claude | windsurf | codex` and never installs a server. By default the config runs `npx -y @foundryprotocol/0gkit-mcp` (the nine neutral `og_*` tools). When run in **project** scope inside a project whose `.0gkit/kits.json.base === "mcp-agent"` with ≥1 applied kit, it instead writes `npm --prefix <project> start` so the editor runs the local kitted server (kit tools included). `--global` writes the agent's user-level path and is always neutral. The CLI lazy-imports `0gkit-mcp` (D39); `0gkit-mcp` is a runtime `dependency` of `0gkit-cli` so `0g mcp init` resolves for global installs.
+
+**Why:** Project scope keeps the config committable and lets it travel with the repo. Local mode is the honest delivery of the kit-tool synergy (D87) — it only triggers where a local kitted server actually exists. `--global` cannot point at a specific project, so it stays neutral. Making `0gkit-mcp` a real dependency (not devDependency) fixes the case where a globally-installed CLI could not resolve the lazy import.
+
+**How to apply:** Add new agents by extending the `AGENTS` list and `PATHS` table in `0gkit-mcp/config-init.ts`. Keep `buildMcpConfig` pure (path/JSON only); do not have it install anything. Local mode must remain gated on project scope + `mcp-agent` base + applied kits.

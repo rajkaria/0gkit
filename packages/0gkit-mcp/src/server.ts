@@ -8,6 +8,7 @@ import {
 import { TOOLS, makeHandlers, defaultDeps, type McpDeps } from "./tools.js";
 import { loadFoundryPlugin, type FoundryPlugin } from "./foundry-plugin.js";
 import type { ToolCallResult } from "./context.js";
+import type { McpToolPlugin } from "./plugin.js";
 
 export const VERSION = "0.1.0";
 
@@ -19,6 +20,13 @@ export interface ZeroGMcpOptions {
    * load (ZEROG_FOUNDRY) at construction time. Pass `null` to force-disable.
    */
   foundryPlugin?: FoundryPlugin | null;
+  /**
+   * Additional tool plugins (e.g. kit adapters built with `collectToolPlugin`).
+   * These are merged with the Foundry plugin — all plugins' tools are listed and
+   * all plugin calls are routed by tool name. Neutral `og_*` tools always win
+   * when there is a name collision.
+   */
+  plugins?: McpToolPlugin[];
 }
 
 /**
@@ -41,7 +49,13 @@ export async function create0gMcpServer(
     { capabilities: { tools: {} } }
   );
 
-  const tools: Tool[] = foundry ? [...TOOLS, ...foundry.tools] : [...TOOLS];
+  // Merge plugins: user-supplied plugins first, then foundry (if present).
+  const allPlugins: McpToolPlugin[] = [
+    ...(options.plugins ?? []),
+    ...(foundry ? [foundry] : []),
+  ];
+
+  const tools: Tool[] = [...TOOLS, ...allPlugins.flatMap((p) => p.tools)];
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 
@@ -50,9 +64,8 @@ export async function create0gMcpServer(
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
     const neutral = handlers[name];
     if (neutral) return (await neutral(args)) as CallToolResult;
-    if (foundry && foundry.tools.some((t) => t.name === name)) {
-      return (await foundry.call(name, args)) as CallToolResult;
-    }
+    const plugin = allPlugins.find((p) => p.tools.some((t) => t.name === name));
+    if (plugin) return (await plugin.call(name, args)) as CallToolResult;
     const result: ToolCallResult = {
       content: [
         {
@@ -60,9 +73,13 @@ export async function create0gMcpServer(
           text: JSON.stringify(
             {
               error: `Unknown tool: ${name}`,
-              hint: foundry
-                ? `Known: ${tools.map((t) => t.name).join(", ")}`
-                : `Foundry tools are opt-in — set ZEROG_FOUNDRY=1 to enable them.`,
+              // List the known tools whenever any plugin (kit or foundry) is
+              // wired; only fall back to the foundry opt-in hint on a bare
+              // neutral server (no plugins at all).
+              hint:
+                allPlugins.length > 0
+                  ? `Known: ${tools.map((t) => t.name).join(", ")}`
+                  : `Foundry tools are opt-in — set ZEROG_FOUNDRY=1 to enable them.`,
             },
             null,
             2

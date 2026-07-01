@@ -18,15 +18,44 @@ import { KITS } from "./registry.generated.js";
  * Task 6 may extend this; keep the signature stable.
  */
 export function resolveTiers(manifest: KitManifest, base: string): string[] {
-  const result: string[] = [...manifest.tiers.lib];
+  return resolveTierFiles(manifest, base).map((f) => f.dest);
+}
+
+/** A single tier file: where it lives in the fetched overlay (`src`) vs. where
+ *  it lands in the target project (`dest`). */
+export interface TierFile {
+  /** Path within the fetched kit overlay, tier-prefixed. */
+  src: string;
+  /** Path within the target project (what `resolveTiers` returns). */
+  dest: string;
+}
+
+/**
+ * Resolves each applicable tier file as a `{ src, dest }` pair.
+ *
+ * The overlay stores tiers under prefixed directories
+ * (`lib/…`, `adapters/<base>/…`, `ui/…`), but a kit's `tiers.*` manifest values
+ * are the **destination** paths in the project. Only the `lib` tier's values
+ * already carry their `lib/` prefix (so `src === dest`); the `adapters` and
+ * `ui` tiers must be prefixed to locate the source file in the overlay.
+ */
+export function resolveTierFiles(manifest: KitManifest, base: string): TierFile[] {
+  const result: TierFile[] = manifest.tiers.lib.map((f) => ({
+    src: f,
+    dest: f,
+  }));
 
   const adapterFiles = manifest.tiers.adapters?.[base];
   if (adapterFiles) {
-    result.push(...adapterFiles);
+    for (const f of adapterFiles) {
+      result.push({ src: `adapters/${base}/${f}`, dest: f });
+    }
   }
 
   if (isReactBase(base) && manifest.tiers.ui) {
-    result.push(...manifest.tiers.ui);
+    for (const f of manifest.tiers.ui) {
+      result.push({ src: `ui/${f}`, dest: f });
+    }
   }
 
   return result;

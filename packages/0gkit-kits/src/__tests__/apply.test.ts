@@ -89,12 +89,28 @@ const nodeOnlyKit: KitManifest = KitManifestSchema.parse({
   },
 });
 
+/** A kit with an adapter tier — exercises the src≠dest tier-path mapping
+ *  (overlay `adapters/<base>/src/tools/adapter.ts` → project `src/tools/adapter.ts`). */
+const adapterKit: KitManifest = KitManifestSchema.parse({
+  name: "adapter-kit",
+  title: "Adapter Kit",
+  domain: "agent-infra",
+  summary: "A kit that ships an adapter tier.",
+  compatibleBases: ["node"],
+  tiers: {
+    lib: ["lib/adapter-core.ts"],
+    adapters: { node: ["src/tools/adapter.ts"] },
+  },
+  requires: [],
+});
+
 const TEST_REGISTRY: KitManifest[] = [
   depKit,
   mainKit,
   conflictKit,
   standaloneKit,
   nodeOnlyKit,
+  adapterKit,
 ];
 
 // ---------------------------------------------------------------------------
@@ -106,13 +122,19 @@ function makeFakeFetchOverlay(registry: KitManifest[]) {
     const manifest = registry.find((k) => k.name === name);
     if (!manifest) throw new Error(`fake fetchOverlay: unknown kit "${name}"`);
 
-    const allFiles = [
+    // Mirror the REAL published overlay layout (giget): tiers live under
+    // prefixed dirs — `lib/…` (already prefixed in the manifest value),
+    // `ui/…`, and `adapters/<base>/…`. Writing at the flat dest paths here
+    // would let a src≠dest copy bug pass unnoticed (see resolveTierFiles).
+    const srcFiles: string[] = [
       ...manifest.tiers.lib,
-      ...(manifest.tiers.ui ?? []),
-      ...Object.values(manifest.tiers.adapters ?? {}).flat(),
+      ...(manifest.tiers.ui ?? []).map((f) => `ui/${f}`),
+      ...Object.entries(manifest.tiers.adapters ?? {}).flatMap(([b, files]) =>
+        files.map((f) => `adapters/${b}/${f}`)
+      ),
     ];
 
-    for (const relPath of allFiles) {
+    for (const relPath of srcFiles) {
       const absPath = join(dir, relPath);
       const parentDir = absPath.substring(0, absPath.lastIndexOf("/"));
       mkdirSync(parentDir, { recursive: true });
@@ -247,6 +269,22 @@ describe("file writes", () => {
 
     expect(result.filesWritten).not.toContain("components/Main.tsx");
     expect(existsSync(join(dest, "components/Main.tsx"))).toBe(false);
+  });
+
+  it("copies an adapter-tier file from its overlay adapters/<base>/ path to the flat project dest", async () => {
+    // Regression: the overlay stores this under adapters/node/src/tools/adapter.ts,
+    // but it must land at src/tools/adapter.ts in the project. A src≡dest copy
+    // would ENOENT against the real overlay (see resolveTierFiles).
+    const result = await applyKit({
+      kit: "adapter-kit",
+      dest,
+      base: "node",
+      deps: makeDeps(),
+    });
+
+    expect(result.filesWritten).toContain("src/tools/adapter.ts");
+    expect(existsSync(join(dest, "src/tools/adapter.ts"))).toBe(true);
+    expect(existsSync(join(dest, "lib/adapter-core.ts"))).toBe(true);
   });
 });
 
@@ -604,5 +642,150 @@ describe(".0gkit/kits.json manifest", () => {
     });
 
     expect(existsSync(join(dest, ".0gkit", "kits.json"))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// src/kits.ts aggregator generation (K6 T4)
+// ---------------------------------------------------------------------------
+
+/** mcp-agent kit manifest stubs with adapters entries */
+const mcpAgentMemoryKit: KitManifest = KitManifestSchema.parse({
+  name: "agent-memory",
+  title: "Agent Memory",
+  domain: "agent-infra",
+  summary: "Agent memory kit.",
+  compatibleBases: ["mcp-agent"],
+  tiers: {
+    lib: ["lib/agent-memory.ts"],
+    adapters: { "mcp-agent": ["src/tools/memory.ts"] },
+  },
+  requires: ["0gkit-core"],
+});
+
+const mcpAiOracleKit: KitManifest = KitManifestSchema.parse({
+  name: "ai-oracle",
+  title: "AI Oracle",
+  domain: "verifiable-ai",
+  summary: "AI oracle kit.",
+  compatibleBases: ["mcp-agent"],
+  tiers: {
+    lib: ["lib/oracle.ts"],
+    adapters: { "mcp-agent": ["src/tools/oracle.ts"] },
+  },
+  requires: ["0gkit-core"],
+});
+
+/** Kit with NO mcp-agent adapter (should be skipped in aggregator) */
+const noAdapterKit: KitManifest = KitManifestSchema.parse({
+  name: "yield-intel",
+  title: "Yield Intel",
+  domain: "defi",
+  summary: "Yield intel kit with no mcp-agent adapter.",
+  compatibleBases: ["react-app"],
+  tiers: {
+    lib: ["lib/yield.ts"],
+  },
+  requires: [],
+});
+
+const MCP_REGISTRY: KitManifest[] = [mcpAgentMemoryKit, mcpAiOracleKit, noAdapterKit];
+
+function makeMcpDeps(overrides?: Partial<ApplyDeps>): ApplyDeps {
+  return {
+    fetchOverlay: makeFakeFetchOverlay(MCP_REGISTRY),
+    registry: MCP_REGISTRY,
+    ...overrides,
+  };
+}
+
+describe("src/kits.ts aggregator (mcp-agent base)", () => {
+  const FIXED_TS = "2026-07-01T00:00:00.000Z";
+  const fixedNow = () => FIXED_TS;
+
+  it("writes src/kits.ts when applying agent-memory to a mcp-agent base", async () => {
+    // Seed src/ directory (mcp-agent always has it)
+    mkdirSync(join(dest, "src"), { recursive: true });
+
+    const result = await applyKit({
+      kit: "agent-memory",
+      dest,
+      base: "mcp-agent",
+      deps: makeMcpDeps(),
+      now: fixedNow,
+    });
+
+    const kitsPath = join(dest, "src", "kits.ts");
+    expect(existsSync(kitsPath)).toBe(true);
+    expect(result.filesWritten).toContain("src/kits.ts");
+
+    const content = readFileSync(kitsPath, "utf8");
+    expect(content).toContain(
+      'import { mcpToolPlugin as agentMemoryPlugin } from "./tools/memory.js"'
+    );
+    expect(content).toContain("agentMemoryPlugin(process.env)");
+    expect(content).toContain("export const kitPlugins");
+  });
+
+  it("regenerates src/kits.ts with union imports when a second mcp-agent kit is applied", async () => {
+    mkdirSync(join(dest, "src"), { recursive: true });
+
+    // First apply: agent-memory
+    await applyKit({
+      kit: "agent-memory",
+      dest,
+      base: "mcp-agent",
+      deps: makeMcpDeps(),
+      now: fixedNow,
+    });
+
+    // Second apply: ai-oracle (agent-memory already in .0gkit/kits.json)
+    await applyKit({
+      kit: "ai-oracle",
+      dest,
+      base: "mcp-agent",
+      deps: makeMcpDeps(),
+      now: fixedNow,
+    });
+
+    const content = readFileSync(join(dest, "src", "kits.ts"), "utf8");
+    // Both imports must be present
+    expect(content).toContain(
+      'import { mcpToolPlugin as agentMemoryPlugin } from "./tools/memory.js"'
+    );
+    expect(content).toContain(
+      'import { mcpToolPlugin as aiOraclePlugin } from "./tools/oracle.js"'
+    );
+    expect(content).toContain("agentMemoryPlugin(process.env)");
+    expect(content).toContain("aiOraclePlugin(process.env)");
+  });
+
+  it("does NOT write src/kits.ts when base is react-app (uses fake react registry)", async () => {
+    // Use the original TEST_REGISTRY where kits are compatible with react-app
+    const result = await applyKit({
+      kit: "dep-kit",
+      dest,
+      base: "react-app",
+      deps: makeDeps(),
+      now: fixedNow,
+    });
+
+    expect(existsSync(join(dest, "src", "kits.ts"))).toBe(false);
+    expect(result.filesWritten).not.toContain("src/kits.ts");
+  });
+
+  it("dryRun: true does NOT write src/kits.ts", async () => {
+    mkdirSync(join(dest, "src"), { recursive: true });
+
+    await applyKit({
+      kit: "agent-memory",
+      dest,
+      base: "mcp-agent",
+      dryRun: true,
+      deps: makeMcpDeps(),
+      now: fixedNow,
+    });
+
+    expect(existsSync(join(dest, "src", "kits.ts"))).toBe(false);
   });
 });

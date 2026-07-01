@@ -26,8 +26,12 @@ import { Compute } from "@foundryprotocol/0gkit-compute";
 import { digestJson } from "@foundryprotocol/0gkit-core";
 import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
 import { recoverSigner } from "@foundryprotocol/0gkit-attestation";
+import { collectToolPlugin, type McpServerLike } from "@foundryprotocol/0gkit-mcp";
 
 import { sealedInfer, type Attestor } from "../../lib/sealed.js";
+
+// Re-export McpServerLike so existing code using this file's type still works.
+export type { McpServerLike };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,17 +46,6 @@ export interface SealedToolOptions {
   model?: string;
   /** Expected signer address — what verify checks against. */
   attestorAddress: string;
-}
-
-/** Minimal MCP Server interface needed to register tools. */
-export interface McpServerLike {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tool(
-    name: string,
-    description: string,
-    schema: object,
-    handler: (args: any) => Promise<any>
-  ): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -274,3 +267,24 @@ export function registerSealedTools(
   // Suppress unused variable warning for `rpc` (reserved for future use with Compute)
   void rpc;
 }
+
+// ---------------------------------------------------------------------------
+// mcpToolPlugin factory — additive export for use with create0gMcpServer
+// ---------------------------------------------------------------------------
+
+/**
+ * Build an McpToolPlugin from the sealed-inference kit.
+ *
+ * Usage:
+ *   import { mcpToolPlugin } from "./src/tools/sealed.js";
+ *   const server = await create0gMcpServer({ plugins: [mcpToolPlugin(process.env)] });
+ */
+export const mcpToolPlugin = (env: Record<string, string | undefined>) =>
+  collectToolPlugin("sealed-inference", (s) =>
+    registerSealedTools(s, {
+      privateKey: env.OG_PRIVATE_KEY ?? "",
+      rpc: env.OG_RPC_URL ?? "",
+      model: env.OG_COMPUTE_MODEL,
+      attestorAddress: env.OG_ATTESTOR_ADDRESS ?? "",
+    })
+  );

@@ -83,6 +83,7 @@ function makeDeps(over: {
     readStdin: over.readStdin ?? vi.fn(async () => new Uint8Array()),
     fetch: noop as never,
     cwd: () => "/w",
+    homedir: () => "/home/test",
     env: {},
     isTTY: false,
     noColor: true,
