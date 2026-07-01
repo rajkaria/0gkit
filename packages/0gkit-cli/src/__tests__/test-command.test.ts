@@ -88,6 +88,7 @@ function makeDeps(over: Partial<ProgramDeps> = {}): {
     readStdin: vi.fn(async () => new Uint8Array()),
     fetch: vi.fn(async () => ({ status: 200 })),
     cwd: () => "/tmp/test-proj",
+    homedir: () => "/home/test",
     env: {},
     isTTY: false,
     noColor: true,

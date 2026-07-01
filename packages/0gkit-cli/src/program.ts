@@ -48,6 +48,7 @@ import { registerCost } from "./commands/cost.js";
 import { registerTraces } from "./commands/traces.js";
 import { registerKits, type KitsEngineLike } from "./commands/kits.js";
 import { registerTest, defaultRunKitConformance } from "./commands/test.js";
+import { registerMcp } from "./commands/mcp.js";
 import type {
   TraceFileEntry,
   TraceFileSummary,
@@ -168,6 +169,13 @@ export interface ProgramDeps {
   /** Injected so `0g doctor` reachability probes are testable (no real net). */
   fetch: typeof fetch;
   cwd: () => string;
+  /**
+   * K6 T3 — returns the user's home directory. Injected so tests can supply a
+   * fake home path without touching the real filesystem. Production wiring uses
+   * `os.homedir()`. Required for `0g mcp init --global`.
+   * Optional: when omitted, falls back to os.homedir() inline in the command.
+   */
+  homedir?: () => string;
   env: Record<string, string | undefined>;
   isTTY: boolean;
   noColor: boolean;
@@ -204,6 +212,30 @@ export interface ProgramDeps {
    * note lines.  Injected so tests never touch the real filesystem.
    */
   runKitConformance?: (cwd: string) => Promise<string[]>;
+  /**
+   * K6 T3 (D88) — injected so tests stub buildMcpConfig + readAppliedKits
+   * without importing `@foundryprotocol/0gkit-mcp`. The production CLI uses
+   * a lazy computed specifier inside commands/mcp.ts. Optional: undefined means
+   * fall through to the lazy import in the command.
+   */
+  mcpConfig?: {
+    buildMcpConfig: (opts: {
+      agent: string;
+      scope: "project" | "global";
+      home: string;
+      cwd: string;
+      applied?: { applied: string[]; base: string } | null;
+    }) => {
+      path: string;
+      json: { mcpServers: Record<string, { command: string; args: string[]; env?: Record<string, string> }> };
+      mode: "neutral" | "local";
+      kits: string[];
+    };
+    readAppliedKits: (
+      cwd: string,
+      fs: { readFile(path: string): Promise<Uint8Array | string> }
+    ) => Promise<{ applied: string[]; base: string } | null>;
+  };
   /** Resolves installed `@foundryprotocol/0gkit-*` versions for issue-context. */
   packageVersions: () => Array<{ name: string; version: string }>;
   /** Injected for deterministic timestamps in issue-context. */
@@ -348,6 +380,7 @@ export function buildProgram(deps: ProgramDeps): Command {
   registerTest(program, deps);
   registerTraces(program, deps);
   registerKits(program, deps);
+  registerMcp(program, deps);
   registerFoundry(program, deps);
 
   return program;
