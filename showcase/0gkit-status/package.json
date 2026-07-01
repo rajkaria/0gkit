@@ -1,0 +1,33 @@
+{
+  "name": "0gkit-status",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live 0G network status dashboard — built by composing the agent-memory + live-feed 0gkit kits on the published @foundryprotocol/0gkit-* packages.",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "0g test --suite=storage"
+  },
+  "dependencies": {
+    "@foundryprotocol/0gkit-compute": "^1.0.0",
+    "@foundryprotocol/0gkit-core": "^1.0.0",
+    "@foundryprotocol/0gkit-indexer": "^1.0.0",
+    "@foundryprotocol/0gkit-storage": "^1.0.0",
+    "@foundryprotocol/0gkit-wallet": "^1.0.0",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@foundryprotocol/0gkit-cli": "^1.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}

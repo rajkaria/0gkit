@@ -1,0 +1,29 @@
+# CI for the 0gkit-status showcase.
+#
+# This lives in the app's own dir so it activates when the showcase is extracted
+# to its own repo (GitHub only runs workflows under the repo-root .github/). In
+# the 0gkit monorepo it is documentation of the intended gate; the app is not a
+# workspace package, so the monorepo CI does not build it.
+name: ci
+
+on:
+  push:
+    paths: ["**"]
+  pull_request:
+
+jobs:
+  build-and-conformance:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: showcase/0gkit-status
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run build
+      # K5 conformance gate — proves the published surface works before deploy.
+      - run: npx 0g test --suite=storage --galileo
