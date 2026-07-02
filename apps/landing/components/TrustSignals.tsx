@@ -22,11 +22,6 @@ export async function TrustSignals() {
       sub: "Install only what you use",
     },
     {
-      value: "600+",
-      label: "tests passing",
-      sub: "CI gate on every PR",
-    },
-    {
       value: "MIT",
       label: "open source",
       sub: "No strings, no contracts",
@@ -63,8 +58,8 @@ export async function TrustSignals() {
           style={{
             padding: "1.6rem 1.4rem",
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "1.2rem",
+            gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+            gap: "1rem",
           }}
         >
           {STATS.map((s) => (

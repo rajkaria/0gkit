@@ -59,7 +59,7 @@ export const KITS: KitCardData[] = [
     slug: "durable-agent",
     summary:
       "Long-running, resumable agent loop on 0gkit-jobs. Survives restarts; step ledger + OTEL traces.",
-    highlight: "Category create-0g-dapp cannot reach",
+    highlight: "Durable by design — survives restarts",
   },
   {
     domain: "Markets & Onchain Data",
@@ -75,7 +75,7 @@ export const KITS: KitCardData[] = [
     name: "live-feed",
     slug: "live-feed",
     summary: "Reorg-safe live event/social feed via 0gkit-indexer.",
-    highlight: "Correct reorg handling (theirs isn't)",
+    highlight: "Reorg-safe by default",
   },
   {
     domain: "Assets",
