@@ -143,8 +143,7 @@ export class Storage {
     }
 
     this.loadSdk =
-      config.loadSdk ??
-      (() => import(STORAGE_SDK_SPECIFIER) as Promise<StorageSdk>);
+      config.loadSdk ?? (() => import(STORAGE_SDK_SPECIFIER) as Promise<StorageSdk>);
   }
 
   private async sdk(): Promise<StorageSdk> {
