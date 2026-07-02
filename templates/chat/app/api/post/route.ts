@@ -92,7 +92,15 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    const receipt = await contract.write.post([root as `0x${string}`, BigInt(ts)]);
+    // `write.<method>` is a Record access, so under noUncheckedIndexedAccess
+    // it is typed as possibly-undefined — assert the ABI's `post` method exists.
+    const postWrite = contract.write.post;
+    if (!postWrite) {
+      throw new Error("MessageRegistry ABI exposes no writable `post` method.");
+    }
+    // No dryRun requested, so the result is a Receipt; narrow off the union.
+    const posted = await postWrite([root as `0x${string}`, BigInt(ts)]);
+    const receipt = "dryRun" in posted ? posted.result : posted;
     if (!bannerEmitted) {
       bannerEmitted = true;
       printFirstSuccess({
