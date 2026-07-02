@@ -58,7 +58,25 @@ export interface StorageConfig {
 export interface UploadResult {
   root: string;
   tx: Receipt;
+  /** 0G Storage sequence number, when the underlying SDK reports one. */
+  txSeq?: number;
   raw: unknown;
+}
+
+export interface UploadOptions {
+  /**
+   * A ready-to-use signer object (e.g. an ethers `Wallet`/`Signer`) passed
+   * straight through to the underlying 0G Storage SDK. When provided it takes
+   * precedence over the constructor `signer`/`privateKey`, so browser-, remote-,
+   * or KMS-backed ethers signers that never expose a plaintext key can still
+   * upload. The type is intentionally loose — anything the storage SDK's
+   * `Indexer.upload` accepts as a signer.
+   */
+  signer?: unknown;
+  /** Optional `UploadOption` forwarded to the SDK (fee, finality, tags). */
+  uploadOptions?: Record<string, unknown>;
+  /** Optional ethers-style `TransactionOptions` forwarded to the SDK. */
+  txOptions?: Record<string, unknown>;
 }
 
 function normalizeHex(s: string): string {
@@ -159,14 +177,14 @@ export class Storage {
     return makeStorageEstimate(data.length);
   }
 
-  async upload(data: Uint8Array): Promise<UploadResult>;
+  async upload(data: Uint8Array, opts?: UploadOptions): Promise<UploadResult>;
   async upload(
     data: Uint8Array,
     opts: { dryRun: true }
   ): Promise<DryRunResult<UploadResult>>;
   async upload(
     data: Uint8Array,
-    opts?: { dryRun?: boolean }
+    opts?: { dryRun?: boolean } & UploadOptions
   ): Promise<UploadResult | DryRunResult<UploadResult>> {
     if (opts?.dryRun) {
       const estimate = await this.estimate(data);
@@ -178,12 +196,22 @@ export class Storage {
       };
       return { dryRun: true, estimate, result };
     }
-    const signer = await this.signer();
+    // A per-call `signer` takes precedence over the constructor signer/privateKey
+    // — it lets browser-, remote-, or KMS-backed ethers signers upload without
+    // ever exposing a plaintext key. Falls back to the plaintext-key path.
+    const signer = opts?.signer ?? (await this.signer());
     const mod = await this.sdk();
     const startedAt = Date.now();
     const file = new mod.MemData(Array.from(data));
     const indexer = new mod.Indexer(this.indexerUrl);
-    const [res, err] = await indexer.upload(file, this.rpcUrl, signer);
+    const [res, err] = await indexer.upload(
+      file,
+      this.rpcUrl,
+      signer,
+      opts?.uploadOptions,
+      undefined,
+      opts?.txOptions
+    );
     if (err) {
       throw new NetworkError(
         `0G Storage upload failed: ${err.message}`,
@@ -197,6 +225,8 @@ export class Storage {
         : (o.rootHashes as string[] | undefined)?.[0];
     const txHash =
       "txHash" in o ? (o.txHash as string) : (o.txHashes as string[] | undefined)?.[0];
+    const txSeq =
+      "txSeq" in o ? (o.txSeq as number) : (o.txSeqs as number[] | undefined)?.[0];
     if (!root || !txHash) {
       throw new NetworkError(
         `0G Storage upload returned an unrecognized result shape.`,
@@ -206,6 +236,7 @@ export class Storage {
     return {
       root: normalizeHex(root),
       tx: { txHash: normalizeHex(txHash), latencyMs: Date.now() - startedAt },
+      txSeq,
       raw: res,
     };
   }

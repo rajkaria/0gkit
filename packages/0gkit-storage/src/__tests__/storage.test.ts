@@ -210,3 +210,87 @@ describe("Storage", () => {
     });
   });
 });
+
+describe("Storage — per-call signer, options, and txSeq (K9)", () => {
+  /** A fake SDK whose Indexer.upload records the exact args it was called with. */
+  function capturingSdk(uploadResult: unknown) {
+    const calls: unknown[][] = [];
+    const sdk = {
+      MemData: class {
+        constructor(public data: number[]) {}
+        async merkleTree() {
+          return [{ rootHash: () => "0xroot" }, null] as const;
+        }
+      },
+      Indexer: class {
+        constructor(public url: string) {}
+        async upload(...args: unknown[]) {
+          calls.push(args);
+          return [uploadResult, null] as const;
+        }
+        async downloadToBlob() {
+          return [new Blob([new Uint8Array([1])]), null] as const;
+        }
+        async peekHeader() {
+          return [{}, null] as const;
+        }
+      },
+    };
+    return { calls, sdk };
+  }
+
+  it("uploads with a per-call signer even when no privateKey is configured", async () => {
+    const cap = capturingSdk({ txHash: "0xtx", rootHash: "0xroot", txSeq: 42 });
+    const s = new Storage({ network: "galileo", loadSdk: async () => cap.sdk });
+    const signer = { _tag: "ready-ethers-signer" };
+    const r = await s.upload(new Uint8Array([1, 2, 3]), { signer });
+    expect(r.root).toBe("0xroot");
+    expect(r.tx.txHash).toBe("0xtx");
+    // upload(file, rpc, signer, uploadOptions, retry, txOptions) — signer is arg[2]
+    expect(cap.calls[0][2]).toBe(signer);
+  });
+
+  it("returns txSeq from the single-root response shape", async () => {
+    const cap = capturingSdk({ txHash: "0xtx", rootHash: "0xroot", txSeq: 42 });
+    const s = new Storage({ network: "galileo", loadSdk: async () => cap.sdk });
+    const r = await s.upload(new Uint8Array([1]), { signer: {} });
+    expect(r.txSeq).toBe(42);
+  });
+
+  it("extracts txSeq from the multi-root union shape", async () => {
+    const cap = capturingSdk({
+      txHashes: ["0xtxA"],
+      rootHashes: ["0xrootA"],
+      txSeqs: [7],
+    });
+    const s = new Storage({ network: "galileo", loadSdk: async () => cap.sdk });
+    const r = await s.upload(new Uint8Array([1]), { signer: {} });
+    expect(r.root).toBe("0xrootA");
+    expect(r.txSeq).toBe(7);
+  });
+
+  it("forwards uploadOptions and txOptions to indexer.upload", async () => {
+    const cap = capturingSdk({ txHash: "0xtx", rootHash: "0xroot", txSeq: 1 });
+    const s = new Storage({ network: "galileo", loadSdk: async () => cap.sdk });
+    const uploadOptions = { finalityRequired: true };
+    const txOptions = { gasPrice: 1n };
+    await s.upload(new Uint8Array([1]), { signer: {}, uploadOptions, txOptions });
+    const args = cap.calls[0];
+    expect(args[3]).toBe(uploadOptions); // uploadOptions slot
+    expect(args[5]).toBe(txOptions); // txOptions slot
+  });
+
+  it("still honors the constructor signer (and now returns txSeq for it too)", async () => {
+    const cap = capturingSdk({ txHash: "0xtx", rootHash: "0xroot", txSeq: 3 });
+    const signer = await fromPrivateKey(TEST_PK);
+    const s = new Storage({
+      network: "galileo",
+      signer,
+      loadSdk: async () => cap.sdk,
+    });
+    const r = await s.upload(new Uint8Array([1]));
+    expect(r.txSeq).toBe(3);
+    // a real ethers Wallet was built from the constructor key and forwarded
+    expect(cap.calls[0][2]).toBeTruthy();
+  });
+});

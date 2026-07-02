@@ -2,6 +2,7 @@ export {
   Storage,
   type StorageConfig,
   type StorageSdk,
+  type UploadOptions,
   type UploadResult,
 } from "./storage.js";
 export {
