@@ -18,6 +18,7 @@ export const KITS: KitManifest[] = [
       },
       ui: ["components/MemoryPanel.tsx", "hooks/useAgentMemory.ts"],
     },
+    requires: [],
     env: [
       {
         key: "OG_STORAGE_NAMESPACE",
@@ -39,7 +40,6 @@ export const KITS: KitManifest[] = [
       "@foundryprotocol/0gkit-storage": "^1.0.0",
     },
     devDependencies: {},
-    requires: [],
     composes: [],
     conflicts: [],
   },
@@ -59,6 +59,7 @@ export const KITS: KitManifest[] = [
         "mcp-agent": ["src/tools/oracle.ts"],
       },
     },
+    requires: [],
     env: [
       {
         key: "OG_COMPUTE_MODEL",
@@ -95,7 +96,6 @@ export const KITS: KitManifest[] = [
       "@foundryprotocol/0gkit-core": "^1.0.0",
     },
     devDependencies: {},
-    requires: [],
     composes: [],
     conflicts: [],
   },
@@ -122,6 +122,7 @@ export const KITS: KitManifest[] = [
         "storage-app": ["src/agent-runner.ts"],
       },
     },
+    requires: [],
     env: [
       {
         key: "OG_PRIVATE_KEY",
@@ -152,7 +153,6 @@ export const KITS: KitManifest[] = [
       zod: "^3.23.0",
     },
     devDependencies: {},
-    requires: [],
     composes: [],
     conflicts: [],
   },
@@ -186,6 +186,7 @@ export const KITS: KitManifest[] = [
         "app/studio/page.tsx",
       ],
     },
+    requires: [],
     env: [
       {
         key: "OG_PRIVATE_KEY",
@@ -216,7 +217,6 @@ export const KITS: KitManifest[] = [
       "@foundryprotocol/0gkit-core": "^1.0.0",
     },
     devDependencies: {},
-    requires: [],
     composes: [],
     conflicts: [],
   },
@@ -235,6 +235,7 @@ export const KITS: KitManifest[] = [
       },
       ui: ["hooks/useLiveFeed.ts", "components/FeedStream.tsx", "app/feed/page.tsx"],
     },
+    requires: [],
     env: [
       {
         key: "OG_PRIVATE_KEY",
@@ -262,7 +263,6 @@ export const KITS: KitManifest[] = [
       "@foundryprotocol/0gkit-indexer": "^1.0.0",
     },
     devDependencies: {},
-    requires: [],
     composes: [],
     conflicts: [],
   },
@@ -286,6 +286,7 @@ export const KITS: KitManifest[] = [
         "components/CreateMarketForm.tsx",
       ],
     },
+    requires: [],
     env: [
       {
         key: "OG_COMPUTE_MODEL",
@@ -327,7 +328,6 @@ export const KITS: KitManifest[] = [
       "@foundryprotocol/0gkit-core": "^1.0.0",
     },
     devDependencies: {},
-    requires: [],
     composes: ["ai-oracle"],
     conflicts: [],
   },
@@ -348,6 +348,7 @@ export const KITS: KitManifest[] = [
       },
       ui: ["components/SealedChat.tsx", "hooks/useSealedInference.ts"],
     },
+    requires: [],
     env: [
       {
         key: "OG_COMPUTE_MODEL",
@@ -377,7 +378,62 @@ export const KITS: KitManifest[] = [
       "@foundryprotocol/0gkit-core": "^1.0.0",
     },
     devDependencies: {},
+    composes: [],
+    conflicts: [],
+  },
+  {
+    name: "trade-signal",
+    title: "Trade Signal",
+    domain: "defi",
+    summary:
+      "Advisory AI trade signals (buy/sell/hold) with attested receipts on 0G. The model scores an asset from its recent price history and returns an action + confidence + rationale; each signal can be signed by the operator key (✓ signature verified — not TEE-quote) and its record anchored to 0G Storage. Deliberately advisory-only: NO order execution, NO transactions, NO auto-trading — the user reads the signal and acts manually. A NEGATIVE lib test enforces the execution-free API surface for the lifetime of the kit. Testnet-default (Galileo); mainnet and automated execution are intentionally out of scope.",
+    compatibleBases: ["react-app", "chat", "tee-attested-api", "mcp-agent"],
+    tiers: {
+      lib: ["lib/signal.ts", "lib/signalLog.ts"],
+      adapters: {
+        "react-app": ["app/api/signal/route.ts"],
+        chat: ["app/api/signal/route.ts"],
+        "tee-attested-api": ["src/routes/signal.ts"],
+        "mcp-agent": ["src/tools/signal.ts"],
+      },
+      ui: [
+        "components/AdvisoryBanner.tsx",
+        "components/SignalPanel.tsx",
+        "hooks/useTradeSignal.ts",
+        "app/signal/page.tsx",
+      ],
+    },
     requires: [],
+    env: [
+      {
+        key: "OG_PRIVATE_KEY",
+        example: "0x...",
+        note: "Operator private key for signing signal receipts and 0G Storage transactions",
+      },
+      {
+        key: "OG_RPC_URL",
+        example: "https://evmrpc-testnet.0g.ai",
+        note: "0G chain RPC endpoint (Galileo testnet default — mainnet is out of scope)",
+      },
+      {
+        key: "OG_COMPUTE_MODEL",
+        example: "neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8",
+        note: "Model for signal inference (optional — uses provider default if omitted)",
+      },
+      {
+        key: "OG_ATTESTOR_ADDRESS",
+        example: "0x...",
+        note: "Expected signer address — the operator address whose signature the mcp-agent signal_verify tool (and the sign+verify path) checks against",
+      },
+    ],
+    dependencies: {
+      "@foundryprotocol/0gkit-compute": "^1.0.0",
+      "@foundryprotocol/0gkit-storage": "^1.0.0",
+      "@foundryprotocol/0gkit-attestation": "^1.0.0",
+      "@foundryprotocol/0gkit-wallet": "^1.0.0",
+      "@foundryprotocol/0gkit-core": "^1.0.0",
+    },
+    devDependencies: {},
     composes: [],
     conflicts: [],
   },
@@ -402,6 +458,7 @@ export const KITS: KitManifest[] = [
         "app/yield/page.tsx",
       ],
     },
+    requires: [],
     env: [
       {
         key: "OG_NETWORK",
@@ -432,7 +489,6 @@ export const KITS: KitManifest[] = [
       "@foundryprotocol/0gkit-core": "^1.0.0",
     },
     devDependencies: {},
-    requires: [],
     composes: [],
     conflicts: [],
   },

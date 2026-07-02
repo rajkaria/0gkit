@@ -1,0 +1,161 @@
+---
+title: "trade-signal kit"
+---
+
+# trade-signal
+
+> ⚠ **Advisory only — not financial advice; no orders executed.**
+> This kit generates AI buy/sell/hold signals for informational purposes only.
+> It does **not** place orders, move funds, or execute any transaction on your
+> behalf. You are solely responsible for any decisions you make. This is a
+> testnet demo running on the Galileo network — mainnet and automated execution
+> are intentionally out of scope.
+
+## What it does
+
+The `trade-signal` kit adds an **advisory** trading-signal feature to your 0G
+app. The public API has **no** `execute`, `trade`, `swap`, `send`, or
+`transfer` function — this is a signal generator with an attested audit trail,
+not an auto-trader.
+
+On each run the kit:
+
+1. Accepts a read-only `SignalInput` (asset, current price, recent price
+   history, optional indicators) from the caller — no on-chain read is
+   performed by the lib.
+2. Calls `@foundryprotocol/0gkit-compute` via `compute.router()` (K7 — routed
+   provider selection with a client-side fallback) with a structured prompt
+   asking for an advisory action, a confidence, and a one-sentence rationale.
+   The model is instructed: no order instructions, no profit guarantees, no
+   risk-free claims.
+3. Parses the JSON response and returns a validated `Signal`
+   (`action ∈ buy|sell|hold`, `confidence` clamped to `[0,1]`, `rationale`).
+   On malformed output it returns a **safe `hold` default** (confidence `0`) —
+   it never fabricates a buy/sell and never throws.
+4. Optionally attests the signal: `logSignal` signs a `SignalReceipt` via
+   EIP-191 personal-sign and uploads the full record to **0G Storage** as an
+   immutable audit entry; `attestSignal` signs + verifies a receipt without
+   storing (used by the MCP tool). **Neither executes anything.**
+
+The `AdvisoryBanner` component is **non-removable** — it is rendered
+unconditionally at the top of the signal page with fixed copy:
+"Advisory only — not financial advice; no orders executed."
+
+## Compatible bases
+
+`react-app` · `chat` · `tee-attested-api` · `mcp-agent`
+
+## Apply
+
+```bash
+# scaffold-time
+npm create 0gkit-app -- --kits trade-signal
+
+# add to an existing project
+0g add trade-signal
+```
+
+## Environment variables
+
+| Variable              | Example                                       | Notes                                                                                          |
+| --------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `OG_PRIVATE_KEY`      | `0x...`                                       | Operator key for signing signal receipts and 0G Storage transactions                           |
+| `OG_RPC_URL`          | `https://evmrpc-testnet.0g.ai`                | 0G chain RPC endpoint (Galileo testnet default — mainnet is out of scope)                      |
+| `OG_COMPUTE_MODEL`    | `neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8` | Model for signal inference (optional — uses provider default if omitted)                       |
+| `OG_ATTESTOR_ADDRESS` | `0x...`                                       | Expected signer address the `signal_verify` MCP tool (and the sign+verify path) checks against |
+
+## Quick start
+
+```bash
+0g add trade-signal
+```
+
+`analyzeSignal(input, deps)` returns an advisory, read-only `Signal`.
+`logSignal(signal, deps)` records the signal as a signed receipt on 0G Storage —
+it does **not** execute anything:
+
+```ts
+import { Compute } from "@foundryprotocol/0gkit-compute";
+import { fromPrivateKey } from "@foundryprotocol/0gkit-wallet";
+import { analyzeSignal, type SignalInput } from "./lib/signal.js";
+
+const privateKey = process.env.OG_PRIVATE_KEY as `0x${string}`;
+const signer = await fromPrivateKey(privateKey);
+const compute = new Compute({ signer });
+
+const input: SignalInput = {
+  asset: "ETH",
+  currentPrice: 3200,
+  history: [3100, 3150, 3180, 3200],
+  indicators: { rsi14: 58, sma20: 3120 },
+};
+
+const signal = await analyzeSignal(input, {
+  compute: {
+    async infer({ prompt, model }) {
+      const r = await compute.router({
+        messages: [{ role: "user" as const, content: prompt }],
+        ...(model ? { model } : {}),
+      });
+      return { output: r.output };
+    },
+  },
+  model: process.env.OG_COMPUTE_MODEL,
+}); // { action: "buy"|"sell"|"hold", confidence: 0..1, rationale }; safe "hold" on malformed output
+console.log(signal);
+```
+
+> **Honesty caveat:** `trade-signal` is advisory-only by design — the public API
+> has **no** `execute` / `trade` / `swap` / `send` / `transfer` (enforced by a
+> negative test). `logSignal` records the signal with a **signed receipt** (not
+> a TEE-quote); the user decides and acts manually. Testnet-default; mainnet and
+> automated execution are intentionally out of scope.
+
+## Tiers
+
+- **lib** — `lib/signal.ts` (portable `analyzeSignal`, `Signal`, `SignalInput`,
+  `SignalAction`, `AnalyzeSignalDeps` — the only analysis function; read-only,
+  safe `hold` default); `lib/signalLog.ts` (portable `logSignal` + `attestSignal`,
+  `SignalReceipt`, `SignalRecord`, `SealedSignal` — attest to 0G Storage or
+  sign+verify without storing; neither executes a transaction).
+- **adapters** — `app/api/signal/route.ts` for `react-app` and `chat` bases
+  (POST dispatcher: `analyze` + `log`); `src/routes/signal.ts` for
+  `tee-attested-api` (Hono `buildSignalRouter`); `src/tools/signal.ts` for
+  `mcp-agent` (`trade_signal` + `signal_verify` MCP tools + `mcpToolPlugin`).
+- **ui** — `components/AdvisoryBanner.tsx` (**non-removable** disclaimer, leads
+  the page), `components/SignalPanel.tsx` (advisory action badge + attested
+  receipt button), `hooks/useTradeSignal.ts`, `app/signal/page.tsx`.
+
+## Attested signal receipt
+
+`logSignal` (`lib/signalLog.ts`) records the advisory signal with an attested
+receipt:
+
+1. Builds a canonical `SignalReceipt` (`asset`, `action`, `confidence`,
+   `rationale`, `ts`).
+2. Signs it via the injected `Attestor` (EIP-191 personal-sign over
+   `digestJson(receipt)`). Badge: **✓ signature verified** — not TEE-quote.
+3. Encodes the full `SignalRecord` to JSON and uploads to **0G Storage**
+   (immutable, content-addressed). The `storageRef` is the returned root.
+4. Returns the full record including `storageRef` for offline retrieval and
+   independent verification.
+
+The `mcp-agent` adapter exposes the same attestation as two tools:
+`trade_signal` (returns an advisory signal + a signed, verified receipt) and
+`signal_verify` (recovers the signer from a receipt and checks it against the
+expected operator address). Neither tool places an order.
+
+## Honesty note
+
+`trade-signal` is deliberately advisory-only. The lib test suite contains a
+**negative assertion** (`PUBLIC API SURFACE — advisory-only, execution-free
+invariant`) that fails if any export ever contains `execute`, `trade`, `swap`,
+`send`, or `transfer` — this guard exists for the lifetime of the kit.
+
+The attestation is a **signed receipt** (EIP-191 personal-sign via
+`@foundryprotocol/0gkit-attestation` `recoverSigner`) — not a TEE-quote /
+enclave attestation. The `Attestor` interface is injected so a real TEE-quote
+verifier can slot in without changing the lib.
+
+`OG_RPC_URL` defaults to the Galileo testnet endpoint. Mainnet usage and
+automated execution are intentionally out of scope for this kit.
