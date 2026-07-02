@@ -1,5 +1,12 @@
 # @foundryprotocol/0gkit-react
 
+## 1.12.0
+
+### Patch Changes
+
+- Updated dependencies [0b4eef4]
+  - @foundryprotocol/0gkit-storage@1.12.0
+
 ## 1.10.0
 
 ### Patch Changes

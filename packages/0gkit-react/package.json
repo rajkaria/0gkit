@@ -1,6 +1,6 @@
 {
   "name": "@foundryprotocol/0gkit-react",
-  "version": "1.10.0",
+  "version": "1.12.0",
   "description": "Neutral React hooks for 0G — useUpload, useDownload, useInference, useAttestation over @foundryprotocol/0gkit-*.",
   "license": "MIT",
   "homepage": "https://0gkit.com",
