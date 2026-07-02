@@ -43,7 +43,10 @@ export async function GET(req: NextRequest) {
   });
   try {
     const bytes = await storage.download(root);
-    return new NextResponse(bytes, {
+    // download() returns Uint8Array<ArrayBufferLike>; re-wrap into a fresh
+    // Uint8Array<ArrayBuffer> so it satisfies the DOM BodyInit type — TS ≥5.7
+    // pins ArrayBufferView to ArrayBuffer and rejects the wider ArrayBufferLike.
+    return new NextResponse(new Uint8Array(bytes), {
       status: 200,
       headers: { "content-type": "application/octet-stream" },
     });
