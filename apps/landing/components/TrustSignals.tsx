@@ -45,10 +45,12 @@ export async function TrustSignals() {
       label: "showcase app",
       sub: (
         <a
-          href="https://github.com/rajkaria/0gkit/tree/main/showcase/0gkit-status"
+          href="https://apps.0gkit.com"
+          target="_blank"
+          rel="noreferrer"
           style={{ color: "inherit", textDecoration: "underline" }}
         >
-          0gkit-status — built with kits →
+          0gkit-status — live, built with kits →
         </a>
       ),
     },
