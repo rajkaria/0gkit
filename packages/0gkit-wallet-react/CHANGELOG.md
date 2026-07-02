@@ -1,5 +1,12 @@
 # @foundryprotocol/0gkit-wallet-react
 
+## 1.12.2
+
+### Patch Changes
+
+- Updated dependencies [a72988b]
+  - @foundryprotocol/0gkit-wallet@1.12.2
+
 ## 1.5.0
 
 ### Patch Changes
