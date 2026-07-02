@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useUpload } from "@foundryprotocol/0gkit-react";
 import { printFirstSuccess } from "@foundryprotocol/0gkit-core";
-import { config } from "../0g.config.js";
+import { config } from "../0g.config";
 
 const env = config.client(process.env as Record<string, string | undefined>);
 // useUpload SDK currently accepts only "galileo" | "aristotle"; "local" is

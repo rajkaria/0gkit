@@ -13,6 +13,18 @@ const INDEXERS = {
 } as const;
 const DEFAULT_RPC = "https://evmrpc.0g.ai";
 
+/**
+ * Specifier for the optional 0G Storage SDK, assembled at runtime rather than
+ * written as a string literal. A literal `import("@0gfoundation/0g-storage-ts-sdk")`
+ * is statically analysable, so bundlers (Turbopack, webpack, Vite) try to
+ * resolve this *optional* peer dependency at BUILD time and hard-fail any app
+ * that doesn't install it — e.g. a browser Next.js app that supplies its own
+ * `loadSdk`. Routing the specifier through a non-foldable expression keeps the
+ * import lazy (SDK fetched only at runtime, on first op) while staying opaque
+ * to bundlers. Regression-guarded by `.github/workflows/fresh-machine-smoke.yml`.
+ */
+const STORAGE_SDK_SPECIFIER = ["@0gfoundation", "0g-storage-ts-sdk"].join("/");
+
 export interface StorageSdk {
   MemData: new (data: number[]) => {
     merkleTree(): Promise<readonly [{ rootHash(): string }, Error | null]>;
@@ -132,8 +144,7 @@ export class Storage {
 
     this.loadSdk =
       config.loadSdk ??
-      (() =>
-        import("@0gfoundation/0g-storage-ts-sdk" as string) as Promise<StorageSdk>);
+      (() => import(STORAGE_SDK_SPECIFIER) as Promise<StorageSdk>);
   }
 
   private async sdk(): Promise<StorageSdk> {

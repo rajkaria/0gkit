@@ -1,4 +1,4 @@
-import { config } from "../0g.config.js";
+import { config } from "../0g.config";
 
 /**
  * Minimal ABI for the on-chain message registry. Two pieces:

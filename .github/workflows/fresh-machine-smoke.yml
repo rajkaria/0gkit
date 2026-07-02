@@ -150,8 +150,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build kits engine
-        run: pnpm --filter @foundryprotocol/0gkit-kits build
+      - name: Build 0gkit packages
+        # kits:check type-checks each kit's overlay files against the REAL
+        # workspace package types (packages/0gkit-*/dist/*.d.ts) — not just the
+        # kits engine — so every package the kits import must be built first, or
+        # the isolated tsc fails with TS2307 "Cannot find module
+        # '@foundryprotocol/0gkit-storage'". turbo builds in dependency order.
+        run: pnpm --filter "./packages/*" build
+
+      - name: Install base-template deps
+        # runKitIsolatedTsc (Next bases) resolves next/react/@types from each
+        # base template's OWN node_modules, and runTsc (non-Next bases) needs the
+        # base's full dep set. Templates are NOT pnpm workspace members (they pin
+        # published ^1.x and are degit-scaffolded), so the `pnpm install` above
+        # does not populate them — install each kit-target base here. Keep this
+        # list in sync with the kits' compatibleBases (templates/_kits/*/kit.json).
+        run: |
+          set -euo pipefail
+          for t in react-app chat storage-app mcp-agent tee-attested-api; do
+            echo "→ installing templates/$t deps"
+            (cd "templates/$t" && npm install --no-audit --no-fund --loglevel=error)
+          done
 
       - name: Run kits:check
         run: pnpm kits:check
