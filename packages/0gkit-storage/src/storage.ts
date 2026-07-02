@@ -130,10 +130,19 @@ export class Storage {
       this.privateKey = config.privateKey;
     }
 
+    // The 0G Storage SDK is an OPTIONAL peer dep loaded lazily on first op. The
+    // `*Ignore` magic comments tell bundlers to leave this dynamic import as a
+    // runtime import instead of trying to resolve/bundle the SDK at BUILD time —
+    // otherwise Turbopack/webpack hard-fail any app that doesn't install it (e.g.
+    // a browser Next.js app supplying its own `loadSdk`). Guarded by
+    // `.github/workflows/fresh-machine-smoke.yml`.
     this.loadSdk =
       config.loadSdk ??
       (() =>
-        import("@0gfoundation/0g-storage-ts-sdk" as string) as Promise<StorageSdk>);
+        import(
+          /* webpackIgnore: true */ /* @vite-ignore */ /* turbopackIgnore: true */
+          "@0gfoundation/0g-storage-ts-sdk" as string
+        ) as Promise<StorageSdk>);
   }
 
   private async sdk(): Promise<StorageSdk> {

@@ -2,7 +2,7 @@
 import { useEffect, useMemo } from "react";
 import { Indexer } from "@foundryprotocol/0gkit-indexer";
 import { ZeroGIndexerProvider } from "@foundryprotocol/0gkit-react";
-import { config } from "../0g.config.js";
+import { config } from "../0g.config";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const env = config.client(process.env as Record<string, string | undefined>);
