@@ -1,5 +1,13 @@
 # @foundryprotocol/0gkit-cli
 
+## 1.12.0
+
+### Patch Changes
+
+- Updated dependencies [0b4eef4]
+  - @foundryprotocol/0gkit-storage@1.12.0
+  - @foundryprotocol/0gkit-mcp@1.12.0
+
 ## 1.11.0
 
 ### Minor Changes
