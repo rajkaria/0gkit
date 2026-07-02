@@ -4,56 +4,42 @@ import { AuthorKitCTA } from "./AuthorKitCTA";
 import { KITS } from "@/lib/kits";
 
 // ---------------------------------------------------------------------------
-// Comparison table — source note (HONESTY requirement):
-//   The "create-0g-dapp skills" column is based solely on create-0g-dapp's
-//   PUBLIC README (https://github.com/0glabs/create-0g-dapp). We have not
-//   inspected private source code. Any hackathon-track names quoted below
-//   are create-0g-dapp's own marketing terminology, not an official 0G
-//   taxonomy. We make no claims about internal implementation details.
+// Why 0gkit Kits — the structural benefits every kit ships with. Pure product
+// value, stated on its own terms (no competitor comparison).
 // ---------------------------------------------------------------------------
-
-// Comparison rows — all claims are verifiable from create-0g-dapp's public README.
-type CompRow = { concern: string; kits: string; createDapp: string };
-const COMP_ROWS: CompRow[] = [
+type Benefit = { title: string; body: string };
+const BENEFITS: Benefit[] = [
   {
-    concern: "Upgradeability",
-    kits: "Logic in versioned 0gkit-* packages; overlay is thin glue — `0g update` is real",
-    createDapp: "Code dump — once generated, nothing to upgrade¹",
+    title: "Upgradeable, not a code dump",
+    body: "Logic lives in versioned `0gkit-*` packages; the overlay is thin glue. `0g update` pulls fixes and improvements into a project you already scaffolded.",
   },
   {
-    concern: "Framework support",
-    kits: "One kit works across React, Hono, MCP, Node bases",
-    createDapp: "Next.js-only scaffold (single base)¹",
+    title: "Multi-framework by design",
+    body: "One kit works across the React, Hono, MCP, and Node bases. Write the feature once — it wires itself into whichever base you scaffolded.",
   },
   {
-    concern: "Error handling",
-    kits: "Typed ZeroGError + 45-code taxonomy + helpUrl surfaced in kit UI",
-    createDapp: "Inherits the underlying SDK's error shape (untyped)¹",
+    title: "Typed errors, surfaced in the UI",
+    body: "Every kit rides the `ZeroGError` 45-code taxonomy — each error carries a `.code`, a `.hint`, and a `helpUrl` you can render straight into the kit UI.",
   },
   {
-    concern: "Durability",
-    kits: "durable-agent kit: restartable loop on 0gkit-jobs",
-    createDapp: "No durable agent primitive in README¹",
+    title: "Durable where it matters",
+    body: "The durable-agent kit gives you a restartable agent loop on `0gkit-jobs` — a step ledger and OTEL traces mean it survives restarts and crashes.",
   },
   {
-    concern: "Composition",
-    kits: "prediction-market composes ai-oracle; engine handles dep order",
-    createDapp: "No kit-composes-kit mechanism in README¹",
+    title: "Kits compose kits",
+    body: "prediction-market composes ai-oracle; the engine resolves dependency order, dedupes shared packages, and keeps the graph cycle-safe for you.",
   },
   {
-    concern: "CI coverage",
-    kits: "Every (kit × base) combo typecheck+build gated: `pnpm kits:check`",
-    createDapp: "No public per-combo CI gate documented¹",
+    title: "CI-gated per kit × base",
+    body: "Every kit×base combination is typecheck- and build-gated in CI (`pnpm kits:check`). If a kit compiles on a base, it's because the matrix proved it.",
   },
   {
-    concern: "Observability",
-    kits: "0gkit-observability OpenTelemetry wired into durable-agent",
-    createDapp: "Not documented in README¹",
+    title: "Observability out of the box",
+    body: "`0gkit-observability` OpenTelemetry instrumentation is wired into durable-agent — traces, spans, and `0g.*` semantic attributes with no extra setup.",
   },
   {
-    concern: "License",
-    kits: "MIT",
-    createDapp: "MIT¹",
+    title: "Yours, under MIT",
+    body: "MIT-licensed with no strings. Every primitive keeps a `.raw()` escape hatch to the underlying 0G SDK, so you are never blocked or locked in.",
   },
 ];
 
@@ -142,120 +128,66 @@ export function KitsShowcase() {
         </div>
       </section>
 
-      {/* ── Comparison table ────────────────────────────────────────── */}
+      {/* ── Why kits ─────────────────────────────────────────────────── */}
       <section
         className="section"
         style={{ background: "var(--color-bg-elev)" }}
-        id="kits-comparison"
+        id="why-kits"
       >
         <div className="container-x">
           <SectionHeader
-            kicker="How kits compare"
+            kicker="Why 0gkit Kits"
             title={
               <>
-                Structural advantages over{" "}
-                <span className="text-gradient">skills-style scaffolds.</span>
+                Built to last,{" "}
+                <span className="text-gradient">not just to scaffold.</span>
               </>
             }
-            sub="create-0g-dapp's skills are a sharp GTM hook. But they have three structural ceilings — each one a 0gkit Kits strength."
+            sub="Every kit is upgradeable, typed, multi-framework, and CI-gated from day one — the structural foundations you'd otherwise have to build and maintain yourself."
           />
 
           <div
-            className="card"
             style={{
               marginTop: "2.5rem",
-              overflow: "hidden",
-              padding: 0,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "1rem",
             }}
           >
-            {/* Header row */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(140px, 1.4fr) 2fr 2fr",
-                borderBottom: "1px solid var(--color-border)",
-                background:
-                  "color-mix(in srgb, var(--color-bg) 50%, var(--color-bg-card))",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-                color: "var(--color-fg-muted)",
-              }}
-            >
-              <div style={{ padding: "0.85rem 1rem" }}>Concern</div>
-              <div style={{ padding: "0.85rem 1rem", color: "var(--color-accent-2)" }}>
-                0gkit Kits
-              </div>
-              <div style={{ padding: "0.85rem 1rem" }}>create-0g-dapp skills</div>
-            </div>
-
-            {COMP_ROWS.map((row, i) => (
+            {BENEFITS.map((b) => (
               <div
-                key={row.concern}
+                key={b.title}
+                className="card"
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "minmax(140px, 1.4fr) 2fr 2fr",
-                  borderBottom:
-                    i === COMP_ROWS.length - 1
-                      ? "none"
-                      : "1px solid var(--color-border)",
-                  fontSize: "0.9rem",
+                  padding: "1.3rem 1.4rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.5rem",
                 }}
               >
                 <div
                   style={{
-                    padding: "0.85rem 1rem",
-                    color: "var(--color-fg-dim)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {row.concern}
-                </div>
-                <div
-                  style={{
-                    padding: "0.85rem 1rem",
+                    fontSize: "1rem",
+                    fontWeight: 700,
                     color: "var(--color-fg)",
-                    background:
-                      "color-mix(in srgb, var(--color-accent) 4%, transparent)",
+                    letterSpacing: "-0.01em",
                   }}
                 >
-                  {row.kits}
+                  {b.title}
                 </div>
-                <div
+                <p
                   style={{
-                    padding: "0.85rem 1rem",
+                    margin: 0,
+                    fontSize: "0.9rem",
+                    lineHeight: 1.55,
                     color: "var(--color-fg-muted)",
                   }}
                 >
-                  {row.createDapp}
-                </div>
+                  {b.body}
+                </p>
               </div>
             ))}
           </div>
-
-          {/* HONESTY footnote — required by the brief */}
-          <p
-            style={{
-              marginTop: "1rem",
-              fontSize: "0.75rem",
-              color: "var(--color-fg-muted)",
-              lineHeight: 1.5,
-            }}
-          >
-            <sup>1</sup> Comparison based on create-0g-dapp&rsquo;s{" "}
-            <a
-              href="https://github.com/0glabs/create-0g-dapp"
-              target="_blank"
-              rel="noreferrer"
-              style={{ color: "var(--color-fg-dim)", textDecoration: "underline" }}
-            >
-              public README
-            </a>
-            , not its private source. Any hackathon-track names are
-            create-0g-dapp&rsquo;s own terminology — they are not an official 0G
-            taxonomy and are not adopted here.
-          </p>
         </div>
       </section>
     </>

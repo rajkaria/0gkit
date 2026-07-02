@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack && pnpm pagefind:build",
+    "predev": "node scripts/gen-llms.mjs",
+    "gen:llms": "node scripts/gen-llms.mjs",
+    "build": "node scripts/gen-llms.mjs && next build --webpack && pnpm pagefind:build",
     "pagefind:build": "pagefind --site .next/server/app --output-path public/pagefind || pagefind --site .next --output-path public/pagefind",
     "start": "next start",
-    "clean": "rimraf .next .turbo public/pagefind",
+    "clean": "rimraf .next .turbo public/pagefind public/llms public/llms.txt public/llms-full.txt",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

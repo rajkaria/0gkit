@@ -102,8 +102,10 @@ export function Footer() {
           title="Product"
           links={[
             { label: "Docs", href: "https://docs.0gkit.com" },
+            { label: "Kits", href: "/kits" },
             { label: "Packages", href: "#packages" },
             { label: "CLI", href: "https://docs.0gkit.com/cli" },
+            { label: "Templates", href: "https://docs.0gkit.com/templates" },
             { label: "Playground", href: "https://playground.0gkit.com" },
           ]}
         />
@@ -116,9 +118,11 @@ export function Footer() {
               href: "https://docs.0gkit.com/getting-started",
             },
             { label: "Concepts", href: "https://docs.0gkit.com/concepts" },
+            { label: "Cookbook", href: "https://docs.0gkit.com/cookbook" },
             { label: "Error codes", href: "https://docs.0gkit.com/errors" },
             { label: "MCP guide", href: "https://docs.0gkit.com/mcp" },
             { label: "React guide", href: "https://docs.0gkit.com/react" },
+            { label: "llms.txt", href: "/llms.txt" },
           ]}
         />
 

@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Sidebar } from "../components/Sidebar";
 import { Search } from "../components/Search";
 import { Logo } from "../components/Logo";
+import { CopyForLLM } from "../components/CopyForLLM";
 import "./globals.css";
 
 const geist = Geist({
@@ -70,7 +71,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="shell">
               <Sidebar />
               <main className="content">
-                <article className="prose">{children}</article>
+                <div className="page-wrap">
+                  <CopyForLLM />
+                  <article className="prose">{children}</article>
+                </div>
               </main>
             </div>
           </div>
