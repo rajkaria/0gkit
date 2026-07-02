@@ -49,9 +49,15 @@ interface StorageConfig {
   privateKey?: string; // legacy — deprecated, use signer instead
   loadSdk?: () => Promise<StorageSdk>; // inject the SDK (testing)
 }
+interface UploadOptions {
+  signer?: unknown; // ready ethers Wallet/Signer — bypasses config signer/privateKey
+  uploadOptions?: Record<string, unknown>; // SDK UploadOption (fee, finality, tags)
+  txOptions?: Record<string, unknown>; // ethers-style TransactionOptions
+}
 interface UploadResult {
   root: string; // 0x-normalized merkle root
   tx: Receipt; // { txHash, latencyMs }
+  txSeq?: number; // 0G Storage sequence number, when the SDK reports one
   raw: unknown; // the raw SDK result
 }
 new Storage(config: StorageConfig);
@@ -67,16 +73,21 @@ key is managed independently of the `Storage` class. The legacy `privateKey`
 string continues to work but emits a deprecation warning — see
 [Legacy (deprecated)](#legacy-deprecated) below.
 
-#### `storage.upload(data)`
+#### `storage.upload(data, opts?)`
 
 ```ts
-upload(data: Uint8Array): Promise<UploadResult>;
+upload(data: Uint8Array, opts?: UploadOptions): Promise<UploadResult>;
 ```
 
-Uploads the bytes; returns `{ root, tx, raw }`. Requires `privateKey` in the
-config (it funds the tx). **Throws** `ConfigError` if `privateKey` is missing
-or the SDK / `ethers` cannot be loaded; **throws** `NetworkError` if the
-upload fails or returns an unrecognized shape.
+Uploads the bytes; returns `{ root, tx, txSeq, raw }`. Funds the tx from the
+constructor `signer`/`privateKey` by default. **Throws** `ConfigError` if no
+key is available or the SDK / `ethers` cannot be loaded; **throws**
+`NetworkError` if the upload fails or returns an unrecognized shape.
+
+Pass `opts.signer` to upload with a **ready ethers `Wallet`/`Signer`** — it
+takes precedence over the constructor signer, so browser-, remote-, or
+KMS-backed signers that never expose a plaintext key can upload. `opts.uploadOptions`
+and `opts.txOptions` are forwarded straight to the underlying SDK.
 
 #### `storage.download(root)`
 
@@ -222,4 +233,5 @@ React: [`useUpload` / `useDownload`](/react). Template:
 - `type StorageEstimate`
 - `type StorageEstimateBreakdown`
 - `type StorageSdk`
+- `type UploadOptions`
 - `type UploadResult`
