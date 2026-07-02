@@ -1,10 +1,10 @@
-import {
-  KMSClient,
-  GetPublicKeyCommand,
-  SignCommand,
-  MessageType,
-  SigningAlgorithmSpec,
-} from "@aws-sdk/client-kms";
+// Type-only import — erased at compile time, so it never reaches a bundler.
+// The runtime values are loaded lazily inside fromKMS() (see below) because
+// @aws-sdk/client-kms is an OPTIONAL peer dependency: a top-level static import
+// would force every bundler (Turbopack/webpack/Vite) to resolve it at build
+// time, breaking apps that only use fromPrivateKey/fromEnv and never install
+// the AWS SDK (e.g. the `chat` template's browser bundle).
+import type { KMSClient } from "@aws-sdk/client-kms";
 import { hashMessage, hashTypedData, keccak256, recoverAddress, type Hex } from "viem";
 import {
   ConfigError,
@@ -16,19 +16,25 @@ import {
 import type { FromKMSOptions } from "./types.js";
 
 export async function fromKMS(opts: FromKMSOptions): Promise<Signer> {
+  // Load the optional AWS SDK lazily through a runtime-assembled specifier so
+  // bundlers can't statically resolve it at build time — the import only runs
+  // when someone actually calls fromKMS().
+  let kms: typeof import("@aws-sdk/client-kms");
   let client: KMSClient;
   try {
-    client = new KMSClient({ region: opts.region ?? process.env.AWS_REGION });
+    const kmsSpecifier = ["@aws-sdk", "client-kms"].join("/");
+    kms = (await import(kmsSpecifier)) as typeof import("@aws-sdk/client-kms");
+    client = new kms.KMSClient({ region: opts.region ?? process.env.AWS_REGION });
   } catch (err) {
     throw new ConfigError(
-      `Failed to construct KMSClient: ${err instanceof Error ? err.message : String(err)}.`,
+      `Failed to load @aws-sdk/client-kms or construct KMSClient: ${err instanceof Error ? err.message : String(err)}.`,
       "Install @aws-sdk/client-kms and provide AWS credentials (env, profile, or IAM role)."
     );
   }
 
   let publicKeyDer: Uint8Array;
   try {
-    const r = await client.send(new GetPublicKeyCommand({ KeyId: opts.keyId }));
+    const r = await client.send(new kms.GetPublicKeyCommand({ KeyId: opts.keyId }));
     if (!r.PublicKey) {
       throw new ZeroGError(
         "WALLET_KMS_PUBKEY_FAILED",
@@ -51,11 +57,11 @@ export async function fromKMS(opts: FromKMSOptions): Promise<Signer> {
     let der: Uint8Array;
     try {
       const r = await client.send(
-        new SignCommand({
+        new kms.SignCommand({
           KeyId: opts.keyId,
           Message: hexToBytes(hash),
-          MessageType: MessageType.DIGEST,
-          SigningAlgorithm: SigningAlgorithmSpec.ECDSA_SHA_256,
+          MessageType: kms.MessageType.DIGEST,
+          SigningAlgorithm: kms.SigningAlgorithmSpec.ECDSA_SHA_256,
         })
       );
       if (!r.Signature) {
